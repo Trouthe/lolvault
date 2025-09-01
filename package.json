@@ -1,12 +1,18 @@
 {
   "name": "lolvault",
   "version": "0.0.0",
+  "main": "main.js",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
+    "build-electron": "ng build && electron .",
+    "dist": "ng build && electron-builder",
+    "lint": "ng lint"
   },
   "private": true,
   "dependencies": {
@@ -26,12 +32,41 @@
     "@angular/cli": "^19.2.11",
     "@angular/compiler-cli": "^19.2.0",
     "@types/jasmine": "~5.1.0",
+    "angular-eslint": "20.2.0",
+    "concurrently": "^9.2.1",
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "typescript-eslint": "8.40.0",
+    "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "com.lolvault.app",
+    "productName": "LoL Vault",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/lolvault/**/*",
+      "main.js",
+      "preload.js",
+      "src/app/data/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
