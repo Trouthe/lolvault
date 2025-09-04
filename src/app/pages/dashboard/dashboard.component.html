@@ -1,8 +1,5 @@
 @for (account of accounts; track account.id) {
-<div>
-  <strong>{{ account.name }}</strong> ({{ account.username }})
-  <button (click)="loginWithAccount(account.id)">Launch</button>
-</div>
+<app-acc-card [account]="account"></app-acc-card>
 }
 
 <div class="test">Test box</div>
