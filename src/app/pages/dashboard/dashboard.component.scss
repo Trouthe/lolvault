@@ -1,0 +1,7 @@
+@use 'sass:map';
+@use 'styles/variables' as v;
+
+.test {
+  background-color: map.get(v.$ranks-bg, gold);
+  color: map.get(v.$ranks-text, gold);
+}
