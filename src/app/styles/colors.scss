@@ -1,7 +1,21 @@
 [data-theme='dark'] {
+  --background: oklch(0.12 0 0);
+
+  // Card styles
+  --card: oklch(0.16 0 0);
   --border-color: oklch(0.25 0 0);
+
+  // Text
+  --primary-text: oklch(0.9 0 0);
 }
 
 [data-theme='light'] {
+  --background: oklch(0.99 0 0);
+
+  // Card styles
+  --card: oklch(0.97 0 0);
   --border-color: oklch(0.88 0 0);
+
+  // Text
+  --primary-text: oklch(0.9 0 0);
 }
