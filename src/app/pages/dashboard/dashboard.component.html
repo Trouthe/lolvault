@@ -6,13 +6,13 @@
   </button>
 </div>
 
-@for (account of accounts; track account.id) {
+@for (account of accounts(); track account.id) {
 <app-acc-card [account]="account"></app-acc-card>
 }
 
 <!-- Add Account Modal -->
 <app-add-account-modal
-  [isOpen]="isModalOpen"
+  [isOpen]="isModalOpen()"
   (closeModal)="closeModal()"
   (accountsAdded)="onAccountsAdded($event)"
 >

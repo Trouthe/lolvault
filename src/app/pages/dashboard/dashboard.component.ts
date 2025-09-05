@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Component } from '@angular/core';
+import { signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
 import {
@@ -15,8 +15,8 @@ import {
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
-  public accounts: any[] = [];
-  public isModalOpen = false;
+  public accounts = signal<Account[]>([]);
+  public isModalOpen = signal(false);
 
   constructor() {
     this.loadAccounts();
@@ -24,29 +24,36 @@ export class DashboardComponent {
 
   async loadAccounts() {
     try {
-      this.accounts = await window.electronAPI.loadAccounts();
+      const loadedAccounts = await window.electronAPI.loadAccounts();
+      this.accounts.set(loadedAccounts);
     } catch (error) {
       console.error('Error loading accounts:', error);
     }
   }
 
   addAccount(): void {
-    this.isModalOpen = true;
+    this.isModalOpen.set(true);
   }
 
   closeModal(): void {
-    this.isModalOpen = false;
+    this.isModalOpen.set(false);
   }
 
-  onAccountsAdded(newAccounts: Account[]): void {
+  async onAccountsAdded(newAccounts: Account[]): Promise<void> {
     // Add new accounts to the existing accounts array
-    this.accounts.push(...newAccounts);
+    const updatedAccounts = [...this.accounts(), ...newAccounts];
+    this.accounts.set(updatedAccounts);
 
-    // Here you would typically save the accounts to the JSON file
-    // For now, we'll just update the local array
-    console.log('New accounts added:', newAccounts);
-
-    // TODO: Implement saving to accounts.json file via Electron API
-    // await window.electronAPI.saveAccounts(this.accounts);
+    // Save the accounts to the JSON file via Electron API
+    try {
+      const result = await window.electronAPI.saveAccounts(updatedAccounts);
+      if (result.success) {
+        console.log('Accounts saved successfully');
+      } else {
+        console.error('Error saving accounts:', result.error);
+      }
+    } catch (error) {
+      console.error('Error saving accounts:', error);
+    }
   }
 }

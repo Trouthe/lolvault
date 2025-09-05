@@ -7,6 +7,7 @@ declare global {
     electronAPI: {
       launchAccount: (accountData: any) => Promise<any>;
       loadAccounts: () => Promise<any[]>;
+      saveAccounts: (accounts: any[]) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
