@@ -1,3 +1,11 @@
+<div class="dash-header">
+  <h3>My Accounts</h3>
+  <button (click)="addAccount()">
+    <img src="assets/icons/plus.svg" alt="Add" width="16" />
+    Add Account
+  </button>
+</div>
+
 @for (account of accounts; track account.id) {
 <app-acc-card [account]="account"></app-acc-card>
 }

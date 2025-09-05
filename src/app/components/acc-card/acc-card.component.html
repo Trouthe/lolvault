@@ -1,6 +1,9 @@
 @if (account()) {
 <div class="acc-card">
-  <strong>{{ account().name }}</strong> ({{ account().username }})
+  <div>
+    <strong>{{ account().name }}</strong>
+    <p>{{ account().username }}</p>
+  </div>
   <button (click)="launchAccount()">Launch</button>
 </div>
 }

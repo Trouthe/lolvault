@@ -32,6 +32,11 @@
                 "glob": "**/*",
                 "input": "src/app/data",
                 "output": "data"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/app/assets",
+                "output": "assets"
               }
             ],
             "styles": [

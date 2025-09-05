@@ -23,4 +23,6 @@ export class DashboardComponent {
       console.error('Error loading accounts:', error);
     }
   }
+
+  addAccount(): void {}
 }

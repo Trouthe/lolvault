@@ -1,0 +1,33 @@
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary-text);
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: transparent;
+    color: white;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: var(--card);
+      cursor: pointer;
+    }
+
+    img {
+      filter: invert(1);
+    }
+  }
+}
