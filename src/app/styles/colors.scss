@@ -1,13 +1,16 @@
 [data-theme='dark'] {
-  --background: oklab(0.12 0 0);
-
-  // Card styles
-  --card: oklch(0.16 0 0);
-  --border-color: oklch(0.2 0 0);
+  --background: oklch(0.15 0 0);
+  --muted: oklch(0.24 0 0);
+  --inverted-background: oklch(0.7 0 0);
+  // Card stylesp
+  --card: oklch(0.175 0 0);
+  --border-color: oklch(0.25 0 0);
+  --outline: oklch(0.3 0 0);
 
   // Text
   --primary-text: oklch(0.9 0 0);
   --secondary-text: oklch(0.6 0 0);
+  --inverted-text: oklch(0.12 0 0);
 }
 
 [data-theme='light'] {

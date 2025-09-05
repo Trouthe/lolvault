@@ -22,7 +22,7 @@
     transition: background-color 0.3s ease;
 
     &:hover {
-      background-color: var(--card);
+      background-color: var(--border-color);
       cursor: pointer;
     }
 

@@ -1,0 +1,120 @@
+@if (isOpen()) {
+<div class="modal-overlay" (click)="close()" tabindex="0">
+  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+    <div class="modal-header">
+      <div>
+        <h2>Add New Account</h2>
+        <p>Add a single account or multiple accounts in bulk</p>
+      </div>
+      <img
+        src="assets/icons/plus.svg"
+        class="close-btn"
+        (click)="close()"
+        alt="Close"
+        tabindex="0"
+      />
+    </div>
+
+    <div class="modal-tabs">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'single'"
+        (click)="setActiveTab('single')"
+      >
+        Single Account
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'bulk'"
+        (click)="setActiveTab('bulk')"
+      >
+        Bulk Import
+      </button>
+    </div>
+
+    @if (activeTab() === 'single') {
+    <form class="single-account-form" (ngSubmit)="addSingleAccount()">
+      <div>
+        <div class="form-group">
+          <label for="username">Username *</label>
+          <input
+            type="text"
+            id="username"
+            [(ngModel)]="singleAccount().username"
+            name="username"
+            placeholder="Enter username"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password *</label>
+          <input
+            type="password"
+            id="password"
+            [(ngModel)]="singleAccount().password"
+            name="password"
+            placeholder="Enter password"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="displayName">Display Name</label>
+        <input
+          type="text"
+          id="displayName"
+          [(ngModel)]="singleAccount().displayName"
+          name="displayName"
+          placeholder="Custom display name (optional)"
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="server">Server</label>
+          <select id="server" [(ngModel)]="singleAccount().server" name="server">
+            <option value="">Select Server</option>
+            @for (server of servers; track server) {
+            <option [value]="server">{{ server }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="rank">Rank</label>
+          <select id="rank" [(ngModel)]="singleAccount().rank" name="rank">
+            <option value="">Select Rank</option>
+            @for (rank of ranks; track rank) {
+            <option [value]="rank">{{ rank }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn">Add Account</button>
+    </form>
+    } @else {
+    <div class="bulk-import-form">
+      <div class="form-group">
+        <label for="bulkAccounts">Bulk Import</label>
+        <textarea
+          id="bulkAccounts"
+          [(ngModel)]="bulkAccountsText"
+          name="bulkAccounts"
+          placeholder="example1:password1, Example Account 1, EUW, Gold&#10;example2:password2, Example Account 2, NA, Silver&#10;example3:password3"
+          rows="8"
+        ></textarea>
+      </div>
+
+      <p>Format: <span>username,password,displayName,server,rank</span> (one per line)</p>
+
+      <button type="button" class="submit-btn" (click)="importBulkAccounts()">
+        Import Accounts
+      </button>
+    </div>
+    }
+  </div>
+</div>
+}

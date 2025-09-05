@@ -11,3 +11,11 @@
 }
 
 <div class="test">Test box</div>
+
+<!-- Add Account Modal -->
+<app-add-account-modal
+  [isOpen]="isModalOpen"
+  (closeModal)="closeModal()"
+  (accountsAdded)="onAccountsAdded($event)"
+>
+</app-add-account-modal>
