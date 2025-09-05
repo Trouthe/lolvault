@@ -27,6 +27,9 @@ export class AddAccountModalComponent {
 
   activeTab = signal<'single' | 'bulk'>('single');
 
+  servers = LOL_DATA.SERVERS;
+  ranks = LOL_DATA.RANKS;
+
   // Forms
   bulkAccountsText = signal('');
   singleAccount = signal({
@@ -37,15 +40,12 @@ export class AddAccountModalComponent {
     rank: '',
   });
 
-  // Contants
-  servers = LOL_DATA.SERVERS;
-  ranks = LOL_DATA.RANKS;
-
   setActiveTab(tab: 'single' | 'bulk') {
     this.activeTab.set(tab);
   }
 
   close() {
+    this.resetForm();
     this.closeModal.emit();
   }
 

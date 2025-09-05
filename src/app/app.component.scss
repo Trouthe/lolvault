@@ -1,5 +1,32 @@
 section {
   max-width: 800px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 16px;
+}
+
+hr {
+  border: 1px solid var(--border-color);
+  max-width: 800px;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+h4 {
+  color: var(--secondary-text);
+  font-weight: 300;
+}
+
+span {
+  color: var(--secondary-text);
+  font-size: 12px;
+  filter: brightness(0.7);
+}
+
+p {
+  color: var(--secondary-text);
+  font-size: 14px;
+  text-align: center;
+  margin-block: 32px;
 }

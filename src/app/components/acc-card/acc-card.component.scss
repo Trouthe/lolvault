@@ -17,13 +17,14 @@
 
   strong {
     color: var(--primary-text);
-    font-size: 1rem;
     font-size: 16px;
+    font-weight: 500;
   }
 
   p {
-    padding-top: 3px;
-    font-size: 14px;
     color: var(--secondary-text);
+    font-size: 14px;
+    font-weight: 400;
+    padding-top: 3px;
   }
 }

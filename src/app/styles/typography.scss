@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+
 h1,
 h2,
 h3,
@@ -11,6 +13,6 @@ div,
 button,
 label {
   color: var(--primary-text);
-  font-family: 'GeistSans', sans-serif;
+  font-family: 'Geist', sans-serif;
   margin: 0;
 }
