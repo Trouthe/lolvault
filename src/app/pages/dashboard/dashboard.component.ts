@@ -2,10 +2,8 @@ import { Component } from '@angular/core';
 import { signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
-import {
-  AddAccountModalComponent,
-  Account,
-} from '../../components/add-account-modal/add-account-modal.component';
+import { AddAccountModalComponent } from '../../components/add-account-modal/add-account-modal.component';
+import { Account } from '../../models/interfaces/Account';
 
 @Component({
   selector: 'app-dashboard',

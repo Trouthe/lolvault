@@ -3,16 +3,7 @@ import { input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LOL_DATA } from '../../models/constants';
-
-export interface Account {
-  id: number;
-  name: string;
-  username: string;
-  password: string;
-  game: string;
-  server?: string;
-  rank?: string;
-}
+import { Account } from '../../models/interfaces/Account';
 
 @Component({
   selector: 'app-add-account-modal',
