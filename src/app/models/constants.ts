@@ -6,6 +6,7 @@ export const LOL_DATA = {
     'Silver',
     'Gold',
     'Platinum',
+    'Emerald',
     'Diamond',
     'Master',
     'Grandmaster',
