@@ -14,29 +14,31 @@ if (!(Test-Path $nircmd)) {
 $windowFound = $false
 while (-not $windowFound) {
     $windowFound = (Get-Process | Where-Object { $_.MainWindowTitle -like "*$windowTitle*" }).Count -gt 0
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 10
 }
 
-# Activate the window
-& "$nircmd" win activate process "$windowTitle"
-if (-not $?) { 
-    & "$nircmd" win activate ititle "$windowTitle"
-}
-Start-Sleep -Seconds 5
+# Focus the window
+& "$nircmd" win activate ititle "$windowTitle"
+Start-Sleep -Milliseconds 1
 
-# Send username
+# Clear clipboard and send username
+& "$nircmd" clipboard clear
 & "$nircmd" clipboard set "$username"
 & "$nircmd" sendkeypress "ctrl+v"
-Start-Sleep -Milliseconds 200
+Start-Sleep -Milliseconds 1
 
-# Send TAB
+# Tab to password field
 & "$nircmd" sendkeypress "tab"
-Start-Sleep -Milliseconds 200
+Start-Sleep -Milliseconds 1
 
-# Send password
+# Clear clipboard and send password  
+& "$nircmd" clipboard clear
 & "$nircmd" clipboard set "$password"
 & "$nircmd" sendkeypress "ctrl+v"
-Start-Sleep -Milliseconds 200
+Start-Sleep -Milliseconds 1
 
-# Send ENTER
+# Submit
 & "$nircmd" sendkeypress "enter"
+
+# Clear clipboard for security
+& "$nircmd" clipboard clear

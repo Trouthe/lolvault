@@ -8,3 +8,16 @@
 body {
   background-color: var(--background);
 }
+
+.icon {
+  color: var(--primary-text);
+  transition: filter 0.2s;
+}
+
+[data-theme='dark'] .icon {
+  filter: none;
+}
+
+[data-theme='light'] .icon {
+  filter: invert(1);
+}

@@ -37,7 +37,7 @@
   align-items: center;
   gap: 8px;
   background-color: transparent;
-  color: white;
+  color: var(--primary-text);
   border: 2px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 10px;
@@ -48,10 +48,6 @@
   &:hover {
     background-color: var(--border-color);
     cursor: pointer;
-  }
-
-  img {
-    filter: invert(1);
   }
 }
 

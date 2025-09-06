@@ -1,8 +1,9 @@
 [data-theme='dark'] {
   --background: oklch(0.15 0 0);
   --muted: oklch(0.24 0 0);
-  --inverted-background: oklch(0.9 0 0);
-  // Card stylesp
+  --inverted-background: oklch(0.7 0 0);
+
+  // Card styles
   --card: oklch(0.175 0 0);
   --border-color: oklch(0.25 0 0);
   --outline: oklch(0.3 0 0);
@@ -18,13 +19,21 @@
 }
 
 [data-theme='light'] {
-  --background: #fcfcfc;
+  --background: oklch(0.98 0 0);
+  --muted: oklch(0.93 0 0);
+  --inverted-background: oklch(0.18 0 0);
 
   // Card styles
-  --card: #f5f5f5;
-  --border-color: #d7d7d7;
+  --card: oklch(0.97 0 0);
+  --border-color: oklch(0.85 0 0);
+  --outline: oklch(0.7 0 0);
 
   // Text
-  --primary-text: #202020;
-  --secondary-text: #555555;
+  --primary-text: oklch(0.13 0 0);
+  --secondary-text: oklch(0.5 0 0);
+  --inverted-text: oklch(0.98 0 0);
+
+  // States
+  --danger: #dc143c;
+  --danger-hover: rgba(220, 20, 60, 0.08);
 }

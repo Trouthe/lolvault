@@ -70,3 +70,53 @@
     color: var(--secondary-text);
   }
 }
+
+[data-theme='light'] .rank-pill {
+  background-color: var(--muted);
+  color: var(--primary-text);
+
+  &[data-rank='iron'] {
+    background-color: map.get(v.$ranks-bg-light, iron);
+    color: map.get(v.$ranks-text-light, iron);
+  }
+  &[data-rank='bronze'] {
+    background-color: map.get(v.$ranks-bg-light, bronze);
+    color: map.get(v.$ranks-text-light, bronze);
+  }
+  &[data-rank='silver'] {
+    background-color: map.get(v.$ranks-bg-light, silver);
+    color: map.get(v.$ranks-text-light, silver);
+  }
+  &[data-rank='gold'] {
+    background-color: map.get(v.$ranks-bg-light, gold);
+    color: map.get(v.$ranks-text-light, gold);
+  }
+  &[data-rank='platinum'] {
+    background-color: map.get(v.$ranks-bg-light, platinum);
+    color: map.get(v.$ranks-text-light, platinum);
+  }
+  &[data-rank='emerald'] {
+    background-color: map.get(v.$ranks-bg-light, emerald);
+    color: map.get(v.$ranks-text-light, emerald);
+  }
+  &[data-rank='diamond'] {
+    background-color: map.get(v.$ranks-bg-light, diamond);
+    color: map.get(v.$ranks-text-light, diamond);
+  }
+  &[data-rank='master'] {
+    background-color: map.get(v.$ranks-bg-light, master);
+    color: map.get(v.$ranks-text-light, master);
+  }
+  &[data-rank='grandmaster'] {
+    background-color: map.get(v.$ranks-bg-light, grandmaster);
+    color: map.get(v.$ranks-text-light, grandmaster);
+  }
+  &[data-rank='challenger'] {
+    background-color: map.get(v.$ranks-bg-light, challenger);
+    color: map.get(v.$ranks-text-light, challenger);
+  }
+  &[data-rank='unranked'] {
+    background-color: #f3f4f6;
+    color: #6b7280;
+  }
+}
