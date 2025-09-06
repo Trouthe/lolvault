@@ -1,8 +1,20 @@
 @if (account()) {
 <div class="acc-card">
   <div class="account-info">
-    <strong>{{ account()!.name }}</strong>
-    <p>{{ account()!.username }}</p>
+    <div class="account-details">
+      <strong>{{ account()!.name }}</strong>
+      <p>
+        {{ account()!.username }}
+        @if (account()!.server) {
+        <span class="server">- {{ account()!.server }}</span>
+        }
+      </p>
+    </div>
+    @if (account()!.rank) {
+    <div class="rank-pill" [attr.data-rank]="account()!.rank?.toLowerCase()">
+      {{ account()!.rank }}
+    </div>
+    }
   </div>
 
   <div class="button-collection">

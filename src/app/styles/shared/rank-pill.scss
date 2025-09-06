@@ -1,0 +1,72 @@
+@use 'sass:map';
+@use 'styles/variables' as v;
+
+.rank-pill {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+
+  // Default styling
+  background-color: var(--muted);
+  color: var(--primary-text);
+
+  // Rank-specific colors using data attributes
+  &[data-rank='iron'] {
+    background-color: map.get(v.$ranks-bg, iron);
+    color: map.get(v.$ranks-text, iron);
+  }
+
+  &[data-rank='bronze'] {
+    background-color: map.get(v.$ranks-bg, bronze);
+    color: map.get(v.$ranks-text, bronze);
+  }
+
+  &[data-rank='silver'] {
+    background-color: map.get(v.$ranks-bg, silver);
+    color: map.get(v.$ranks-text, silver);
+  }
+
+  &[data-rank='gold'] {
+    background-color: map.get(v.$ranks-bg, gold);
+    color: map.get(v.$ranks-text, gold);
+  }
+
+  &[data-rank='platinum'] {
+    background-color: map.get(v.$ranks-bg, platinum);
+    color: map.get(v.$ranks-text, platinum);
+  }
+
+  &[data-rank='emerald'] {
+    background-color: map.get(v.$ranks-bg, emerald);
+    color: map.get(v.$ranks-text, emerald);
+  }
+
+  &[data-rank='diamond'] {
+    background-color: map.get(v.$ranks-bg, diamond);
+    color: map.get(v.$ranks-text, diamond);
+  }
+
+  &[data-rank='master'] {
+    background-color: map.get(v.$ranks-bg, master);
+    color: map.get(v.$ranks-text, master);
+  }
+
+  &[data-rank='grandmaster'] {
+    background-color: map.get(v.$ranks-bg, grandmaster);
+    color: map.get(v.$ranks-text, grandmaster);
+  }
+
+  &[data-rank='challenger'] {
+    background-color: map.get(v.$ranks-bg, challenger);
+    color: map.get(v.$ranks-text, challenger);
+  }
+
+  &[data-rank='unranked'] {
+    background-color: var(--muted);
+    color: var(--secondary-text);
+  }
+}

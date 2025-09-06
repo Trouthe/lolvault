@@ -1,13 +1,14 @@
 $ranks-bg: (
-  iron: #374151,
-  bronze: #ea580c,
-  silver: #6b7280,
-  gold: #ca8a04,
-  platinum: #14b8a6,
-  diamond: #3b82f6,
-  master: #a21caf,
-  grandmaster: #ef4444,
-  challenger: #eab308,
+  iron: rgba(55, 65, 81, 0.35),
+  bronze: rgba(234, 88, 12, 0.35),
+  silver: rgba(107, 114, 128, 0.35),
+  gold: rgba(202, 138, 4, 0.35),
+  platinum: rgba(20, 184, 166, 0.35),
+  emerald: rgba(80, 200, 120, 0.35),
+  diamond: rgba(59, 130, 246, 0.35),
+  master: rgba(162, 28, 175, 0.35),
+  grandmaster: rgba(239, 68, 68, 0.35),
+  challenger: rgba(234, 179, 8, 0.35),
 );
 
 $ranks-text: (
@@ -16,6 +17,7 @@ $ranks-text: (
   silver: #d1d5db,
   gold: #facc15,
   platinum: #2dd4bf,
+  emerald: #50c878,
   diamond: #60a5fa,
   master: #c084fc,
   grandmaster: #fca5a5,

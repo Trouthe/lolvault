@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
 import { AddAccountModalComponent } from '../../components/add-account-modal/add-account-modal.component';
 import { Account } from '../../models/interfaces/Account';
@@ -8,13 +9,37 @@ import { Account } from '../../models/interfaces/Account';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AccCardComponent, AddAccountModalComponent],
+  imports: [CommonModule, FormsModule, AccCardComponent, AddAccountModalComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
   public accounts = signal<Account[]>([]);
   public isModalOpen = signal(false);
+  private _searchQuery = signal('');
+  public searchQuery = '';
+
+  // Computed property for filtered accounts
+  public filteredAccounts = computed(() => {
+    const query = this._searchQuery().toLowerCase().trim();
+    if (!query) {
+      return this.accounts();
+    }
+
+    return this.accounts().filter(
+      (account) =>
+        account.name?.toLowerCase().includes(query) ||
+        account.username?.toLowerCase().includes(query) ||
+        account.server?.toLowerCase().includes(query) ||
+        account.rank?.toLowerCase().includes(query) ||
+        account.game?.toLowerCase().includes(query)
+    );
+  });
+
+  // Update search signal when searchQuery changes
+  updateSearch() {
+    this._searchQuery.set(this.searchQuery);
+  }
 
   constructor() {
     this.loadAccounts();
@@ -35,6 +60,10 @@ export class DashboardComponent {
 
   closeModal(): void {
     this.isModalOpen.set(false);
+  }
+
+  onSearchChange(query: string): void {
+    this._searchQuery.set(query);
   }
 
   async onAccountsAdded(newAccounts: Account[]): Promise<void> {

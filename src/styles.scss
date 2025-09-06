@@ -1,6 +1,9 @@
 @use 'styles/colors';
 @use 'styles/typography';
+
+// Components
 @use 'styles/shared/button';
+@use 'styles/shared/rank-pill';
 
 body {
   background-color: var(--background);
