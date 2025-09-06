@@ -1,5 +1,6 @@
 @use 'styles/colors';
 @use 'styles/typography';
+@use 'styles/shared/button';
 
 body {
   background-color: var(--background);

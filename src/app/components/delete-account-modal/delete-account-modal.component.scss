@@ -1,0 +1,66 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--background);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
+  width: 400px;
+  color: var(--primary-text);
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+  }
+
+  .modal-body {
+    margin-bottom: 24px;
+
+    p {
+      margin-bottom: 16px;
+      color: var(--secondary-text);
+    }
+
+    .account-info {
+      background: var(--card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+
+      strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--secondary-text);
+      }
+    }
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+}

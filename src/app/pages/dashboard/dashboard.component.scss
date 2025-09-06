@@ -9,27 +9,4 @@
     font-weight: 600;
     color: var(--primary-text);
   }
-
-  button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: transparent;
-    color: white;
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-
-    &:hover {
-      background-color: var(--border-color);
-      cursor: pointer;
-    }
-
-    img {
-      filter: invert(1);
-    }
-  }
 }

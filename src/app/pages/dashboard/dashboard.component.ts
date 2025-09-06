@@ -54,4 +54,44 @@ export class DashboardComponent {
       console.error('Error saving accounts:', error);
     }
   }
+
+  async onAccountUpdated(updatedAccount: Account): Promise<void> {
+    // Update the specific account in the array
+    const currentAccounts = this.accounts();
+    const updatedAccounts = currentAccounts.map((acc) =>
+      acc.id === updatedAccount.id ? updatedAccount : acc
+    );
+    this.accounts.set(updatedAccounts);
+
+    // Save the accounts to the JSON file via Electron API
+    try {
+      const result = await window.electronAPI.saveAccounts(updatedAccounts);
+      if (result.success) {
+        console.log('Account updated successfully');
+      } else {
+        console.error('Error updating account:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating account:', error);
+    }
+  }
+
+  async onAccountDeleted(deletedAccount: Account): Promise<void> {
+    // Remove the account from the array
+    const currentAccounts = this.accounts();
+    const updatedAccounts = currentAccounts.filter((acc) => acc.id !== deletedAccount.id);
+    this.accounts.set(updatedAccounts);
+
+    // Save the accounts to the JSON file via Electron API
+    try {
+      const result = await window.electronAPI.saveAccounts(updatedAccounts);
+      if (result.success) {
+        console.log('Account deleted successfully');
+      } else {
+        console.error('Error deleting account:', result.error);
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+    }
+  }
 }

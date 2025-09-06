@@ -11,6 +11,10 @@
   --primary-text: oklch(0.9 0 0);
   --secondary-text: oklch(0.6 0 0);
   --inverted-text: oklch(0.12 0 0);
+
+  // States
+  --danger: #dc143c;
+  --danger-hover: rgba(220, 20, 60, 0.25);
 }
 
 [data-theme='light'] {

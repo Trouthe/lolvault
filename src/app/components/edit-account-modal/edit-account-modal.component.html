@@ -1,0 +1,82 @@
+@if (isOpen()) {
+<div class="modal-overlay" (click)="close()" tabindex="0">
+  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+    <div class="modal-header">
+      <h2>Edit Account</h2>
+      <img
+        src="assets/icons/plus.svg"
+        class="close-btn"
+        (click)="close()"
+        alt="Close"
+        tabindex="0"
+      />
+    </div>
+
+    <form class="edit-form" (ngSubmit)="saveChanges()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-username">Username</label>
+          <input
+            type="text"
+            id="edit-username"
+            [(ngModel)]="editForm().username"
+            name="username"
+            placeholder="Enter username"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-password">Password</label>
+          <input
+            type="password"
+            id="edit-password"
+            [(ngModel)]="editForm().password"
+            name="password"
+            placeholder="Enter password"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-displayName">Display Name</label>
+        <input
+          type="text"
+          id="edit-displayName"
+          [(ngModel)]="editForm().displayName"
+          name="displayName"
+          placeholder="Custom display name (optional)"
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-server">Server</label>
+          <select id="edit-server" [(ngModel)]="editForm().server" name="server">
+            <option value="">Select Server</option>
+            @for (server of servers; track server) {
+            <option [value]="server">{{ server }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-rank">Rank</label>
+          <select id="edit-rank" [(ngModel)]="editForm().rank" name="rank">
+            <option value="">Select Rank</option>
+            @for (rank of ranks; track rank) {
+            <option [value]="rank">{{ rank }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+}
