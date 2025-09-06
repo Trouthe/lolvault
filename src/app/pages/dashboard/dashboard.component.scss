@@ -9,6 +9,16 @@
     font-weight: 600;
     color: var(--primary-text);
   }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .settings-btn {
+      padding: 8px;
+    }
+  }
 }
 
 .search-section {
@@ -44,7 +54,6 @@
       &:focus {
         outline: none;
         border-color: var(--outline);
-        box-shadow: 0 0 0 3px rgba(var(--outline-rgb), 0.1);
       }
     }
   }

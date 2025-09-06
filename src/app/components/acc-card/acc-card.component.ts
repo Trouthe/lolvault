@@ -2,8 +2,8 @@
 import { Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Account } from '../../models/interfaces/Account';
-import { DeleteAccountModalComponent } from '../delete-account-modal/delete-account-modal.component';
-import { EditAccountModalComponent } from '../edit-account-modal/edit-account-modal.component';
+import { DeleteAccountModalComponent } from '../modals/delete-account-modal/delete-account-modal.component';
+import { EditAccountModalComponent } from '../modals/edit-account-modal/edit-account-modal.component';
 
 // Declare the electronAPI that will be available via preload script
 declare global {

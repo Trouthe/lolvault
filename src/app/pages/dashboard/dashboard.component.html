@@ -1,9 +1,14 @@
 <div class="dash-header">
   <h3>My Accounts</h3>
-  <button class="btn-icon-outlined" (click)="addAccount()">
-    <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
-    Add Account
-  </button>
+  <div class="header-actions">
+    <button class="btn-icon-outlined settings-btn" (click)="openSettings()">
+      <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="16" />
+    </button>
+    <button class="btn-icon-outlined" (click)="addAccount()">
+      <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
+      Add Account
+    </button>
+  </div>
 </div>
 
 <div class="search-section">
@@ -24,7 +29,7 @@
   [account]="account"
   (accountUpdated)="onAccountUpdated($event)"
   (accountDeleted)="onAccountDeleted($event)"
-></app-acc-card>
+/>
 }
 
 <!-- Add Account Modal -->
@@ -32,5 +37,11 @@
   [isOpen]="isModalOpen()"
   (closeModal)="closeModal()"
   (accountsAdded)="onAccountsAdded($event)"
->
-</app-add-account-modal>
+/>
+
+<!-- Settings Modal -->
+<app-settings-modal
+  [isOpen]="isSettingsOpen()"
+  [accounts]="accounts()"
+  (closeModal)="closeSettings()"
+/>

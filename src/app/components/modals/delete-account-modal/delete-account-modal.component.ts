@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Account } from '../../models/interfaces/Account';
+import { Account } from '../../../models/interfaces/Account';
 
 @Component({
   selector: 'app-delete-account-modal',

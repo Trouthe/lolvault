@@ -3,19 +3,27 @@ import { signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
-import { AddAccountModalComponent } from '../../components/add-account-modal/add-account-modal.component';
+import { AddAccountModalComponent } from '../../components/modals/add-account-modal/add-account-modal.component';
+import { SettingsModalComponent } from '../../components/modals/settings-modal/settings-modal.component';
 import { Account } from '../../models/interfaces/Account';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccCardComponent, AddAccountModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AccCardComponent,
+    AddAccountModalComponent,
+    SettingsModalComponent,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
   public accounts = signal<Account[]>([]);
   public isModalOpen = signal(false);
+  public isSettingsOpen = signal(false);
   private _searchQuery = signal('');
   public searchQuery = '';
 
@@ -60,6 +68,14 @@ export class DashboardComponent {
 
   closeModal(): void {
     this.isModalOpen.set(false);
+  }
+
+  openSettings(): void {
+    this.isSettingsOpen.set(true);
+  }
+
+  closeSettings(): void {
+    this.isSettingsOpen.set(false);
   }
 
   onSearchChange(query: string): void {

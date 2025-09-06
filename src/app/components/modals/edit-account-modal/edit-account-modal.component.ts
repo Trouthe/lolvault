@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { input, output, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Account } from '../../models/interfaces/Account';
-import { LOL_DATA } from '../../models/constants';
+import { Account } from '../../../models/interfaces/Account';
+import { LOL_DATA } from '../../../models/constants';
 
 @Component({
   selector: 'app-edit-account-modal',

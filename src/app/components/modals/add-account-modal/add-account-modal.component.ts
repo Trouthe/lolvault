@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LOL_DATA } from '../../models/constants';
-import { Account } from '../../models/interfaces/Account';
+import { LOL_DATA } from '../../../models/constants';
+import { Account } from '../../../models/interfaces/Account';
 
 @Component({
   selector: 'app-add-account-modal',

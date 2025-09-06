@@ -1,0 +1,64 @@
+@if (isOpen()) {
+<div class="modal-overlay" (click)="close()" tabindex="0">
+  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+    <div class="modal-header">
+      <div class="section-header">
+        <img src="assets/icons/settings.svg" class="icon" width="18" alt="Data" />
+        <h2>Settings</h2>
+      </div>
+      <img
+        src="assets/icons/plus.svg"
+        class="close-btn"
+        (click)="close()"
+        alt="Close"
+        tabindex="0"
+      />
+    </div>
+
+    <hr class="separator" />
+
+    <div class="settings-section">
+      <div class="section-header">
+        <img src="assets/icons/theme.svg" class="icon" width="16" alt="Data" />
+        <h3>Appearance</h3>
+      </div>
+
+      <div class="theme-options">
+        <button
+          class="theme-btn"
+          [class.active]="themeService.theme() === 'light'"
+          (click)="setLightTheme()"
+        >
+          <div class="theme-preview light-preview"></div>
+          <span>Light Theme</span>
+        </button>
+
+        <button
+          class="theme-btn"
+          [class.active]="themeService.theme() === 'dark'"
+          (click)="setDarkTheme()"
+        >
+          <div class="theme-preview dark-preview"></div>
+          <span>Dark Theme</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="section-header">
+        <img src="assets/icons/database.svg" class="icon" width="16" alt="Data" />
+        <h3>Data</h3>
+      </div>
+
+      <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
+        <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
+        <div>
+          <span>Export Accounts</span>
+          <br />
+          <small>Download accounts in bulk import format</small>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+}

@@ -1,4 +1,4 @@
-import { Account } from '../app/components/add-account-modal/add-account-modal.component';
+import { Account } from '../app/components/modals/add-account-modal/add-account-modal.component';
 
 export interface LaunchAccountData {
   account: Account;
