@@ -29,6 +29,8 @@ export class EditAccountModalComponent {
   servers = LOL_DATA.SERVERS;
   ranks = LOL_DATA.RANKS;
 
+  showPassword = signal(false);
+
   constructor() {
     // Update form when account changes
     effect(() => {
@@ -45,7 +47,26 @@ export class EditAccountModalComponent {
     });
   }
 
+  private resetForm() {
+    const acc = this.account();
+    this.showPassword.set(false);
+    if (acc) {
+      this.editForm.set({
+        username: acc.username || '',
+        password: acc.password || '',
+        displayName: acc.name || '',
+        server: acc.server || '',
+        rank: acc.rank || '',
+      });
+    }
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword.set(!this.showPassword());
+  }
+
   close() {
+    this.resetForm();
     this.closeModal.emit();
   }
 

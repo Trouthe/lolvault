@@ -79,5 +79,31 @@
     margin-top: 20px;
   }
 
-  
+  .input-with-icon {
+    position: relative;
+
+    input {
+      width: 100%;
+      padding-right: 40px !important;
+      box-sizing: border-box;
+    }
+
+    .eye-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.2s;
+
+      &.active,
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
 }
