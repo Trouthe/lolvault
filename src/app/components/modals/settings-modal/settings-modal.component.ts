@@ -31,16 +31,17 @@ export class SettingsModalComponent {
   exportAccounts() {
     const accounts = this.accounts();
 
-    // Convert accounts to the bulk import format
+    // Convert accounts to the bulk import format using ':' as separator
     const exportData = accounts
       .map((account) => {
         const parts = [
-          `${account.username}:${account.password}`,
-          account.name || account.username,
+          account.username || '',
+          account.password || '',
+          account.name || account.username || '',
           account.server || '',
           account.rank || '',
         ];
-        return parts.join(',');
+        return parts.join(':');
       })
       .join('\n');
 

@@ -67,18 +67,18 @@ export class AddAccountModalComponent {
     const lines = bulkText.split('\n');
     const accounts: Account[] = [];
     lines.forEach((line) => {
-      const parts = line.split(',').map((p) => p.trim());
-      if (parts.length >= 1 && parts[0].includes(':')) {
-        const [username, password] = parts[0].split(':');
+      const parts = line.split(':').map((p) => p.trim());
+      if (parts.length >= 2) {
+        const [username, password, name, server, rank] = parts;
         if (username && password) {
           const account: Account = {
             id: Date.now() + Math.random(),
-            name: parts[2] || username,
-            username: username.trim(),
-            password: password.trim(),
+            name: name || username,
+            username: username,
+            password: password,
             game: 'League of Legends',
-            server: parts[3] || undefined,
-            rank: parts[4] || undefined,
+            server: server || undefined,
+            rank: rank || undefined,
           };
           accounts.push(account);
         }

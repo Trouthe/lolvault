@@ -103,12 +103,12 @@
           id="bulkAccounts"
           [(ngModel)]="bulkAccountsText"
           name="bulkAccounts"
-          placeholder="example1:password1, Example Account 1, EUW, Gold&#10;example2:password2, Example Account 2, NA, Silver&#10;example3:password3"
+          placeholder="example1:password1:Example Account 1:EUW:Gold&#10;example2:password2:Example Account 2&#10;example3:password3"
           rows="8"
         ></textarea>
       </div>
 
-      <p>Format: <span>username,password,displayName,server,rank</span> (one per line)</p>
+      <p>Format: <span>username:password:displayName:server:rank</span> (one per line)</p>
 
       <button type="button" class="btn btn-primary" (click)="importBulkAccounts()">
         Import Accounts
