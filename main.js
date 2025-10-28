@@ -22,7 +22,13 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:4200');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist/lolvault/browser/index.html'));
+    const indexPath = path.join(__dirname, 'dist', 'lolvault', 'browser', 'index.html');
+    console.log('Loading from:', indexPath);
+    console.log('File exists:', fs.existsSync(indexPath));
+    mainWindow.loadFile(indexPath);
+
+    // Uncomment for debugging
+    // mainWindow.webContents.openDevTools();
   }
 }
 
@@ -45,8 +51,18 @@ ipcMain.handle('launch-account', async (event, accountData) => {
   const { account, riotClientPath, psFilePath, nircmdPath, windowTitle } = accountData;
 
   // Resolve absolute paths for PowerShell script and nircmd
-  const absolutePsFilePath = path.resolve(__dirname, psFilePath);
-  const absoluteNircmdPath = path.resolve(__dirname, nircmdPath);
+  let absolutePsFilePath, absoluteNircmdPath;
+
+  if (app.isPackaged) {
+    // In production, these files should be in the resources/data directory
+    const dataPath = path.join(process.resourcesPath, 'data');
+    absolutePsFilePath = path.join(dataPath, 'core-actions', 'login-action.ps1');
+    absoluteNircmdPath = path.join(dataPath, 'core-actions', 'nircmdc.exe');
+  } else {
+    // In development, use the paths as provided
+    absolutePsFilePath = path.resolve(__dirname, psFilePath);
+    absoluteNircmdPath = path.resolve(__dirname, nircmdPath);
+  }
 
   // Check if files exist
   if (!fs.existsSync(absolutePsFilePath)) {
@@ -95,10 +111,34 @@ ipcMain.handle('launch-account', async (event, accountData) => {
   });
 });
 
+// Helper function to get the correct data path
+function getDataPath() {
+  if (app.isPackaged) {
+    // In production, use the resources/data directory
+    return path.join(process.resourcesPath, 'data');
+  } else {
+    // In development, use the src/app/data directory
+    return path.join(__dirname, 'src/app/data');
+  }
+}
+
 // Handle loading accounts
 ipcMain.handle('load-accounts', async () => {
   try {
-    const accountsPath = path.join(__dirname, 'src/app/data/accounts.json');
+    const dataPath = getDataPath();
+    const accountsPath = path.join(dataPath, 'accounts.json');
+
+    // Ensure the data directory exists
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true });
+    }
+
+    // If accounts.json doesn't exist, create it with an empty array
+    if (!fs.existsSync(accountsPath)) {
+      fs.writeFileSync(accountsPath, '[]', 'utf8');
+      return [];
+    }
+
     const data = fs.readFileSync(accountsPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
@@ -110,7 +150,14 @@ ipcMain.handle('load-accounts', async () => {
 // Handle saving accounts
 ipcMain.handle('save-accounts', async (event, accounts) => {
   try {
-    const accountsPath = path.join(__dirname, 'src/app/data/accounts.json');
+    const dataPath = getDataPath();
+    const accountsPath = path.join(dataPath, 'accounts.json');
+
+    // Ensure the data directory exists
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true });
+    }
+
     fs.writeFileSync(accountsPath, JSON.stringify(accounts, null, 2), 'utf8');
     return { success: true };
   } catch (error) {

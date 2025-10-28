@@ -2,6 +2,8 @@
   "name": "lolvault",
   "version": "0.1.4",
   "main": "main.js",
+  "author": "LoL Vault",
+  "description": "League of Legends account manager and launcher",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -11,7 +13,10 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",
-    "dist": "ng build && electron-builder",
+    "dist": "ng build --configuration production && electron-builder",
+    "dist:win": "ng build --configuration production && electron-builder --win",
+    "dist:portable": "ng build --configuration production && electron-builder --win portable",
+    "dist:all": "ng build --configuration production && electron-builder --win --x64",
     "lint": "ng lint"
   },
   "private": true,
@@ -52,7 +57,8 @@
     "appId": "com.lolvault.app",
     "productName": "LoL Vault",
     "directories": {
-      "output": "dist-electron"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/lolvault/**/*",
@@ -60,13 +66,49 @@
       "preload.js",
       "src/app/data/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "src/app/data",
+        "to": "data",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "win": {
-      "target": "nsis",
-      "icon": "src/assets/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LoL Vault",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": true
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
     }
   }
 }

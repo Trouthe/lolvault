@@ -41,5 +41,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Electron build output
+/dist-electron
+/release
+*.blockmap
+
 # accs
 src/app/data/accounts.json
