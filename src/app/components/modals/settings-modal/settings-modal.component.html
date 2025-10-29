@@ -46,6 +46,24 @@
 
     <div class="settings-section">
       <div class="section-header">
+        <img src="assets/icons/play.svg" class="icon" width="16" alt="Game" />
+        <h3>Riot Client Path</h3>
+      </div>
+
+      <div class="path-setting">
+        <div class="path-display">
+          <code>{{ settingsService.getRiotClientPath() }}</code>
+          <button class="btn btn-primary" (click)="browseForRiotClient()">Browse</button>
+        </div>
+        <small class="path-hint">
+          Click "Browse" to set the path to your RiotClientServices.exe file if the path displayed
+          above does not match.
+        </small>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="section-header">
         <img src="assets/icons/database.svg" class="icon" width="16" alt="Data" />
         <h3>Data</h3>
       </div>

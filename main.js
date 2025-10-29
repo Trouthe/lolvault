@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { dialog } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
@@ -94,7 +95,7 @@ ipcMain.handle('launch-account', async (event, accountData) => {
         // Run PowerShell script for auto-login
         const psCommand = `powershell -ExecutionPolicy Bypass -Command "& { . '${absolutePsFilePath}' -nircmd '${absoluteNircmdPath}' -windowTitle '${windowTitle}' -username '${account.username}' -password '${account.password}' }"`;
 
-        exec(psCommand, (error, stdout, stderr) => {
+        exec(psCommand, (error, stderr) => {
           if (error) {
             console.error('PowerShell script error:', error);
             console.error('stderr:', stderr);
@@ -109,6 +110,28 @@ ipcMain.handle('launch-account', async (event, accountData) => {
       }
     );
   });
+});
+
+// Open file dialog for selecting executables (from renderer)
+ipcMain.handle('open-file-dialog', async (options = {}) => {
+  try {
+    const win = BrowserWindow.getFocusedWindow();
+    const result = await dialog.showOpenDialog(win, {
+      title: options.title || 'Select Riot Client executable',
+      defaultPath: options.defaultPath || undefined,
+      properties: ['openFile'],
+      filters: [
+        { name: 'Executables', extensions: ['exe'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+
+    if (result.canceled) return { canceled: true, filePaths: [] };
+    return { canceled: false, filePaths: result.filePaths };
+  } catch (error) {
+    console.error('Error opening file dialog:', error);
+    return { canceled: true, filePaths: [] };
+  }
 });
 
 // Helper function to get the correct data path

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Account } from '../../models/interfaces/Account';
 import { DeleteAccountModalComponent } from '../modals/delete-account-modal/delete-account-modal.component';
 import { EditAccountModalComponent } from '../modals/edit-account-modal/edit-account-modal.component';
+import { SettingsService } from '../../services/settings.service';
 
 // Declare the electronAPI that will be available via preload script
 declare global {
@@ -27,32 +28,46 @@ export class AccCardComponent {
   accountUpdated = output<Account>();
   accountDeleted = output<Account>();
 
+  settingsService = inject(SettingsService);
+
   // Modal states
   isDeleteModalOpen = signal(false);
   isEditModalOpen = signal(false);
+  isLaunching = signal(false);
 
   private psFilePath = 'src/app/data/core-actions/login-action.ps1';
   private nircmdPath = 'src/app/data/core-actions/nircmdc.exe';
-  private riotClientPath = 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe';
   private windowTitle = 'Riot Client';
 
   async launchAccount(): Promise<void> {
     const acc = this.account();
-    if (!acc) {
-      console.warn('No account data provided');
+    if (!acc || this.isLaunching()) {
+      console.warn('No account data provided or already launching');
       return;
     }
 
+    this.isLaunching.set(true);
+
     try {
-      await window.electronAPI.launchAccount({
+      const result = await window.electronAPI.launchAccount({
         account: acc,
-        riotClientPath: this.riotClientPath,
+        riotClientPath: this.settingsService.getRiotClientPath(),
         psFilePath: this.psFilePath,
         nircmdPath: this.nircmdPath,
         windowTitle: this.windowTitle,
       });
+
+      if (result.success) {
+        console.log('Account launched successfully');
+      } else {
+        console.error('Launch failed:', result.error);
+      }
     } catch (error) {
       console.error(`Error launching account: ${error}`);
+    } finally {
+      setTimeout(() => {
+        this.isLaunching.set(false);
+      }, 2000);
     }
   }
 

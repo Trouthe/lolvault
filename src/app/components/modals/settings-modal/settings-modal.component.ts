@@ -1,11 +1,13 @@
 import { Component, input, output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ThemeService } from '../../../services/theme.service';
+import { SettingsService } from '../../../services/settings.service';
 import { Account } from '../../../models/interfaces/Account';
 
 @Component({
   selector: 'app-settings-modal',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './settings-modal.component.html',
   styleUrl: './settings-modal.component.scss',
 })
@@ -13,8 +15,8 @@ export class SettingsModalComponent {
   isOpen = input<boolean>(false);
   accounts = input<Account[]>([]);
   closeModal = output<void>();
-
   themeService = inject(ThemeService);
+  settingsService = inject(SettingsService);
 
   close() {
     this.closeModal.emit();
@@ -26,6 +28,26 @@ export class SettingsModalComponent {
 
   setDarkTheme() {
     this.themeService.setTheme('dark');
+  }
+
+  resetToDefault() {
+    this.settingsService.resetToDefaults();
+  }
+
+  async browseForRiotClient() {
+    try {
+      console.log('browseForRiotClient called');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const api = (window as any).electronAPI;
+
+      const result = await api.openFilePicker({ title: 'Select RiotClientServices.exe' });
+      if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
+        const selected: string = result.filePaths[0];
+        this.settingsService.updateRiotClientPath(selected);
+      }
+    } catch (error) {
+      console.error('Error picking file:', error);
+    }
   }
 
   exportAccounts() {

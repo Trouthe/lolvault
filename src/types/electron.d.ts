@@ -17,6 +17,10 @@ export interface ElectronAPI {
   launchAccount: (accountData: LaunchAccountData) => Promise<LaunchResult>;
   loadAccounts: () => Promise<Account[]>;
   saveAccounts: (accounts: Account[]) => Promise<{ success: boolean; error?: string }>;
+  openFilePicker: (options?: {
+    title?: string;
+    defaultPath?: string;
+  }) => Promise<{ canceled: boolean; filePaths: string[] }>;
 }
 
 declare global {

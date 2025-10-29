@@ -25,8 +25,18 @@
       <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
     </button>
     <hr />
-    <button class="action-btn launch-btn" (click)="launchAccount()" title="Launch Account">
+    <button
+      class="action-btn launch-btn"
+      (click)="launchAccount()"
+      [disabled]="isLaunching()"
+      [class.launching]="isLaunching()"
+      title="Launch Account"
+    >
+      @if (isLaunching()) {
+      <div class="spinner"></div>
+      } @else {
       <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+      }
     </button>
   </div>
 </div>
