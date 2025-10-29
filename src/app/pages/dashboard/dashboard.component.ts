@@ -44,7 +44,6 @@ export class DashboardComponent {
     );
   });
 
-  // Update search signal when searchQuery changes
   updateSearch() {
     this._searchQuery.set(this.searchQuery);
   }
@@ -83,11 +82,9 @@ export class DashboardComponent {
   }
 
   async onAccountsAdded(newAccounts: Account[]): Promise<void> {
-    // Add new accounts to the existing accounts array
     const updatedAccounts = [...this.accounts(), ...newAccounts];
     this.accounts.set(updatedAccounts);
 
-    // Save the accounts to the JSON file via Electron API
     try {
       const result = await window.electronAPI.saveAccounts(updatedAccounts);
       if (result.success) {
@@ -101,14 +98,12 @@ export class DashboardComponent {
   }
 
   async onAccountUpdated(updatedAccount: Account): Promise<void> {
-    // Update the specific account in the array
     const currentAccounts = this.accounts();
     const updatedAccounts = currentAccounts.map((acc) =>
       acc.id === updatedAccount.id ? updatedAccount : acc
     );
     this.accounts.set(updatedAccounts);
 
-    // Save the accounts to the JSON file via Electron API
     try {
       const result = await window.electronAPI.saveAccounts(updatedAccounts);
       if (result.success) {
@@ -122,12 +117,10 @@ export class DashboardComponent {
   }
 
   async onAccountDeleted(deletedAccount: Account): Promise<void> {
-    // Remove the account from the array
     const currentAccounts = this.accounts();
     const updatedAccounts = currentAccounts.filter((acc) => acc.id !== deletedAccount.id);
     this.accounts.set(updatedAccounts);
 
-    // Save the accounts to the JSON file via Electron API
     try {
       const result = await window.electronAPI.saveAccounts(updatedAccounts);
       if (result.success) {

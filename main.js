@@ -173,6 +173,16 @@ ipcMain.handle('load-accounts', async () => {
 // Handle saving accounts
 ipcMain.handle('save-accounts', async (event, accounts) => {
   try {
+    if (!Array.isArray(accounts)) {
+      console.error(
+        'save-accounts received non-array data, rejecting save. Type:',
+        typeof accounts,
+        'Keys:',
+        Object.keys(accounts || {}).slice(0, 5)
+      );
+      return { success: false, error: 'Invalid data: accounts must be an array' };
+    }
+
     const dataPath = getDataPath();
     const accountsPath = path.join(dataPath, 'accounts.json');
 
