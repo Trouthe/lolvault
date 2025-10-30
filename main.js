@@ -137,8 +137,19 @@ ipcMain.handle('open-file-dialog', async (options = {}) => {
 // Helper function to get the correct data path
 function getDataPath() {
   if (app.isPackaged) {
-    // In production, use the resources/data directory
-    return path.join(process.resourcesPath, 'data');
+    // For portable exe, check if we're running from a temp extracted location
+    // If so, use a persistent location instead
+    const exeDir = path.dirname(process.execPath);
+    
+    // Check if we're in a temp directory (portable exe extracts to temp)
+    if (exeDir.includes('\\AppData\\Local\\Temp\\') || exeDir.includes('\\Temp\\')) {
+      // Use a persistent location in Local AppData for portable mode
+      const localAppData = process.env.LOCALAPPDATA || app.getPath('appData');
+      return path.join(localAppData, 'LoL Vault', 'data');
+    }
+    
+    // Otherwise, store data next to the executable
+    return path.join(exeDir, 'data');
   } else {
     // In development, use the src/app/data directory
     return path.join(__dirname, 'src/app/data');
