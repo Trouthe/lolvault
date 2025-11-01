@@ -1,0 +1,43 @@
+// Shurima - Ancient Glory, Desert Sun, and Ascension
+// Colors: Golden yellow, sandstone, sun orange
+// Aesthetic: Ancient empire, desert civilization, divine power
+
+[data-theme='dark'][data-theme-variant='shurima'] {
+  --background: oklch(0.16 0.03 55);
+  --muted: oklch(0.23 0.04 55);
+  --inverted-background: oklch(0.78 0.12 65);
+
+  // Card styles - ancient stone and gold
+  --card: oklch(0.19 0.035 55);
+  --border-color: oklch(0.58 0.14 65);
+  --outline: oklch(0.68 0.16 65);
+
+  // Text - sun gold
+  --primary-text: oklch(0.9 0.1 65);
+  --secondary-text: oklch(0.65 0.08 55);
+  --inverted-text: oklch(0.18 0.03 55);
+
+  // States
+  --danger: #d4a574;
+  --danger-hover: rgba(212, 165, 116, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='shurima'] {
+  --background: oklch(0.96 0.03 65);
+  --muted: oklch(0.9 0.05 65);
+  --inverted-background: oklch(0.2 0.04 55);
+
+  // Card styles - sandstone
+  --card: oklch(0.93 0.04 65);
+  --border-color: oklch(0.72 0.12 65);
+  --outline: oklch(0.55 0.1 55);
+
+  // Text
+  --primary-text: oklch(0.22 0.04 55);
+  --secondary-text: oklch(0.48 0.06 55);
+  --inverted-text: oklch(0.95 0.03 65);
+
+  // States
+  --danger: #b8874d;
+  --danger-hover: rgba(184, 135, 77, 0.15);
+}

@@ -1,0 +1,43 @@
+// Bilgewater - Pirates, Fortune, and High Seas
+// Colors: Ocean blue, treasure gold, rum brown
+// Aesthetic: Nautical, pirate haven, lawless port city
+
+[data-theme='dark'][data-theme-variant='bilgewater'] {
+  --background: oklch(0.15 0.03 210);
+  --muted: oklch(0.21 0.04 210);
+  --inverted-background: oklch(0.68 0.1 75);
+
+  // Card styles - ship wood and ocean
+  --card: oklch(0.18 0.035 210);
+  --border-color: oklch(0.5 0.12 75);
+  --outline: oklch(0.6 0.14 75);
+
+  // Text - gold and sea foam
+  --primary-text: oklch(0.88 0.08 75);
+  --secondary-text: oklch(0.62 0.06 210);
+  --inverted-text: oklch(0.17 0.03 210);
+
+  // States
+  --danger: #d2691e;
+  --danger-hover: rgba(210, 105, 30, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='bilgewater'] {
+  --background: oklch(0.94 0.02 210);
+  --muted: oklch(0.87 0.03 75);
+  --inverted-background: oklch(0.19 0.04 210);
+
+  // Card styles - weathered deck
+  --card: oklch(0.91 0.025 75);
+  --border-color: oklch(0.68 0.1 75);
+  --outline: oklch(0.52 0.08 210);
+
+  // Text
+  --primary-text: oklch(0.21 0.04 210);
+  --secondary-text: oklch(0.48 0.06 210);
+  --inverted-text: oklch(0.93 0.02 75);
+
+  // States
+  --danger: #cd5c0f;
+  --danger-hover: rgba(205, 92, 15, 0.12);
+}

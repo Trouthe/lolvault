@@ -1,6 +1,3 @@
-@use 'sass:color';
-@use 'styles/shared/button';
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -105,6 +102,19 @@
             font-weight: 500;
             color: var(--primary-text);
           }
+        }
+      }
+
+      /* Theme variant selector uses the shared .select-wrapper/.form-select */
+      .theme-variant-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        p {
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--secondary-text);
         }
       }
 

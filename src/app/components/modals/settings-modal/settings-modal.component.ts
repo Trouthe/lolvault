@@ -30,6 +30,11 @@ export class SettingsModalComponent {
     this.themeService.setTheme('dark');
   }
 
+  onThemeVariantChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.themeService.setThemeVariant(select.value);
+  }
+
   resetToDefault() {
     this.settingsService.resetToDefaults();
   }

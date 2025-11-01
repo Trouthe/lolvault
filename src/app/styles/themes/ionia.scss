@@ -1,0 +1,43 @@
+// Ionia - Balance, Spirituality, and Natural Harmony
+// Colors: Cherry blossom pink, jade green, soft cream
+// Aesthetic: Spiritual, balanced, nature-connected, Eastern-inspired
+
+[data-theme='dark'][data-theme-variant='ionia'] {
+  --background: oklch(0.16 0.02 160);
+  --muted: oklch(0.22 0.03 160);
+  --inverted-background: oklch(0.72 0.08 340);
+
+  // Card styles - natural wood and jade
+  --card: oklch(0.19 0.025 160);
+  --border-color: oklch(0.48 0.1 160);
+  --outline: oklch(0.58 0.12 160);
+
+  // Text - soft spiritual glow
+  --primary-text: oklch(0.9 0.06 340);
+  --secondary-text: oklch(0.65 0.08 160);
+  --inverted-text: oklch(0.18 0.02 160);
+
+  // States
+  --danger: #d45c84;
+  --danger-hover: rgba(212, 92, 132, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='ionia'] {
+  --background: oklch(0.96 0.015 340);
+  --muted: oklch(0.9 0.025 340);
+  --inverted-background: oklch(0.2 0.03 160);
+
+  // Card styles - paper and cherry blossom
+  --card: oklch(0.94 0.02 340);
+  --border-color: oklch(0.7 0.1 340);
+  --outline: oklch(0.55 0.12 160);
+
+  // Text
+  --primary-text: oklch(0.22 0.03 160);
+  --secondary-text: oklch(0.5 0.06 160);
+  --inverted-text: oklch(0.95 0.015 340);
+
+  // States
+  --danger: #d45c84;
+  --danger-hover: rgba(212, 92, 132, 0.12);
+}

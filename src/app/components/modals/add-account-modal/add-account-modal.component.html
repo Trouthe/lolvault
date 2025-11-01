@@ -74,22 +74,31 @@
       <div class="form-row">
         <div class="form-group">
           <label for="server">Server</label>
-          <select id="server" [(ngModel)]="singleAccount().server" name="server">
-            <option value="">Select Server</option>
-            @for (server of servers; track server) {
-            <option [value]="server">{{ server }}</option>
-            }
-          </select>
+          <div class="select-wrapper">
+            <select
+              id="server"
+              class="form-select"
+              [(ngModel)]="singleAccount().server"
+              name="server"
+            >
+              <option value="">Select Server</option>
+              @for (server of servers; track server) {
+              <option [value]="server">{{ server }}</option>
+              }
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
           <label for="rank">Rank</label>
-          <select id="rank" [(ngModel)]="singleAccount().rank" name="rank">
-            <option value="">Select Rank</option>
-            @for (rank of ranks; track rank) {
-            <option [value]="rank">{{ rank }}</option>
-            }
-          </select>
+          <div class="select-wrapper">
+            <select id="rank" class="form-select" [(ngModel)]="singleAccount().rank" name="rank">
+              <option value="">Select Rank</option>
+              @for (rank of ranks; track rank) {
+              <option [value]="rank">{{ rank }}</option>
+              }
+            </select>
+          </div>
         </div>
       </div>
 

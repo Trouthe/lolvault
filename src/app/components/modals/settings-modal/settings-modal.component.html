@@ -15,7 +15,7 @@
       />
     </div>
 
-    <hr class="separator" />
+    <hr />
 
     <div class="settings-section">
       <div class="section-header">
@@ -41,6 +41,23 @@
           <div class="theme-preview dark-preview"></div>
           <span>Dark Theme</span>
         </button>
+      </div>
+
+      <div class="theme-variant-selector">
+        <p>Theme Variant:</p>
+        <div class="select-wrapper">
+          <select
+            id="theme-variant"
+            [ngModel]="themeService.themeVariant()"
+            (ngModelChange)="themeService.setThemeVariant($event)"
+            class="form-select"
+            name="themeVariant"
+          >
+            @for (variant of themeService.themeVariants; track variant.id) {
+            <option [value]="variant.id">{{ variant.name }}</option>
+            }
+          </select>
+        </div>
       </div>
     </div>
 

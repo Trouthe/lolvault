@@ -1,0 +1,43 @@
+// Freljord - Ice, Resilience, and Ancient Power
+// Colors: Ice blue, frost white, deep tundra blue
+// Aesthetic: Harsh, frozen, primal, survival-focused
+
+[data-theme='dark'][data-theme-variant='freljord'] {
+  --background: oklch(0.15 0.03 230);
+  --muted: oklch(0.21 0.04 230);
+  --inverted-background: oklch(0.78 0.06 230);
+
+  // Card styles - ice and frozen stone
+  --card: oklch(0.18 0.035 230);
+  --border-color: oklch(0.52 0.08 230);
+  --outline: oklch(0.68 0.1 230);
+
+  // Text - ice and frost
+  --primary-text: oklch(0.92 0.04 230);
+  --secondary-text: oklch(0.7 0.06 230);
+  --inverted-text: oklch(0.17 0.03 230);
+
+  // States
+  --danger: #5b8fa3;
+  --danger-hover: rgba(91, 143, 163, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='freljord'] {
+  --background: oklch(0.96 0.02 230);
+  --muted: oklch(0.9 0.03 230);
+  --inverted-background: oklch(0.19 0.04 230);
+
+  // Card styles - snow and ice
+  --card: oklch(0.94 0.025 230);
+  --border-color: oklch(0.72 0.08 230);
+  --outline: oklch(0.55 0.1 230);
+
+  // Text
+  --primary-text: oklch(0.21 0.04 230);
+  --secondary-text: oklch(0.48 0.06 230);
+  --inverted-text: oklch(0.95 0.02 230);
+
+  // States
+  --danger: #4a7489;
+  --danger-hover: rgba(74, 116, 137, 0.15);
+}

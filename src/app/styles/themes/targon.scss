@@ -1,0 +1,43 @@
+// Mount Targon - Celestial Power, Cosmic Wonder, and Divine Ascension
+// Colors: Cosmic purple, celestial gold, starlight white
+// Aesthetic: Mystical mountain peak, celestial realm, cosmic power
+
+[data-theme='dark'][data-theme-variant='targon'] {
+  --background: oklch(0.14 0.04 280);
+  --muted: oklch(0.2 0.05 280);
+  --inverted-background: oklch(0.75 0.1 75);
+
+  // Card styles - cosmic stone and stardust
+  --card: oklch(0.17 0.045 280);
+  --border-color: oklch(0.52 0.12 280);
+  --outline: oklch(0.65 0.14 75);
+
+  // Text - celestial glow
+  --primary-text: oklch(0.9 0.08 280);
+  --secondary-text: oklch(0.68 0.1 280);
+  --inverted-text: oklch(0.16 0.04 280);
+
+  // States
+  --danger: #9370db;
+  --danger-hover: rgba(147, 112, 219, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='targon'] {
+  --background: oklch(0.95 0.02 280);
+  --muted: oklch(0.89 0.03 280);
+  --inverted-background: oklch(0.18 0.05 280);
+
+  // Card styles - mountain stone
+  --card: oklch(0.92 0.025 280);
+  --border-color: oklch(0.7 0.1 280);
+  --outline: oklch(0.55 0.12 280);
+
+  // Text
+  --primary-text: oklch(0.2 0.05 280);
+  --secondary-text: oklch(0.5 0.08 280);
+  --inverted-text: oklch(0.94 0.02 280);
+
+  // States
+  --danger: #7952b3;
+  --danger-hover: rgba(121, 82, 179, 0.15);
+}

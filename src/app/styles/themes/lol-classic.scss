@@ -1,0 +1,43 @@
+// LoL Classic - Official League of Legends Branding
+// Based on official Riot Games brand colors: Okra Gold #C4A15B, Light Yellow #EDDC91, Blue #548CB4
+// Captures the legendary prestige and iconic look of League of Legends
+
+[data-theme='dark'][data-theme-variant='lol-classic'] {
+  --background: oklch(0.12 0.04 245);
+  --muted: oklch(0.18 0.05 245);
+  --inverted-background: oklch(0.75 0.08 75);
+
+  // Card styles - deep blue with gold accents
+  --card: oklch(0.16 0.05 245);
+  --border-color: oklch(0.52 0.12 75);
+  --outline: oklch(0.65 0.14 75);
+
+  // Text - iconic gold and light gold
+  --primary-text: oklch(0.88 0.07 85);
+  --secondary-text: oklch(0.68 0.08 75);
+  --inverted-text: oklch(0.14 0.04 245);
+
+  // States - using LoL blue for danger to stay on brand
+  --danger: #548cb4;
+  --danger-hover: rgba(84, 140, 180, 0.25);
+}
+
+[data-theme='light'][data-theme-variant='lol-classic'] {
+  --background: oklch(0.96 0.02 85);
+  --muted: oklch(0.9 0.03 85);
+  --inverted-background: oklch(0.2 0.05 245);
+
+  // Card styles - light gold/cream with blue accents
+  --card: oklch(0.93 0.025 85);
+  --border-color: oklch(0.68 0.12 75);
+  --outline: oklch(0.52 0.08 245);
+
+  // Text - deep blue with gold secondary
+  --primary-text: oklch(0.22 0.05 245);
+  --secondary-text: oklch(0.5 0.08 75);
+  --inverted-text: oklch(0.94 0.02 85);
+
+  // States
+  --danger: #548cb4;
+  --danger-hover: rgba(84, 140, 180, 0.12);
+}
