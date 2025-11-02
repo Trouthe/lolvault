@@ -35,6 +35,11 @@ export class SettingsModalComponent {
     this.themeService.setThemeVariant(select.value);
   }
 
+  onMasteryBackgroundToggle(event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    this.settingsService.toggleMasteryBackground(checkbox.checked);
+  }
+
   resetToDefault() {
     this.settingsService.resetToDefaults();
   }

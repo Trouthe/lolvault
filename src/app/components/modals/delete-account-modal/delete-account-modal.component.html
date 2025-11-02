@@ -16,8 +16,17 @@
       <p>Are you sure you want to delete this account? This action cannot be undone.</p>
       @if (account()) {
       <div class="account-info">
-        <strong>{{ account()!.name }}</strong>
-        <p>{{ account()!.username }}</p>
+        <img
+          src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
+            account()!.profileIconId || 29
+          }}.png"
+          alt="profile icon"
+          class="profile-icon"
+        />
+        <div class="account-details">
+          <strong>{{ account()!.name }}</strong>
+          <p>{{ account()!.username }}</p>
+        </div>
       </div>
       }
     </div>

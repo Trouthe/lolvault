@@ -17,23 +17,45 @@
     gap: 12px;
 
     .account-details {
-      strong {
-        color: var(--primary-text);
-        font-size: 16px;
-        font-weight: 500;
-        display: block;
-      }
+      display: flex;
+      gap: 8px;
 
-      p {
-        color: var(--secondary-text);
-        font-size: 14px;
-        font-weight: 400;
-        padding-top: 3px;
-        margin: 0;
+      div {
+        .mastery-overview {
+          position: absolute;
+          width: auto;
+          height: auto;
+        }
 
-        .server {
+        img {
+          border-radius: 8px;
+          height: 48px;
+          width: 48px;
+        }
+
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        strong {
+          color: var(--primary-text);
+          font-size: 16px;
+          font-weight: 500;
+          display: block;
+        }
+
+        p {
           color: var(--secondary-text);
-          opacity: 0.8;
+          font-size: 14px;
+          font-weight: 400;
+          padding-top: 3px;
+          margin: 0;
+
+          .server {
+            color: var(--secondary-text);
+            opacity: 0.8;
+          }
         }
       }
     }

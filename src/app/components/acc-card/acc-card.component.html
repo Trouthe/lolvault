@@ -2,13 +2,24 @@
 <div class="acc-card">
   <div class="account-info">
     <div class="account-details">
-      <strong>{{ account()!.name }}</strong>
-      <p>
-        {{ account()!.username }}
-        @if (account()!.server) {
-        <span class="server">- {{ account()!.server }}</span>
-        }
-      </p>
+      <div>
+        <img
+          src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
+            account()!.profileIconId || 29
+          }}.png"
+          alt="profile icon"
+        />
+      </div>
+
+      <div>
+        <strong>{{ account()!.name }}</strong>
+        <p>
+          {{ account()!.username }}
+          @if (account()!.server) {
+          <span class="server">- {{ account()!.server }}</span>
+          }
+        </p>
+      </div>
     </div>
     @if (account()!.rank) {
     <div class="rank-pill" [attr.data-rank]="account()!.rank?.toLowerCase()">

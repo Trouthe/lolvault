@@ -1,3 +1,11 @@
+@if (settingsService.getShowMasteryBackground() && championId()) {
+<img
+  [src]="'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'"
+  class="mastery-bg"
+  alt="Mastery Background"
+/>
+}
+
 <div class="dash-header">
   <h3>My Accounts</h3>
   <div class="header-actions">

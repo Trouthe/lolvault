@@ -2,10 +2,12 @@ import { Injectable, signal } from '@angular/core';
 
 export interface AppSettings {
   riotClientPath: string;
+  showMasteryBackground: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   riotClientPath: 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe',
+  showMasteryBackground: false,
 };
 
 @Injectable({
@@ -48,6 +50,16 @@ export class SettingsService {
 
   getRiotClientPath(): string {
     return this.settings().riotClientPath;
+  }
+
+  toggleMasteryBackground(show: boolean): void {
+    const newSettings = { ...this.settings(), showMasteryBackground: show };
+    this.settings.set(newSettings);
+    this.saveSettings(newSettings);
+  }
+
+  getShowMasteryBackground(): boolean {
+    return this.settings().showMasteryBackground;
   }
 
   resetToDefaults(): void {
