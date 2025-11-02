@@ -113,7 +113,15 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/styles.scss",
+              "src/app/styles/variables.scss",
+              "src/app/styles/colors.scss",
+              "src/app/styles/typography.scss"
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/app"]
+            },
             "scripts": []
           }
         },
