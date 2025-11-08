@@ -1,11 +1,11 @@
-// Import all theme variants
-@import './themes/default.scss';
-@import './themes/lol-classic.scss';
-@import './themes/ionia.scss';
-@import './themes/targon.scss';
-@import './themes/shurima.scss';
-@import './themes/bilgewater.scss';
-@import './themes/shadow-isles.scss';
-@import './themes/freljord.scss';
-@import './themes/noxus.scss';
-@import './themes/demacia.scss';
+// Use all theme variants
+@use './themes/default.scss';
+@use './themes/lol-classic.scss';
+@use './themes/ionia.scss';
+@use './themes/targon.scss';
+@use './themes/shurima.scss';
+@use './themes/bilgewater.scss';
+@use './themes/shadow-isles.scss';
+@use './themes/freljord.scss';
+@use './themes/noxus.scss';
+@use './themes/demacia.scss';

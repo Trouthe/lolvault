@@ -40,12 +40,7 @@
                 "output": "assets"
               }
             ],
-            "styles": [
-              "src/styles.scss",
-              "src/app/styles/variables.scss",
-              "src/app/styles/colors.scss",
-              "src/app/styles/typography.scss"
-            ],
+            "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": {
               "includePaths": ["src/app"]
             },

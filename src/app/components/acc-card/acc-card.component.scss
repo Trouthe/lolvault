@@ -20,17 +20,43 @@
       display: flex;
       gap: 8px;
 
+      .profile-icon {
+        position: relative;
+        margin-inline: 0.5rem 1rem;
+
+        img:nth-of-type(1) {
+          border-radius: 999px;
+          scale: 0.75;
+        }
+
+        img:nth-of-type(2) {
+          position: absolute;
+          bottom: 15%;
+          left: 0;
+          scale: 2;
+          @at-root .acc-card,
+            .acc-card * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+          }
+
+          & {
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+          }
+        }
+      }
+
       div {
         .mastery-overview {
           position: absolute;
           width: auto;
           height: auto;
-        }
-
-        img {
-          border-radius: 8px;
-          height: 48px;
-          width: 48px;
         }
 
         position: relative;

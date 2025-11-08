@@ -2,13 +2,17 @@
 <div class="acc-card">
   <div class="account-info">
     <div class="account-details">
-      <div>
+      <div [class]="account()!.rank ? 'profile-icon' : ''">
         <img
           src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
             account()!.profileIconId || 29
           }}.png"
           alt="profile icon"
+          width="48"
         />
+        @if (account()!.rank) {
+        <img src="assets/emblems/Wings/{{ account()!.rank }}.png" alt="wing" width="48" />
+        }
       </div>
 
       <div>
