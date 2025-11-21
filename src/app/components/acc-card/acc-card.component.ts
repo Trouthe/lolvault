@@ -94,4 +94,11 @@ export class AccCardComponent {
   onAccountDeleted(deletedAccount: Account) {
     this.accountDeleted.emit(deletedAccount);
   }
+
+  getRankName(rank: string | undefined): string {
+    if (!rank) return '';
+    const base = rank.split(' ')[0]?.trim();
+    if (!base) return '';
+    return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
+  }
 }

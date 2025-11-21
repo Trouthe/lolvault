@@ -15,7 +15,7 @@
     <form class="edit-form" (ngSubmit)="saveChanges()">
       <div class="form-row">
         <div class="form-group">
-          <label for="edit-username">Username</label>
+          <label for="edit-username">Username *</label>
           <input
             type="text"
             id="edit-username"
@@ -27,7 +27,7 @@
         </div>
 
         <div class="form-group password-group">
-          <label for="edit-password">Password</label>
+          <label for="edit-password">Password *</label>
           <div class="input-with-icon">
             <input
               [type]="showPassword() ? 'text' : 'password'"
@@ -49,45 +49,47 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="edit-displayName">Display Name</label>
-        <input
-          type="text"
-          id="edit-displayName"
-          [(ngModel)]="editForm().displayName"
-          name="displayName"
-          placeholder="Custom display name (optional)"
-        />
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="edit-server">Server</label>
-          <div class="select-wrapper">
-            <select
-              id="edit-server"
-              class="form-select"
-              [(ngModel)]="editForm().server"
-              name="server"
-            >
-              <option value="">Select Server</option>
-              @for (server of servers; track server) {
-              <option [value]="server">{{ server }}</option>
-              }
-            </select>
-          </div>
+      <div class="form-row display-tag-row">
+        <div class="form-group display-name-group">
+          <label for="edit-displayName">Display Name *</label>
+          <input
+            type="text"
+            id="edit-displayName"
+            [(ngModel)]="editForm().displayName"
+            name="displayName"
+            placeholder="Summoner name"
+            required
+          />
         </div>
 
-        <div class="form-group">
-          <label for="edit-rank">Rank</label>
-          <div class="select-wrapper">
-            <select id="edit-rank" class="form-select" [(ngModel)]="editForm().rank" name="rank">
-              <option value="">Select Rank</option>
-              @for (rank of ranks; track rank) {
-              <option [value]="rank">{{ rank }}</option>
-              }
-            </select>
-          </div>
+        <div class="form-group tag-group">
+          <label for="edit-tag">Tag *</label>
+          <input
+            type="text"
+            id="edit-tag"
+            [(ngModel)]="editForm().tag"
+            name="tag"
+            placeholder="Tag"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-server">Server *</label>
+        <div class="select-wrapper">
+          <select
+            id="edit-server"
+            class="form-select"
+            [(ngModel)]="editForm().server"
+            name="server"
+            required
+          >
+            <option value="">Select Server</option>
+            @for (server of servers; track server) {
+            <option [value]="server">{{ server }}</option>
+            }
+          </select>
         </div>
       </div>
 

@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LOL_DATA } from '../../../models/constants';
 import { Account } from '../../../models/interfaces/Account';
+import { RiotService } from '../../../services/riot.service';
 
 @Component({
   selector: 'app-add-account-modal',
@@ -12,6 +13,8 @@ import { Account } from '../../../models/interfaces/Account';
   styleUrl: './add-account-modal.component.scss',
 })
 export class AddAccountModalComponent {
+  private riotService = inject(RiotService);
+
   isOpen = input<boolean>(false);
   closeModal = output<void>();
   accountsAdded = output<Account[]>();
@@ -19,7 +22,6 @@ export class AddAccountModalComponent {
   activeTab = signal<'single' | 'bulk'>('single');
 
   servers = LOL_DATA.SERVERS;
-  ranks = LOL_DATA.RANKS;
 
   // Forms
   bulkAccountsText = signal('');
@@ -27,8 +29,8 @@ export class AddAccountModalComponent {
     username: '',
     password: '',
     displayName: '',
+    tag: '',
     server: '',
-    rank: '',
   });
 
   setActiveTab(tab: 'single' | 'bulk') {
@@ -40,19 +42,47 @@ export class AddAccountModalComponent {
     this.closeModal.emit();
   }
 
-  addSingleAccount() {
+  async addSingleAccount() {
     const acc = this.singleAccount();
-    if (!acc.username || !acc.password) {
+    if (!acc.username || !acc.password || !acc.displayName || !acc.tag || !acc.server) {
       return;
     }
+
+    // Combine displayName and tag with #
+    const fullName = `${acc.displayName}#${acc.tag}`;
+
+    // Fetch PUUID and ranked info
+    let puuid: string | undefined;
+    let fetchedRank: string | undefined;
+
+    try {
+      puuid = await this.riotService.getPUUID(acc.displayName, acc.tag, acc.server);
+      console.log('Fetched PUUID:', puuid);
+
+      // Fetch ranked info
+      const rankedInfo = await this.riotService.getRankedInfo(puuid, acc.server);
+      if (rankedInfo && rankedInfo.length > 0) {
+        // Find RANKED_SOLO_5x5 queue
+        const soloQueue = rankedInfo.find(
+          (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
+        );
+        if (soloQueue) {
+          fetchedRank = `${soloQueue.tier} ${soloQueue.rank}`;
+          console.log('Fetched rank:', fetchedRank);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Riot data:', error);
+    }
+
     const account: Account = {
-      id: Date.now(),
-      name: acc.displayName || acc.username,
+      id: puuid || Date.now(),
+      name: fullName,
       username: acc.username,
       password: acc.password,
       game: 'League of Legends',
-      server: acc.server || undefined,
-      rank: acc.rank || undefined,
+      server: acc.server,
+      rank: fetchedRank,
     };
     this.accountsAdded.emit([account]);
     this.resetForm();
@@ -69,7 +99,7 @@ export class AddAccountModalComponent {
     lines.forEach((line) => {
       const parts = line.split(':').map((p) => p.trim());
       if (parts.length >= 2) {
-        const [username, password, name, server, rank] = parts;
+        const [username, password, name, server] = parts;
         if (username && password) {
           const account: Account = {
             id: Date.now() + Math.random(),
@@ -78,7 +108,6 @@ export class AddAccountModalComponent {
             password: password,
             game: 'League of Legends',
             server: server || undefined,
-            rank: rank || undefined,
           };
           accounts.push(account);
         }
@@ -96,8 +125,8 @@ export class AddAccountModalComponent {
       username: '',
       password: '',
       displayName: '',
+      tag: '',
       server: '',
-      rank: '',
     });
     this.bulkAccountsText.set('');
   }

@@ -94,7 +94,7 @@ export class DashboardComponent {
             const puuidToUse =
               typeof account.id === 'string' && account.id.length > 20 ? account.id : null;
 
-            // Fetch FRESH data every time (profile icon and mastery - NOT SAVED)
+            // Fetch FRESH data every time (profile icon, mastery, and rank)
             if (puuidToUse) {
               try {
                 // Get basic account info for profile icon
@@ -118,6 +118,29 @@ export class DashboardComponent {
                   console.log(
                     `Top champion ID: ${account.topChampionId} (Level ${topChampion.championLevel})`
                   );
+                }
+
+                // Get ranked info and update rank
+                const rankedInfo = await this.riotService.getRankedInfo(puuidToUse, account.server);
+                if (rankedInfo && rankedInfo.length > 0) {
+                  const soloQueue = rankedInfo.find(
+                    (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
+                  );
+                  if (soloQueue) {
+                    const newRank = `${soloQueue.tier} ${soloQueue.rank}`;
+                    if (account.rank !== newRank) {
+                      account.rank = newRank;
+                      needsUpdate = true;
+                      console.log(`Updated rank to: ${newRank}`);
+                    }
+                  }
+                } else {
+                  // Clear rank if unranked
+                  if (account.rank) {
+                    account.rank = undefined;
+                    needsUpdate = true;
+                    console.log('Account is unranked, cleared rank');
+                  }
                 }
               } catch (error) {
                 console.error(`Error fetching Riot data for ${account.name}:`, error);
@@ -203,19 +226,26 @@ export class DashboardComponent {
           console.log(`Fetching Riot data for new account: ${summonerId}#${tagline}`);
 
           try {
-            // Get PUUID and use it as the account ID (NO separate puuid field)
-            const puuid = await this.riotService.getPUUID(summonerId, tagline, account.server);
-            account.id = puuid; // Use PUUID as the account ID ONLY
-            console.log(`Got PUUID: ${puuid}`);
+            // Get PUUID and use it as the account ID (if not already set)
+            if (!account.id || typeof account.id === 'number') {
+              const puuid = await this.riotService.getPUUID(summonerId, tagline, account.server);
+              account.id = puuid; // Use PUUID as the account ID ONLY
+              console.log(`Got PUUID: ${puuid}`);
+            }
+
+            const puuidToUse = typeof account.id === 'string' ? account.id : '';
 
             // Get FRESH data for display (NOT SAVED to disk)
-            const basicInfo = await this.riotService.getBasicAccountInfo(puuid, account.server);
+            const basicInfo = await this.riotService.getBasicAccountInfo(
+              puuidToUse,
+              account.server
+            );
             account.profileIconId = basicInfo.profileIconId;
             console.log(`Got profile icon: ${basicInfo.profileIconId}`);
 
             // Get top mastery champions (NOT SAVED to disk)
             const masteryData = await this.riotService.getTopMasteryChampions(
-              puuid,
+              puuidToUse,
               account.server
             );
             if (masteryData && masteryData.length > 0) {
@@ -224,6 +254,20 @@ export class DashboardComponent {
               );
               account.topChampionId = topChampion.championId.toString();
               console.log(`Top champion ID: ${account.topChampionId}`);
+            }
+
+            // Rank is already fetched by the modal, but verify/update if needed
+            if (!account.rank) {
+              const rankedInfo = await this.riotService.getRankedInfo(puuidToUse, account.server);
+              if (rankedInfo && rankedInfo.length > 0) {
+                const soloQueue = rankedInfo.find(
+                  (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
+                );
+                if (soloQueue) {
+                  account.rank = `${soloQueue.tier} ${soloQueue.rank}`;
+                  console.log(`Fetched rank: ${account.rank}`);
+                }
+              }
             }
           } catch (error) {
             console.error(`Error fetching Riot data for ${account.name}:`, error);

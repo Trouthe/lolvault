@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { input, output, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Account } from '../../../models/interfaces/Account';
 import { LOL_DATA } from '../../../models/constants';
+import { RiotService } from '../../../services/riot.service';
 
 @Component({
   selector: 'app-edit-account-modal',
@@ -12,6 +13,8 @@ import { LOL_DATA } from '../../../models/constants';
   styleUrl: './edit-account-modal.component.scss',
 })
 export class EditAccountModalComponent {
+  private riotService = inject(RiotService);
+
   isOpen = input<boolean>(false);
   account = input<Account | undefined>(undefined);
 
@@ -22,12 +25,11 @@ export class EditAccountModalComponent {
     username: '',
     password: '',
     displayName: '',
+    tag: '',
     server: '',
-    rank: '',
   });
 
   servers = LOL_DATA.SERVERS;
-  ranks = LOL_DATA.RANKS;
 
   showPassword = signal(false);
 
@@ -36,12 +38,17 @@ export class EditAccountModalComponent {
     effect(() => {
       const acc = this.account();
       if (acc) {
+        // Split name into displayName and tag if it contains #
+        const [displayName, tag] = acc.name?.includes('#')
+          ? acc.name.split('#')
+          : [acc.name || '', ''];
+
         this.editForm.set({
           username: acc.username || '',
           password: acc.password || '',
-          displayName: acc.name || '',
+          displayName: displayName,
+          tag: tag,
           server: acc.server || '',
-          rank: acc.rank || '',
         });
       }
     });
@@ -51,12 +58,16 @@ export class EditAccountModalComponent {
     const acc = this.account();
     this.showPassword.set(false);
     if (acc) {
+      const [displayName, tag] = acc.name?.includes('#')
+        ? acc.name.split('#')
+        : [acc.name || '', ''];
+
       this.editForm.set({
         username: acc.username || '',
         password: acc.password || '',
-        displayName: acc.name || '',
+        displayName: displayName,
+        tag: tag,
         server: acc.server || '',
-        rank: acc.rank || '',
       });
     }
   }
@@ -70,21 +81,56 @@ export class EditAccountModalComponent {
     this.closeModal.emit();
   }
 
-  saveChanges() {
+  async saveChanges() {
     const acc = this.account();
     const form = this.editForm();
 
-    if (!acc || !form.username || !form.password) {
+    if (
+      !acc ||
+      !form.username ||
+      !form.password ||
+      !form.displayName ||
+      !form.tag ||
+      !form.server
+    ) {
       return;
+    }
+
+    // Combine displayName and tag with #
+    const fullName = `${form.displayName}#${form.tag}`;
+
+    // Fetch PUUID and ranked info
+    let puuid: string | undefined;
+    let fetchedRank: string | undefined;
+
+    try {
+      puuid = await this.riotService.getPUUID(form.displayName, form.tag, form.server);
+      console.log('Fetched PUUID:', puuid);
+
+      // Fetch ranked info
+      const rankedInfo = await this.riotService.getRankedInfo(puuid, form.server);
+      if (rankedInfo && rankedInfo.length > 0) {
+        // Find RANKED_SOLO_5x5 queue
+        const soloQueue = rankedInfo.find(
+          (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
+        );
+        if (soloQueue) {
+          fetchedRank = `${soloQueue.tier} ${soloQueue.rank}`;
+          console.log('Fetched rank:', fetchedRank);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Riot data:', error);
     }
 
     const updatedAccount: Account = {
       ...acc,
+      id: puuid || acc.id,
       username: form.username,
       password: form.password,
-      name: form.displayName || form.username,
-      server: form.server || undefined,
-      rank: form.rank || undefined,
+      name: fullName,
+      server: form.server,
+      rank: fetchedRank,
     };
 
     this.accountUpdated.emit(updatedAccount);

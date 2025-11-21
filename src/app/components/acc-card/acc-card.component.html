@@ -11,7 +11,11 @@
           width="48"
         />
         @if (account()!.rank) {
-        <img src="assets/emblems/Wings/{{ account()!.rank }}.png" alt="wing" width="48" />
+        <img
+          src="assets/emblems/Wings/{{ getRankName(account()!.rank) }}.png"
+          alt="wing"
+          width="48"
+        />
         }
       </div>
 
@@ -25,11 +29,6 @@
         </p>
       </div>
     </div>
-    @if (account()!.rank) {
-    <div class="rank-pill" [attr.data-rank]="account()!.rank?.toLowerCase()">
-      {{ account()!.rank }}
-    </div>
-    }
   </div>
 
   <div class="button-collection">

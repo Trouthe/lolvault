@@ -101,15 +101,29 @@
       flex-direction: column;
       gap: 16px;
 
-      // user/pass + server/rank
-      > div:nth-child(1),
-      > div:nth-child(3) {
+      // user/pass row
+      > div:nth-child(1) {
         display: flex;
         flex-direction: row;
         gap: 16px;
 
         & .form-group {
           width: 50%;
+        }
+      }
+
+      // displayName + tag row
+      .form-row {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+
+        .display-name-group {
+          flex: 3; // 75%
+        }
+
+        .tag-group {
+          flex: 1; // 25%
         }
       }
     }

@@ -69,6 +69,16 @@
       .form-group {
         flex: 1;
       }
+
+      &.display-tag-row {
+        .display-name-group {
+          flex: 3; // 75%
+        }
+
+        .tag-group {
+          flex: 1; // 25%
+        }
+      }
     }
   }
 
