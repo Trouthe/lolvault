@@ -8,15 +8,6 @@
 
 <div class="dash-header">
   <h3>My Accounts</h3>
-  <div class="header-actions">
-    <button class="btn-icon-outlined settings-btn" (click)="openSettings()">
-      <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="16" />
-    </button>
-    <button class="btn-icon-outlined" (click)="addAccount()">
-      <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
-      Add Account
-    </button>
-  </div>
 </div>
 
 <div class="search-section">
@@ -29,6 +20,51 @@
       [(ngModel)]="searchQuery"
       (ngModelChange)="onSearchChange($event)"
     />
+  </div>
+  <div class="header-actions">
+    <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
+      <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="16" />
+    </button>
+    <div class="sort-menu-container">
+      <button title="Sort" class="btn-icon-outlined settings-btn" (click)="toggleSortMenu()">
+        <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
+      </button>
+      @if (isSortMenuOpen()) {
+      <div class="sort-dropdown">
+        <button
+          class="sort-option"
+          [class.active]="currentSort() === 'highest'"
+          (click)="setSortOption('highest')"
+        >
+          Highest Rank
+        </button>
+        <button
+          class="sort-option"
+          [class.active]="currentSort() === 'lowest'"
+          (click)="setSortOption('lowest')"
+        >
+          Lowest Rank
+        </button>
+        <button
+          class="sort-option"
+          [class.active]="currentSort() === 'unranked'"
+          (click)="setSortOption('unranked')"
+        >
+          Unranked
+        </button>
+        <button
+          class="sort-option"
+          [class.active]="currentSort() === 'all'"
+          (click)="setSortOption('all')"
+        >
+          Show All
+        </button>
+      </div>
+      }
+    </div>
+    <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
+      <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
+    </button>
   </div>
 </div>
 

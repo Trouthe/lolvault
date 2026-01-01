@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 import { signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { SettingsModalComponent } from '../../components/modals/settings-modal/s
 import { Account } from '../../models/interfaces/Account';
 import { RiotService } from '../../services/riot.service';
 import { SettingsService } from '../../services/settings.service';
+import { LOL_DATA } from '../../models/constants';
 
 @Component({
   selector: 'app-dashboard',
@@ -29,6 +30,8 @@ export class DashboardComponent {
   private _searchQuery = signal('');
   public searchQuery = '';
   public championId = signal<string>('');
+  public isSortMenuOpen = signal(false);
+  public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
 
   private riotService = inject(RiotService);
   public settingsService = inject(SettingsService);
@@ -36,22 +39,102 @@ export class DashboardComponent {
   // Computed property for filtered accounts
   public filteredAccounts = computed(() => {
     const query = this._searchQuery().toLowerCase().trim();
-    if (!query) {
-      return this.accounts();
+    let filtered = this.accounts();
+
+    // Apply search filter
+    if (query) {
+      filtered = filtered.filter(
+        (account) =>
+          account.name?.toLowerCase().includes(query) ||
+          account.username?.toLowerCase().includes(query) ||
+          account.server?.toLowerCase().includes(query) ||
+          account.rank?.toLowerCase().includes(query) ||
+          account.game?.toLowerCase().includes(query)
+      );
     }
 
-    return this.accounts().filter(
-      (account) =>
-        account.name?.toLowerCase().includes(query) ||
-        account.username?.toLowerCase().includes(query) ||
-        account.server?.toLowerCase().includes(query) ||
-        account.rank?.toLowerCase().includes(query) ||
-        account.game?.toLowerCase().includes(query)
-    );
+    // Apply sorting
+    const sortType = this.currentSort();
+    if (sortType === 'unranked') {
+      return filtered.filter((account) => !account.rank);
+    }
+
+    if (sortType === 'highest' || sortType === 'lowest') {
+      const sorted = [...filtered].sort((a, b) => {
+        const rankA = this.getRankValue(a.rank);
+        const rankB = this.getRankValue(b.rank);
+        return sortType === 'highest' ? rankB - rankA : rankA - rankB;
+      });
+      return sorted;
+    }
+
+    return filtered;
   });
 
   updateSearch() {
     this._searchQuery.set(this.searchQuery);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const sortContainer = target.closest('.sort-menu-container');
+    
+    if (!sortContainer && this.isSortMenuOpen()) {
+      this.isSortMenuOpen.set(false);
+    }
+  }
+
+  toggleSortMenu(): void {
+    this.isSortMenuOpen.set(!this.isSortMenuOpen());
+  }
+
+  setSortOption(option: 'all' | 'highest' | 'lowest' | 'unranked'): void {
+    this.currentSort.set(option);
+    this.isSortMenuOpen.set(false);
+  }
+
+  getSortLabel(): string {
+    const sortMap = {
+      'all': 'All Accounts',
+      'highest': 'Highest Rank',
+      'lowest': 'Lowest Rank',
+      'unranked': 'Unranked Only'
+    };
+    return sortMap[this.currentSort()];
+  }
+
+  private getRankValue(rank: string | undefined): number {
+    if (!rank) return -1; // Unranked
+
+    const rankParts = rank.split(' ');
+    const tier = rankParts[0];
+    const division = rankParts[1];
+    const normalizedTier = tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
+
+    const tierIndex = LOL_DATA.RANKS.indexOf(normalizedTier);
+    if (tierIndex === -1) {
+      console.warn(`Unknown tier: ${tier} (normalized: ${normalizedTier})`);
+      return -1;
+    }
+
+    // tier index * 4 (since each tier has 4 divisions)
+    let value = tierIndex * 4;
+
+    if (division) {
+      const divisionValues: Record<string, number> = {
+        IV: 0,
+        III: 1,
+        II: 2,
+        I: 3,
+      };
+      value += divisionValues[division] || 0;
+    } else {
+      // Master, Grandmaster, Challenger
+      value += 3; // Treat them as if they were division I
+    }
+
+    return value;
   }
 
   constructor() {
