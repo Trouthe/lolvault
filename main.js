@@ -93,7 +93,26 @@ ipcMain.handle('launch-account', async (event, accountData) => {
         }
 
         // Run PowerShell script for auto-login
-        const psCommand = `powershell -ExecutionPolicy Bypass -Command "& { . '${absolutePsFilePath}' -nircmd '${absoluteNircmdPath}' -windowTitle '${windowTitle}' -username '${account.username}' -password '${account.password}' }"`;
+        const quotePsArg = (value) => `"${String(value).replace(/"/g, '""')}"`;
+
+        const psCommand = [
+          'powershell',
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-STA',
+          '-File',
+          quotePsArg(absolutePsFilePath),
+          '-nircmd',
+          quotePsArg(absoluteNircmdPath),
+          '-windowTitle',
+          quotePsArg(windowTitle),
+          '-username',
+          quotePsArg(account.username),
+          '-password',
+          quotePsArg(account.password),
+        ].join(' ');
 
         exec(psCommand, (error, stderr) => {
           if (error) {
@@ -140,14 +159,14 @@ function getDataPath() {
     // For portable exe, check if we're running from a temp extracted location
     // If so, use a persistent location instead
     const exeDir = path.dirname(process.execPath);
-    
+
     // Check if we're in a temp directory (portable exe extracts to temp)
     if (exeDir.includes('\\AppData\\Local\\Temp\\') || exeDir.includes('\\Temp\\')) {
       // Use a persistent location in Local AppData for portable mode
       const localAppData = process.env.LOCALAPPDATA || app.getPath('appData');
       return path.join(localAppData, 'LoL Vault', 'data');
     }
-    
+
     // Otherwise, store data next to the executable
     return path.join(exeDir, 'data');
   } else {
