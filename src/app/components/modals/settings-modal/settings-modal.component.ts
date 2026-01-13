@@ -63,26 +63,34 @@ export class SettingsModalComponent {
   exportAccounts() {
     const accounts = this.accounts();
 
-    // Convert accounts to the bulk import format using ':' as separator
-    const exportData = accounts
-      .map((account) => {
-        const parts = [
-          account.username || '',
-          account.password || '',
-          account.name || account.username || '',
-          account.server || '',
-          account.rank || '',
-        ];
-        return parts.join(':');
-      })
-      .join('\n');
+    // Export as CSV format with header (decrypted data)
+    const header = 'username,password,name,server';
 
-    // Create and download the file
-    const blob = new Blob([exportData], { type: 'text/plain' });
+    const csvRows = accounts.map((account) => {
+      const escapeCSV = (field: string) => {
+        if (!field) return '';
+        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+      return [
+        escapeCSV(account.username || ''),
+        escapeCSV(account.password || ''),
+        escapeCSV(account.name || account.username || ''),
+        escapeCSV(account.server || ''),
+      ].join(',');
+    });
+
+    const csvData = [header, ...csvRows].join('\n');
+
+    // Create and download the CSV file
+    const blob = new Blob([csvData], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'accounts-export.txt';
+    link.download = 'accounts-export.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

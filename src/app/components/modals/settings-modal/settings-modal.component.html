@@ -100,14 +100,16 @@
         <h3>Data</h3>
       </div>
 
-      <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
-        <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
-        <div>
-          <span>Export Accounts</span>
-          <br />
-          <small>Download accounts in bulk import format</small>
-        </div>
-      </button>
+      <div class="export-buttons">
+        <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
+          <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
+          <div>
+            <span>Export as CSV</span>
+            <br />
+            <small>Download accounts in spreadsheet format</small>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 </div>

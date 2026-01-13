@@ -187,6 +187,12 @@
         }
       }
 
+      .export-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
       .export-btn {
         display: flex;
         flex-direction: row;

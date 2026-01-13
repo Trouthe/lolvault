@@ -3,6 +3,62 @@ const { dialog } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
+const crypto = require('crypto');
+
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
+// Generate a machine-specific encryption key
+function getEncryptionKey() {
+  // Use a combination of app-specific data to create a unique key
+  const appSecret = 'lolvault-secure-storage-v1';
+  const machineId = require('os').hostname() + require('os').userInfo().username;
+  return crypto.scryptSync(appSecret + machineId, 'lolvault-salt', 32);
+}
+
+function encrypt(text) {
+  if (!text) return text;
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const key = getEncryptionKey();
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+
+  return iv.toString('hex') + authTag.toString('hex') + encrypted;
+}
+
+function decrypt(encryptedText) {
+  if (!encryptedText) return encryptedText;
+  try {
+    const key = getEncryptionKey();
+    const iv = Buffer.from(encryptedText.slice(0, IV_LENGTH * 2), 'hex');
+    const authTag = Buffer.from(
+      encryptedText.slice(IV_LENGTH * 2, IV_LENGTH * 2 + AUTH_TAG_LENGTH * 2),
+      'hex'
+    );
+    const encrypted = encryptedText.slice(IV_LENGTH * 2 + AUTH_TAG_LENGTH * 2);
+
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    return encryptedText;
+  }
+}
+
+function encryptAccount(account) {
+  return { ...account, username: encrypt(account.username), password: encrypt(account.password) };
+}
+
+function decryptAccount(account) {
+  return { ...account, username: decrypt(account.username), password: decrypt(account.password) };
+}
 
 let mainWindow;
 
@@ -48,7 +104,7 @@ app.on('activate', () => {
 });
 
 // Handle account launch requests from renderer
-ipcMain.handle('launch-account', async (event, accountData) => {
+ipcMain.handle('launch-account', async (accountData) => {
   const { account, riotClientPath, psFilePath, nircmdPath, windowTitle } = accountData;
 
   // Resolve absolute paths for PowerShell script and nircmd
@@ -193,7 +249,8 @@ ipcMain.handle('load-accounts', async () => {
     }
 
     const data = fs.readFileSync(accountsPath, 'utf8');
-    return JSON.parse(data);
+    const accounts = JSON.parse(data);
+    return accounts.map(decryptAccount);
   } catch (error) {
     console.error('Error loading accounts:', error);
     return [];
@@ -201,7 +258,7 @@ ipcMain.handle('load-accounts', async () => {
 });
 
 // Handle saving accounts
-ipcMain.handle('save-accounts', async (event, accounts) => {
+ipcMain.handle('save-accounts', async (accounts) => {
   try {
     if (!Array.isArray(accounts)) {
       console.error(
@@ -221,7 +278,8 @@ ipcMain.handle('save-accounts', async (event, accounts) => {
       fs.mkdirSync(dataPath, { recursive: true });
     }
 
-    fs.writeFileSync(accountsPath, JSON.stringify(accounts, null, 2), 'utf8');
+    const encryptedAccounts = accounts.map(encryptAccount);
+    fs.writeFileSync(accountsPath, JSON.stringify(encryptedAccounts, null, 2), 'utf8');
     return { success: true };
   } catch (error) {
     console.error('Error saving accounts:', error);
