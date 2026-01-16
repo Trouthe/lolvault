@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Component, inject, HostListener, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -69,7 +70,7 @@ export class DashboardComponent implements OnDestroy {
   private readonly REORDER_THROTTLE_MS = 100;
   private isConfirmingBoard = false;
 
-  // Hover state for accounts (to fix stuck hover when modal opens)
+  // Hover state
   public hoveredAccountId = signal<string | null>(null);
   public hoveredFolderId = signal<string | null>(null);
 
@@ -135,8 +136,6 @@ export class DashboardComponent implements OnDestroy {
     document.removeEventListener('dragstart', this.onGlobalDragStart, true);
   }
 
-  // ========== Utility Methods ==========
-
   private getRankValue(rank: string | undefined): number {
     if (!rank) return -1;
     const [tier, division] = rank.split(' ');
@@ -148,7 +147,6 @@ export class DashboardComponent implements OnDestroy {
   }
 
   private async saveAccounts(accounts: Account[]): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const clean = accounts.map(({ profileIconId, topChampionId, ...rest }) => rest);
     await window.electronAPI.saveAccounts(clean);
   }
@@ -255,15 +253,11 @@ export class DashboardComponent implements OnDestroy {
     const allAccounts = this.accounts();
     const selectedBoardId = this.boardService.getSelectedBoardId()();
 
-    // Build new account list preserving accounts not in current view
     const reorderedIds = new Set(reorderedFiltered.map((a) => a.id));
     const otherAccounts = allAccounts.filter((a) => !reorderedIds.has(a.id));
 
-    // If viewing a specific board, insert reordered accounts at their board position
-    // Otherwise just use reordered as the new order
     let newAccounts: Account[];
     if (selectedBoardId !== null) {
-      // Find where the first board account was in the original list
       const firstBoardAccountIndex = allAccounts.findIndex((a) => a.boardId === selectedBoardId);
       if (firstBoardAccountIndex === -1) {
         newAccounts = [...otherAccounts, ...reorderedFiltered];
@@ -283,7 +277,6 @@ export class DashboardComponent implements OnDestroy {
     await this.saveAccounts(newAccounts);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onFolderDragStart(event: DragEvent, board: Board, _index: number): void {
     if (!event.dataTransfer) return;
     this.wasDragging = true;
@@ -366,19 +359,15 @@ export class DashboardComponent implements OnDestroy {
     const accountId = event.dataTransfer?.getData('text/plain');
     if (!accountId) return;
 
-    // Find the account being moved
     const account = this.accounts().find((acc) => String(acc.id) === accountId);
     if (!account) return;
 
-    // If the account is already in this folder, do nothing
     const currentAccountBoardId = account.boardId ?? null;
     if (currentAccountBoardId === boardId) return;
 
-    // Stop the account drag immediately to prevent commitAccountReorder from overwriting our changes
     this.isDraggingAccount.set(false);
     this.draggingAccountId.set(null);
 
-    // Update the account's boardId without reloading all accounts
     await this.updateAccountsAndSave((accounts) =>
       accounts.map((acc) =>
         String(acc.id) === accountId
@@ -487,14 +476,12 @@ export class DashboardComponent implements OnDestroy {
         try {
           const [summonerId, tagline] = account.name.split('#');
 
-          // Get PUUID if needed
           if (typeof account.id !== 'string' || account.id.length <= 20) {
             account.id = await this.riotService.getPUUID(summonerId, tagline, account.server);
           }
 
           const puuid = account.id as string;
 
-          // Fetch display data (not saved to disk)
           const basicInfo = await this.riotService.getBasicAccountInfo(puuid, account.server);
           account.profileIconId = basicInfo.profileIconId;
 

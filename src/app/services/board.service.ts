@@ -50,20 +50,8 @@ export class BoardService {
   async loadBoards(): Promise<Board[]> {
     try {
       const loadedBoards = await window.electronAPI.loadBoards();
-      // Migrate boards without colors
-      let needsSave = false;
-      const migratedBoards = loadedBoards.map((board) => {
-        if (!board.color) {
-          needsSave = true;
-          return { ...board, color: getRandomFolderColor() };
-        }
-        return board;
-      });
-      this.boards.set(migratedBoards);
-      if (needsSave) {
-        await window.electronAPI.saveBoards(migratedBoards);
-      }
-      return migratedBoards;
+      this.boards.set(loadedBoards);
+      return loadedBoards;
     } catch (error) {
       console.error('Error loading boards:', error);
       return [];

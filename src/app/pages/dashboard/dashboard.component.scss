@@ -1,5 +1,4 @@
 section {
-  // max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -40,7 +39,7 @@ section:first-of-type > div:first-of-type {
   flex-direction: column;
   gap: 16px;
   position: relative;
-  overflow: visible; // Allow grip handles to show outside
+  overflow: visible;
 
   .branding {
     margin-bottom: 8px;
@@ -55,7 +54,6 @@ section:first-of-type > div:first-of-type {
     overflow-x: visible;
     padding-bottom: 16px;
 
-    // Hide scrollbar
     &::-webkit-scrollbar {
       display: none;
     }
@@ -67,6 +65,7 @@ section:first-of-type > div:first-of-type {
       align-items: center;
       gap: 10px;
       padding: 10px 12px;
+      min-width: 0;
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease,
@@ -74,7 +73,6 @@ section:first-of-type > div:first-of-type {
       border: 2px solid transparent;
       position: relative;
 
-      // Extended hover zone to the left - must be wide enough to cover translateX shift
       &::before {
         content: '';
         position: absolute;
@@ -126,7 +124,6 @@ section:first-of-type > div:first-of-type {
         }
       }
 
-      // Non-draggable folders just get background on hover
       &:not(.draggable):hover {
         background-color: var(--card);
       }
@@ -216,6 +213,9 @@ section:first-of-type > div:first-of-type {
       .board-name-input,
       .new-board-name-input {
         flex: 1;
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
         background: var(--background);
         border: 1px solid var(--border-color);
         border-radius: 4px;
@@ -272,7 +272,6 @@ section:first-of-type > div:nth-of-type(2) {
   overflow-y: auto;
   height: calc(100vh - 32px);
 
-  // Hide scrollbar
   &::-webkit-scrollbar {
     display: none;
   }
@@ -293,7 +292,7 @@ section:first-of-type > div:nth-of-type(2) {
   }
 
   .accounts-list {
-    min-height: 100px; // Ensure drop zone is available even with few accounts
+    min-height: 100px;
   }
 
   .dash-header {
@@ -407,12 +406,10 @@ section:first-of-type > div:nth-of-type(2) {
     }
   }
 
-  // Account drag wrapper - contains grip handle and card
   .account-drag-wrapper {
     position: relative;
     transition: transform 0.15s ease, padding-right 0.15s ease;
 
-    // Extended hover zone to the left - must be wide enough to cover translateX shift
     &::before {
       content: '';
       position: absolute;
@@ -452,7 +449,7 @@ section:first-of-type > div:nth-of-type(2) {
     }
 
     &.hovered:not(.dragging) {
-      transform: translateX(24px); // Slide right to reveal grip
+      transform: translateX(24px);
       padding-right: 24px;
 
       .account-drag-handle {
