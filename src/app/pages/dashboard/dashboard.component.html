@@ -1,91 +1,128 @@
-@if (settingsService.getShowMasteryBackground() && championId()) {
-<img
-  [src]="'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'"
-  class="mastery-bg"
-  alt="Mastery Background"
-/>
-}
+<section>
+  <!-- Left Side -->
+  <div>
+    <!-- Branding -->
+    <div>
+      <h1>LoL Vault</h1>
+      <h4>All your accounts – tracked in one place</h4>
 
-<div class="dash-header">
-  <h3>My Accounts</h3>
-</div>
-
-<div class="search-section">
-  <div class="search-container">
-    <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
-    <input
-      type="text"
-      class="search-input"
-      placeholder="Search accounts by name, username, server, or rank..."
-      [(ngModel)]="searchQuery"
-      (ngModelChange)="onSearchChange($event)"
-    />
-  </div>
-  <div class="header-actions">
-    <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
-      <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="16" />
-    </button>
-    <div class="sort-menu-container">
-      <button title="Sort" class="btn-icon-outlined settings-btn" (click)="toggleSortMenu()">
-        <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
-      </button>
-      @if (isSortMenuOpen()) {
-      <div class="sort-dropdown">
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'highest'"
-          (click)="setSortOption('highest')"
-        >
-          Highest Rank
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'lowest'"
-          (click)="setSortOption('lowest')"
-        >
-          Lowest Rank
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'unranked'"
-          (click)="setSortOption('unranked')"
-        >
-          Unranked
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'all'"
-          (click)="setSortOption('all')"
-        >
-          Show All
-        </button>
-      </div>
-      }
+      <span>v{{ version[0] }} (831-{{ version[1] }})</span>
     </div>
-    <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
-      <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
-    </button>
+
+    <div class="folder">
+
+    </div>
+
+    <div class="sidebar-buttons">
+      <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
+        <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="18" />
+        Settings
+      </button>
+
+      <button title="Refresh All Accounts" class="btn-icon-outlined new-board-btn">
+        <img src="assets/icons/plus.svg" class="icon" alt="Refresh" width="18" />
+        New Board
+      </button>
+    </div>
   </div>
-</div>
 
-@for (account of filteredAccounts(); track account.id) {
-<app-acc-card
-  [account]="account"
-  (accountUpdated)="onAccountUpdated($event)"
-  (accountDeleted)="onAccountDeleted($event)"
-/>
-}
+  <!-- Right Side -->
+  <div>
+    <!-- Actual Data -->
+    <div class="data">
+      @if (settingsService.getShowMasteryBackground() && championId()) {
+      <img
+        [src]="
+          'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
+        "
+        class="mastery-bg"
+        alt="Mastery Background"
+      />
+      }
 
-<!-- Add Account Modal -->
-<app-add-account-modal
-  [isOpen]="isModalOpen()"
-  (closeModal)="closeModal()"
-  (accountsAdded)="onAccountsAdded($event)"
-/>
+      <div class="dash-header">
+        <h1>My Accounts</h1>
+      </div>
 
-<!-- Settings Modal -->
-<app-settings-modal
-  [isOpen]="isSettingsOpen()"
-  [accounts]="accounts()"
-  (closeModal)="closeSettings()"
-/>
+      <div class="search-section">
+        <div class="search-container">
+          <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search accounts by name, username, server, or rank..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </div>
+        <div class="header-actions">
+          <div class="sort-menu-container">
+            <button title="Sort" class="btn-icon-outlined settings-btn" (click)="toggleSortMenu()">
+              <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
+            </button>
+            @if (isSortMenuOpen()) {
+            <div class="sort-dropdown">
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'highest'"
+                (click)="setSortOption('highest')"
+              >
+                Highest Rank
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'lowest'"
+                (click)="setSortOption('lowest')"
+              >
+                Lowest Rank
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'unranked'"
+                (click)="setSortOption('unranked')"
+              >
+                Unranked
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'all'"
+                (click)="setSortOption('all')"
+              >
+                Show All
+              </button>
+            </div>
+            }
+          </div>
+          <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
+            <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
+          </button>
+        </div>
+      </div>
+
+      @for (account of filteredAccounts(); track account.id) {
+      <app-acc-card
+        [account]="account"
+        (accountUpdated)="onAccountUpdated($event)"
+        (accountDeleted)="onAccountDeleted($event)"
+      />
+      }
+
+      <!-- Add Account Modal -->
+      <app-add-account-modal
+        [isOpen]="isModalOpen()"
+        (closeModal)="closeModal()"
+        (accountsAdded)="onAccountsAdded($event)"
+      />
+
+      <!-- Settings Modal -->
+      <app-settings-modal
+        [isOpen]="isSettingsOpen()"
+        [accounts]="accounts()"
+        (closeModal)="closeSettings()"
+      />
+
+      <!-- Footer -->
+      <p>League of Legends is a trademark of Riot Games, Inc.</p>
+    </div>
+  </div>
+</section>

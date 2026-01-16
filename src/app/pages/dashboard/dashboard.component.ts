@@ -9,6 +9,7 @@ import { Account } from '../../models/interfaces/Account';
 import { RiotService } from '../../services/riot.service';
 import { SettingsService } from '../../services/settings.service';
 import { LOL_DATA } from '../../models/constants';
+import { VERSION, REVISION } from '../../../environments/version';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,6 +25,8 @@ import { LOL_DATA } from '../../models/constants';
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
+  version = [VERSION, REVISION];
+
   public accounts = signal<Account[]>([]);
   public isModalOpen = signal(false);
   public isSettingsOpen = signal(false);
@@ -79,7 +82,7 @@ export class DashboardComponent {
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     const sortContainer = target.closest('.sort-menu-container');
-    
+
     if (!sortContainer && this.isSortMenuOpen()) {
       this.isSortMenuOpen.set(false);
     }
@@ -96,10 +99,10 @@ export class DashboardComponent {
 
   getSortLabel(): string {
     const sortMap = {
-      'all': 'All Accounts',
-      'highest': 'Highest Rank',
-      'lowest': 'Lowest Rank',
-      'unranked': 'Unranked Only'
+      all: 'All Accounts',
+      highest: 'Highest Rank',
+      lowest: 'Lowest Rank',
+      unranked: 'Unranked Only',
     };
     return sortMap[this.currentSort()];
   }
