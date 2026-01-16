@@ -99,11 +99,6 @@ section:first-of-type > div:first-of-type {
         &:active {
           cursor: grabbing;
         }
-
-        img {
-          opacity: 0.6;
-          filter: invert(1);
-        }
       }
 
       &.dragging {
@@ -129,7 +124,7 @@ section:first-of-type > div:first-of-type {
       }
 
       &.active {
-        background-color: var(--outline);
+        background-color: var(--card);
 
         .folder-name {
           font-weight: 600;
@@ -137,8 +132,8 @@ section:first-of-type > div:first-of-type {
         }
 
         .folder-actions .folder-count {
-          background-color: rgba(255, 255, 255, 0.2);
-          color: var(--primary-text);
+          background-color: var(--outline);
+          color: var(--inverted-text);
         }
 
         .folder-color-dot {
@@ -178,6 +173,7 @@ section:first-of-type > div:first-of-type {
         .folder-count {
           font-size: 12px;
           background-color: var(--border-color);
+          color: var(--inverted-text);
           padding: 2px 8px;
           border-radius: 10px;
           min-width: 24px;
@@ -440,11 +436,6 @@ section:first-of-type > div:nth-of-type(2) {
 
       &:active {
         cursor: grabbing;
-      }
-
-      img {
-        opacity: 0.6;
-        filter: invert(1);
       }
     }
 

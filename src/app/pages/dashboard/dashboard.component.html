@@ -54,7 +54,7 @@
           draggable="true"
           (dragstart)="onFolderDragStart($event, board, i)"
         >
-          <img src="assets/icons/grip.svg" alt="Drag" width="12" />
+          <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon"/>
         </div>
         <span
           class="folder-color-dot"
@@ -218,7 +218,7 @@
             [attr.data-account-id]="account.id"
             [attr.data-account-index]="i"
           >
-            <img src="assets/icons/grip.svg" alt="Drag" width="16" />
+            <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon"/>
           </div>
           <app-acc-card
             [account]="account"
