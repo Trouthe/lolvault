@@ -1,0 +1,28 @@
+$folder-coral: #ff6b6b;
+$folder-orange: #ffa94d;
+$folder-yellow: #ffd43b;
+$folder-lime: #a9e34b;
+$folder-teal: #38d9a9;
+$folder-cyan: #22b8cf;
+$folder-blue: #4dabf7;
+$folder-indigo: #748ffc;
+$folder-violet: #9775fa;
+$folder-pink: #f783ac;
+$folder-rose: #f06595;
+$folder-mint: #63e6be;
+
+:root {
+  --folder-color-default: #{$folder-blue};
+  --folder-color-coral: #{$folder-coral};
+  --folder-color-orange: #{$folder-orange};
+  --folder-color-yellow: #{$folder-yellow};
+  --folder-color-lime: #{$folder-lime};
+  --folder-color-teal: #{$folder-teal};
+  --folder-color-cyan: #{$folder-cyan};
+  --folder-color-blue: #{$folder-blue};
+  --folder-color-indigo: #{$folder-indigo};
+  --folder-color-violet: #{$folder-violet};
+  --folder-color-pink: #{$folder-pink};
+  --folder-color-rose: #{$folder-rose};
+  --folder-color-mint: #{$folder-mint};
+}

@@ -267,3 +267,52 @@ ipcMain.handle('save-accounts', async (event, accounts) => {
     return { success: false, error: error.message };
   }
 });
+
+// Handle loading boards
+ipcMain.handle('load-boards', async () => {
+  try {
+    const dataPath = getDataPath();
+    const boardsPath = path.join(dataPath, 'boards.json');
+
+    // Ensure the data directory exists
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true });
+    }
+
+    // If boards.json doesn't exist, create it with an empty array
+    if (!fs.existsSync(boardsPath)) {
+      fs.writeFileSync(boardsPath, '[]', 'utf8');
+      return [];
+    }
+
+    const data = fs.readFileSync(boardsPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading boards:', error);
+    return [];
+  }
+});
+
+// Handle saving boards
+ipcMain.handle('save-boards', async (event, boards) => {
+  try {
+    if (!Array.isArray(boards)) {
+      console.error('save-boards received non-array data, rejecting save.');
+      return { success: false, error: 'Invalid data: boards must be an array' };
+    }
+
+    const dataPath = getDataPath();
+    const boardsPath = path.join(dataPath, 'boards.json');
+
+    // Ensure the data directory exists
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true });
+    }
+
+    fs.writeFileSync(boardsPath, JSON.stringify(boards, null, 2), 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving boards:', error);
+    return { success: false, error: error.message };
+  }
+});

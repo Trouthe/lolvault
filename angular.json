@@ -32,7 +32,7 @@
                 "glob": "**/*",
                 "input": "src/app/data",
                 "output": "data",
-                "ignore": ["accounts.json"]
+                "ignore": ["accounts.json", "boards.json"]
               },
               {
                 "glob": "**/*",

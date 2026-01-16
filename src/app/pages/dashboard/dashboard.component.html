@@ -1,91 +1,279 @@
-@if (settingsService.getShowMasteryBackground() && championId()) {
-<img
-  [src]="'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'"
-  class="mastery-bg"
-  alt="Mastery Background"
-/>
-}
+<section>
+  <!-- Left Side -->
+  <div>
+    <!-- Branding -->
+    <div class="branding">
+      <div>
+        <img
+          src="assets/branding/LV-no-bg_{{ themeService.getOppositeTheme() }}.svg"
+          alt="LoL Vault Logo"
+          width="32"
+        />
+        <h1>LoL Vault</h1>
+      </div>
+      <h4>All your accounts – tracked in one place</h4>
 
-<div class="dash-header">
-  <h3>My Accounts</h3>
-</div>
+      <span>v{{ version[0] }} (831-{{ version[1] }})</span>
+    </div>
 
-<div class="search-section">
-  <div class="search-container">
-    <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
-    <input
-      type="text"
-      class="search-input"
-      placeholder="Search accounts by name, username, server, or rank..."
-      [(ngModel)]="searchQuery"
-      (ngModelChange)="onSearchChange($event)"
-    />
-  </div>
-  <div class="header-actions">
-    <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
-      <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="16" />
-    </button>
-    <div class="sort-menu-container">
-      <button title="Sort" class="btn-icon-outlined settings-btn" (click)="toggleSortMenu()">
-        <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
-      </button>
-      @if (isSortMenuOpen()) {
-      <div class="sort-dropdown">
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'highest'"
-          (click)="setSortOption('highest')"
+    <hr />
+
+    <!-- Board/Folder List -->
+    <div class="folder-list">
+      <!-- All Accounts (always visible) -->
+      <div
+        class="folder-item"
+        tabindex="0"
+        role="button"
+        [class.active]="boardService.getSelectedBoardId()() === null"
+        [class.drag-over]="dragOverBoardId() === 'all'"
+        (click)="selectBoard(null)"
+        (keydown.enter)="selectBoard(null)"
+        (dragover)="onDragOver($event, null)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event, null)"
+      >
+        <span class="folder-color-dot" [style.background-color]="getFolderColor('default')"></span>
+        <span class="folder-name">All Accounts</span>
+        <div class="folder-actions">
+          <span class="folder-count">{{ totalAccountCount() }}</span>
+        </div>
+      </div>
+
+      <!-- User Created Boards -->
+      @for (board of displayedBoards(); track board.id; let i = $index) {
+      <div
+        class="folder-item draggable"
+        tabindex="0"
+        role="button"
+        [class.active]="boardService.getSelectedBoardId()() === board.id"
+        [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
+        [class.dragging]="draggingFolderId() === board.id"
+        [class.hovered]="hoveredFolderId() === board.id"
+        (click)="selectBoard(board.id)"
+        (keydown.enter)="selectBoard(board.id)"
+        (mouseenter)="onFolderMouseEnter(board.id)"
+        (mouseleave)="onFolderMouseLeave()"
+        (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event, board.id)"
+      >
+        <div
+          class="folder-drag-handle"
+          draggable="true"
+          (dragstart)="onFolderDragStart($event, board, i)"
         >
-          Highest Rank
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'lowest'"
-          (click)="setSortOption('lowest')"
-        >
-          Lowest Rank
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'unranked'"
-          (click)="setSortOption('unranked')"
-        >
-          Unranked
-        </button>
-        <button
-          class="sort-option"
-          [class.active]="currentSort() === 'all'"
-          (click)="setSortOption('all')"
-        >
-          Show All
-        </button>
+          <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
+        </div>
+        <span
+          class="folder-color-dot"
+          [style.background-color]="getFolderColor(board.color)"
+        ></span>
+        @if (editingBoardId() === board.id) {
+        <input
+          type="text"
+          class="board-name-input"
+          [value]="editingBoardName()"
+          (input)="editingBoardName.set($any($event.target).value)"
+          (keydown)="onEditBoardKeydown($event)"
+          (blur)="confirmEditBoard()"
+          (click)="$event.stopPropagation()"
+        />
+        } @else {
+        <span class="folder-name" (dblclick)="startEditingBoard(board, $event)">{{
+          board.name
+        }}</span>
+        }
+        <div class="folder-actions">
+          <button
+            class="folder-delete-btn"
+            (click)="deleteBoard(board.id, $event)"
+            title="Delete board"
+          >
+            <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+          </button>
+          <span class="folder-count">{{ getAccountCountForBoard(board.id) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- New Board Input -->
+      @if (isCreatingBoard()) {
+      <div class="folder-item new-board-input-container">
+        <span
+          class="folder-color-dot"
+          [style.background-color]="getFolderColor(newBoardColor())"
+        ></span>
+        <input
+          #newBoardInput
+          type="text"
+          class="new-board-name-input"
+          placeholder="Board name..."
+          [value]="newBoardName()"
+          (input)="newBoardName.set($any($event.target).value)"
+          (keydown)="onNewBoardKeydown($event)"
+          (blur)="onNewBoardBlur()"
+        />
       </div>
       }
     </div>
-    <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
-      <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
-    </button>
+
+    <div class="sidebar-buttons">
+      <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
+        <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="17" />
+        Settings
+      </button>
+
+      <button
+        title="New Board"
+        class="btn-icon-outlined new-board-btn"
+        (click)="startCreatingBoard()"
+      >
+        <img src="assets/icons/plus.svg" class="icon" alt="New Board" width="17" />
+        New Board
+      </button>
+    </div>
   </div>
-</div>
 
-@for (account of filteredAccounts(); track account.id) {
-<app-acc-card
-  [account]="account"
-  (accountUpdated)="onAccountUpdated($event)"
-  (accountDeleted)="onAccountDeleted($event)"
-/>
-}
+  <!-- Right Side -->
+  <div>
+    <!-- Actual Data -->
+    <div class="data">
+      @if (settingsService.getShowMasteryBackground() && championId()) {
+      <img
+        [src]="
+          'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
+        "
+        class="mastery-bg"
+        alt="Mastery Background"
+      />
+      }
 
-<!-- Add Account Modal -->
-<app-add-account-modal
-  [isOpen]="isModalOpen()"
-  (closeModal)="closeModal()"
-  (accountsAdded)="onAccountsAdded($event)"
-/>
+      <div class="dash-header">
+        <h1>{{ getCurrentBoardName() }}</h1>
+      </div>
 
-<!-- Settings Modal -->
-<app-settings-modal
-  [isOpen]="isSettingsOpen()"
-  [accounts]="accounts()"
-  (closeModal)="closeSettings()"
-/>
+      <div class="search-section">
+        <div class="search-container">
+          <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search accounts by name, username, server, or rank..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </div>
+        <div class="header-actions">
+          <div class="sort-menu-container">
+            <button title="Sort" class="btn-icon-outlined settings-btn" (click)="toggleSortMenu()">
+              <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
+            </button>
+            @if (isSortMenuOpen()) {
+            <div class="sort-dropdown">
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'highest'"
+                (click)="setSortOption('highest')"
+              >
+                Highest Rank
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'lowest'"
+                (click)="setSortOption('lowest')"
+              >
+                Lowest Rank
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'unranked'"
+                (click)="setSortOption('unranked')"
+              >
+                Unranked
+              </button>
+              <button
+                class="sort-option"
+                [class.active]="currentSort() === 'all'"
+                (click)="setSortOption('all')"
+              >
+                Show All
+              </button>
+            </div>
+            }
+          </div>
+          <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
+            <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="accounts-list"
+        (dragover)="onAccountsListDragOver($event)"
+        (drop)="onAccountsListDrop($event)"
+      >
+        @for (account of displayedAccounts(); track account.id; let i = $index) {
+        <div
+          class="account-drag-wrapper"
+          [class.dragging]="draggingAccountId() === account.id.toString()"
+          [class.hovered]="hoveredAccountId() === account.id.toString()"
+          (mouseenter)="onAccountMouseEnter(account.id.toString())"
+          (mouseleave)="onAccountMouseLeave()"
+        >
+          <div
+            class="account-drag-handle"
+            draggable="true"
+            [attr.data-account-id]="account.id"
+            [attr.data-account-index]="i"
+          >
+            <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+          </div>
+          <app-acc-card
+            [account]="account"
+            [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
+            (dragover)="onAccountDragOver($event, i)"
+            (drop)="onAccountDrop($event)"
+            (editRequested)="openEditModal($event)"
+            (deleteRequested)="openDeleteModal($event)"
+            (removeFromFolderRequested)="onRemoveFromFolder($event)"
+          />
+        </div>
+        }
+      </div>
+
+      <!-- Add Account Modal -->
+      <app-add-account-modal
+        [isOpen]="isModalOpen()"
+        (closeModal)="closeModal()"
+        (accountsAdded)="onAccountsAdded($event)"
+      />
+
+      <!-- Edit Account Modal -->
+      <app-edit-account-modal
+        [isOpen]="isEditModalOpen()"
+        [account]="editingAccount()"
+        (closeModal)="closeEditModal()"
+        (accountUpdated)="onAccountUpdated($event)"
+      />
+
+      <!-- Delete Account Modal -->
+      <app-delete-account-modal
+        [isOpen]="isDeleteModalOpen()"
+        [account]="deletingAccount()"
+        (closeModal)="closeDeleteModal()"
+        (accountDeleted)="onAccountDeleted($event)"
+      />
+
+      <!-- Settings Modal -->
+      <app-settings-modal
+        [isOpen]="isSettingsOpen()"
+        [accounts]="accounts()"
+        (closeModal)="closeSettings()"
+      />
+
+      <!-- Footer -->
+      <p>League of Legends is a trademark of Riot Games, Inc.</p>
+    </div>
+  </div>
+</section>
