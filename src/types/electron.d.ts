@@ -1,4 +1,5 @@
 import { Account } from '../app/components/modals/add-account-modal/add-account-modal.component';
+import { Board } from '../app/models/interfaces/Board';
 
 export interface LaunchAccountData {
   account: Account;
@@ -17,6 +18,8 @@ export interface ElectronAPI {
   launchAccount: (accountData: LaunchAccountData) => Promise<LaunchResult>;
   loadAccounts: () => Promise<Account[]>;
   saveAccounts: (accounts: Account[]) => Promise<{ success: boolean; error?: string }>;
+  loadBoards: () => Promise<Board[]>;
+  saveBoards: (boards: Board[]) => Promise<{ success: boolean; error?: string }>;
   openFilePicker: (options?: {
     title?: string;
     defaultPath?: string;

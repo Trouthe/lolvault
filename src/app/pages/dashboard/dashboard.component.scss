@@ -3,11 +3,6 @@ section {
   margin: 0 auto;
 }
 
-hr {
-  border: 1px solid var(--border-color);
-  max-width: 1200px;
-}
-
 h1 {
   font-weight: 700;
 }
@@ -44,20 +39,227 @@ section:first-of-type > div:first-of-type {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+  overflow: visible; // Allow grip handles to show outside
+
+  .branding {
+    margin-bottom: 8px;
+  }
+
+  .folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible;
+    padding-bottom: 16px;
+
+    // Hide scrollbar
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease,
+        transform 0.15s ease, padding-right 0.15s ease;
+      border: 2px solid transparent;
+      position: relative;
+
+      // Extended hover zone to the left - must be wide enough to cover translateX shift
+      &::before {
+        content: '';
+        position: absolute;
+        left: -48px;
+        top: 0;
+        bottom: 0;
+        width: 48px;
+      }
+
+      .folder-drag-handle {
+        position: absolute;
+        left: -28px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 8px;
+        cursor: grab;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        border-radius: 4px;
+
+        &:active {
+          cursor: grabbing;
+        }
+
+        img {
+          opacity: 0.6;
+          filter: invert(1);
+        }
+      }
+
+      &.dragging {
+        opacity: 0.4;
+      }
+
+      &.draggable.hovered:not(.dragging) {
+        background-color: var(--card);
+        transform: translateX(24px);
+        padding-right: 36px;
+
+        .folder-drag-handle {
+          opacity: 1;
+        }
+
+        .folder-actions .folder-delete-btn {
+          opacity: 1;
+        }
+      }
+
+      // Non-draggable folders just get background on hover
+      &:not(.draggable):hover {
+        background-color: var(--card);
+      }
+
+      &.active {
+        background-color: var(--outline);
+
+        .folder-name {
+          font-weight: 600;
+          color: var(--primary-text);
+        }
+
+        .folder-actions .folder-count {
+          background-color: rgba(255, 255, 255, 0.2);
+          color: var(--primary-text);
+        }
+
+        .folder-color-dot {
+          filter: brightness(1.2);
+        }
+      }
+
+      &.drag-over:not(.dragging) {
+        border-color: var(--outline);
+        background-color: color-mix(in srgb, var(--outline) 20%, transparent);
+      }
+
+      .folder-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: filter 0.15s ease;
+      }
+
+      .folder-name {
+        flex: 1;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: color 0.15s ease;
+      }
+
+      .folder-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        margin-left: auto;
+
+        .folder-count {
+          font-size: 12px;
+          background-color: var(--border-color);
+          padding: 2px 8px;
+          border-radius: 10px;
+          min-width: 24px;
+          text-align: center;
+        }
+
+        .folder-delete-btn {
+          width: 20px;
+          height: 20px;
+          opacity: 0;
+          background: none;
+          border: none;
+          padding: 4px;
+          cursor: pointer;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          img {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+            flex-shrink: 0;
+          }
+        }
+
+        .folder-delete-btn:hover {
+          background-color: rgba(255, 0, 0, 0.2);
+        }
+      }
+
+      .board-name-input,
+      .new-board-name-input {
+        flex: 1;
+        background: var(--background);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 14px;
+        color: var(--primary-text);
+        outline: none;
+
+        &:focus {
+          border-color: var(--outline);
+        }
+      }
+    }
+
+    .new-board-input-container {
+      background-color: var(--card);
+    }
+  }
 
   .sidebar-buttons {
     display: flex;
     flex-direction: column;
     gap: 12px;
     margin-top: auto;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -38px;
+      left: -16px;
+      right: -16px;
+      height: 24px;
+      background: linear-gradient(to top, var(--background) 0%, transparent 100%);
+      pointer-events: none;
+    }
 
     .settings-btn,
     .new-board-btn {
       justify-content: center;
       border: 2px dashed var(--border-color);
       border-radius: 12px;
-      font-size: 1rem;
-      padding: 16px;
+      font-size: 0.825rem;
+      padding: 14px;
       width: 100%;
     }
   }
@@ -67,6 +269,15 @@ section:first-of-type > div:first-of-type {
 section:first-of-type > div:nth-of-type(2) {
   padding: 16px;
   width: 75%;
+  overflow-y: auto;
+  height: calc(100vh - 32px);
+
+  // Hide scrollbar
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .data {
@@ -79,6 +290,10 @@ section:first-of-type > div:nth-of-type(2) {
     object-fit: cover;
     z-index: -1;
     opacity: 0.15;
+  }
+
+  .accounts-list {
+    min-height: 100px; // Ensure drop zone is available even with few accounts
   }
 
   .dash-header {
@@ -188,6 +403,60 @@ section:first-of-type > div:nth-of-type(2) {
           outline: none;
           border-color: var(--outline);
         }
+      }
+    }
+  }
+
+  // Account drag wrapper - contains grip handle and card
+  .account-drag-wrapper {
+    position: relative;
+    transition: transform 0.15s ease, padding-right 0.15s ease;
+
+    // Extended hover zone to the left - must be wide enough to cover translateX shift
+    &::before {
+      content: '';
+      position: absolute;
+      left: -56px;
+      top: 0;
+      bottom: 0;
+      width: 56px;
+    }
+
+    &.dragging {
+      opacity: 0.4;
+    }
+
+    .account-drag-handle {
+      position: absolute;
+      left: -32px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 10px;
+      cursor: grab;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      border-radius: 4px;
+      z-index: 10;
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      img {
+        opacity: 0.6;
+        filter: invert(1);
+      }
+    }
+
+    &.hovered:not(.dragging) {
+      transform: translateX(24px); // Slide right to reveal grip
+      padding-right: 24px;
+
+      .account-drag-handle {
+        opacity: 1;
       }
     }
   }

@@ -1,5 +1,6 @@
 @use 'styles/colors';
 @use 'styles/typography';
+@use 'app/styles/folder-colors';
 
 // Components
 @use 'styles/shared/button';
@@ -22,4 +23,12 @@ body {
 
 [data-theme='light'] .icon {
   filter: invert(1);
+}
+
+// Drag preview for account cards
+.drag-preview {
+  border-radius: 12px !important;
+  background-color: var(--card) !important;
+  border: 2px solid var(--outline) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }

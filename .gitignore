@@ -48,3 +48,4 @@ Thumbs.db
 
 # accs
 src/app/data/accounts.json
+src/app/data/boards.json

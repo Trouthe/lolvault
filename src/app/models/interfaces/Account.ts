@@ -8,4 +8,5 @@ export interface Account {
   rank?: string;
   profileIconId?: number;
   topChampionId?: string;
+  boardId?: string; // ID of the board/folder this account belongs to
 }

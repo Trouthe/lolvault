@@ -1,5 +1,10 @@
 @if (account()) {
 <div class="acc-card">
+  @if (showRemoveFromFolder()) {
+  <button class="remove-from-folder-btn" (click)="requestRemoveFromFolder()" title="Remove from folder">
+    <img src="assets/icons/plus.svg" alt="Remove" width="12" />
+  </button>
+  }
   <div class="account-info">
     <div class="account-details">
       <div [class]="account()!.rank ? 'profile-icon' : ''">
@@ -32,10 +37,10 @@
   </div>
 
   <div class="button-collection">
-    <button class="action-btn delete-btn" (click)="openDeleteModal()" title="Delete Account">
+    <button class="action-btn delete-btn" (click)="requestDelete()" title="Delete Account">
       <img src="assets/icons/trash.svg" alt="Delete" width="16" />
     </button>
-    <button class="action-btn edit-btn" (click)="openEditModal()" title="Edit Account">
+    <button class="action-btn edit-btn" (click)="requestEdit()" title="Edit Account">
       <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
     </button>
     <hr />
@@ -54,20 +59,4 @@
     </button>
   </div>
 </div>
-
-<!-- Edit Account Modal -->
-<app-edit-account-modal
-  [isOpen]="isEditModalOpen()"
-  [account]="account()"
-  (closeModal)="closeEditModal()"
-  (accountUpdated)="onAccountUpdated($event)"
-></app-edit-account-modal>
-
-<!-- Delete Account Modal -->
-<app-delete-account-modal
-  [isOpen]="isDeleteModalOpen()"
-  [account]="account()"
-  (closeModal)="closeDeleteModal()"
-  (accountDeleted)="onAccountDeleted($event)"
-></app-delete-account-modal>
 }

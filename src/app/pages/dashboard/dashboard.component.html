@@ -2,25 +2,122 @@
   <!-- Left Side -->
   <div>
     <!-- Branding -->
-    <div>
+    <div class="branding">
       <h1>LoL Vault</h1>
       <h4>All your accounts – tracked in one place</h4>
 
       <span>v{{ version[0] }} (831-{{ version[1] }})</span>
     </div>
 
-    <div class="folder">
+    <!-- Board/Folder List -->
+    <div class="folder-list">
+      <!-- All Accounts (always visible) -->
+      <div
+        class="folder-item"
+        tabindex="0"
+        role="button"
+        [class.active]="boardService.getSelectedBoardId()() === null"
+        [class.drag-over]="dragOverBoardId() === 'all'"
+        (click)="selectBoard(null)"
+        (keydown.enter)="selectBoard(null)"
+        (dragover)="onDragOver($event, null)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event, null)"
+      >
+        <span class="folder-color-dot" style="background-color: #4dabf7"></span>
+        <span class="folder-name">All Accounts</span>
+        <div class="folder-actions">
+          <span class="folder-count">{{ totalAccountCount() }}</span>
+        </div>
+      </div>
 
+      <!-- User Created Boards -->
+      @for (board of displayedBoards(); track board.id; let i = $index) {
+      <div
+        class="folder-item draggable"
+        tabindex="0"
+        role="button"
+        [class.active]="boardService.getSelectedBoardId()() === board.id"
+        [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
+        [class.dragging]="draggingFolderId() === board.id"
+        [class.hovered]="hoveredFolderId() === board.id"
+        (click)="selectBoard(board.id)"
+        (keydown.enter)="selectBoard(board.id)"
+        (mouseenter)="onFolderMouseEnter(board.id)"
+        (mouseleave)="onFolderMouseLeave()"
+        (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event, board.id)"
+      >
+        <div
+          class="folder-drag-handle"
+          draggable="true"
+          (dragstart)="onFolderDragStart($event, board, i)"
+        >
+          <img src="assets/icons/grip.svg" alt="Drag" width="12" />
+        </div>
+        <span
+          class="folder-color-dot"
+          [style.background-color]="getFolderColor(board.color)"
+        ></span>
+        @if (editingBoardId() === board.id) {
+        <input
+          type="text"
+          class="board-name-input"
+          [value]="editingBoardName()"
+          (input)="editingBoardName.set($any($event.target).value)"
+          (keydown)="onEditBoardKeydown($event)"
+          (blur)="confirmEditBoard()"
+          (click)="$event.stopPropagation()"
+        />
+        } @else {
+        <span class="folder-name" (dblclick)="startEditingBoard(board, $event)">{{
+          board.name
+        }}</span>
+        }
+        <div class="folder-actions">
+          <button
+            class="folder-delete-btn"
+            (click)="deleteBoard(board.id, $event)"
+            title="Delete board"
+          >
+            <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+          </button>
+          <span class="folder-count">{{ getAccountCountForBoard(board.id) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- New Board Input -->
+      @if (isCreatingBoard()) {
+      <div class="folder-item new-board-input-container">
+        <span class="folder-color-dot" style="background-color: #4dabf7"></span>
+        <input
+          #newBoardInput
+          type="text"
+          class="new-board-name-input"
+          placeholder="Board name..."
+          [value]="newBoardName()"
+          (input)="newBoardName.set($any($event.target).value)"
+          (keydown)="onNewBoardKeydown($event)"
+          (blur)="onNewBoardBlur()"
+        />
+      </div>
+      }
     </div>
 
     <div class="sidebar-buttons">
       <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
-        <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="18" />
+        <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="17" />
         Settings
       </button>
 
-      <button title="Refresh All Accounts" class="btn-icon-outlined new-board-btn">
-        <img src="assets/icons/plus.svg" class="icon" alt="Refresh" width="18" />
+      <button
+        title="New Board"
+        class="btn-icon-outlined new-board-btn"
+        (click)="startCreatingBoard()"
+      >
+        <img src="assets/icons/plus.svg" class="icon" alt="New Board" width="17" />
         New Board
       </button>
     </div>
@@ -41,7 +138,7 @@
       }
 
       <div class="dash-header">
-        <h1>My Accounts</h1>
+        <h1>{{ getCurrentBoardName() }}</h1>
       </div>
 
       <div class="search-section">
@@ -99,19 +196,61 @@
         </div>
       </div>
 
-      @for (account of filteredAccounts(); track account.id) {
-      <app-acc-card
-        [account]="account"
-        (accountUpdated)="onAccountUpdated($event)"
-        (accountDeleted)="onAccountDeleted($event)"
-      />
-      }
+      <div
+        class="accounts-list"
+        (dragover)="onAccountsListDragOver($event)"
+        (drop)="onAccountsListDrop($event)"
+      >
+        @for (account of displayedAccounts(); track account.id; let i = $index) {
+        <div
+          class="account-drag-wrapper"
+          [class.dragging]="draggingAccountId() === account.id.toString()"
+          [class.hovered]="hoveredAccountId() === account.id.toString()"
+          (mouseenter)="onAccountMouseEnter(account.id.toString())"
+          (mouseleave)="onAccountMouseLeave()"
+        >
+          <div
+            class="account-drag-handle"
+            draggable="true"
+            [attr.data-account-id]="account.id"
+            [attr.data-account-index]="i"
+          >
+            <img src="assets/icons/grip.svg" alt="Drag" width="16" />
+          </div>
+          <app-acc-card
+            [account]="account"
+            [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
+            (dragover)="onAccountDragOver($event, i)"
+            (drop)="onAccountDrop($event)"
+            (editRequested)="openEditModal($event)"
+            (deleteRequested)="openDeleteModal($event)"
+            (removeFromFolderRequested)="onRemoveFromFolder($event)"
+          />
+        </div>
+        }
+      </div>
 
       <!-- Add Account Modal -->
       <app-add-account-modal
         [isOpen]="isModalOpen()"
         (closeModal)="closeModal()"
         (accountsAdded)="onAccountsAdded($event)"
+      />
+
+      <!-- Edit Account Modal -->
+      <app-edit-account-modal
+        [isOpen]="isEditModalOpen()"
+        [account]="editingAccount()"
+        (closeModal)="closeEditModal()"
+        (accountUpdated)="onAccountUpdated($event)"
+      />
+
+      <!-- Delete Account Modal -->
+      <app-delete-account-modal
+        [isOpen]="isDeleteModalOpen()"
+        [account]="deletingAccount()"
+        (closeModal)="closeDeleteModal()"
+        (accountDeleted)="onAccountDeleted($event)"
       />
 
       <!-- Settings Modal -->
