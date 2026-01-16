@@ -1,24 +1,27 @@
 import { Injectable, signal } from '@angular/core';
 import { Board } from '../models/interfaces/Board';
 
-// Color list for migration of old boards
-const FOLDER_COLORS = [
-  'coral',
-  'orange',
-  'yellow',
-  'lime',
-  'teal',
-  'cyan',
-  'blue',
-  'indigo',
-  'violet',
-  'pink',
-  'rose',
-  'mint',
-];
+const FOLDER_COLOR_PREFIX = '--folder-color-';
+
+function getFolderColorNames(): string[] {
+  if (typeof document === 'undefined') return ['default'];
+
+  const styles = getComputedStyle(document.documentElement);
+  const names: string[] = [];
+
+  for (const prop of styles) {
+    if (typeof prop === 'string' && prop.startsWith(FOLDER_COLOR_PREFIX)) {
+      const name = prop.slice(FOLDER_COLOR_PREFIX.length);
+      if (name && name !== 'default') names.push(name);
+    }
+  }
+
+  return names.length ? names : ['default'];
+}
 
 function getRandomFolderColor(): string {
-  return FOLDER_COLORS[Math.floor(Math.random() * FOLDER_COLORS.length)];
+  const names = getFolderColorNames();
+  return names[Math.floor(Math.random() * names.length)] ?? 'default';
 }
 
 @Injectable({
@@ -27,6 +30,10 @@ function getRandomFolderColor(): string {
 export class BoardService {
   private boards = signal<Board[]>([]);
   private selectedBoardId = signal<string | null>(null); // null means "All Accounts"
+
+  getRandomFolderColor(): string {
+    return getRandomFolderColor();
+  }
 
   getBoards() {
     return this.boards;
@@ -88,7 +95,6 @@ export class BoardService {
     this.boards.update((boards) => [...boards, newBoard]);
     await this.saveBoards();
 
-    // Only select the new board if autoSelect is true
     if (autoSelect) {
       this.selectedBoardId.set(newBoard.id);
     }
@@ -106,7 +112,6 @@ export class BoardService {
   async deleteBoard(boardId: string): Promise<void> {
     this.boards.update((boards) => boards.filter((board) => board.id !== boardId));
 
-    // If the deleted board was selected, go back to All Accounts
     if (this.selectedBoardId() === boardId) {
       this.selectedBoardId.set(null);
     }

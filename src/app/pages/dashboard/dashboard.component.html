@@ -24,7 +24,7 @@
         (dragleave)="onDragLeave()"
         (drop)="onDrop($event, null)"
       >
-        <span class="folder-color-dot" style="background-color: #4dabf7"></span>
+        <span class="folder-color-dot" [style.background-color]="getFolderColor('default')"></span>
         <span class="folder-name">All Accounts</span>
         <div class="folder-actions">
           <span class="folder-count">{{ totalAccountCount() }}</span>
@@ -91,7 +91,10 @@
       <!-- New Board Input -->
       @if (isCreatingBoard()) {
       <div class="folder-item new-board-input-container">
-        <span class="folder-color-dot" style="background-color: #4dabf7"></span>
+        <span
+          class="folder-color-dot"
+          [style.background-color]="getFolderColor(newBoardColor())"
+        ></span>
         <input
           #newBoardInput
           type="text"

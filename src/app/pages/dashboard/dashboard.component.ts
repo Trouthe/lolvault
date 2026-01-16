@@ -52,6 +52,7 @@ export class DashboardComponent implements OnDestroy {
   // Board state
   public isCreatingBoard = signal(false);
   public newBoardName = signal('');
+  public newBoardColor = signal('default');
   public editingBoardId = signal<string | null>(null);
   public editingBoardName = signal('');
   public dragOverBoardId = signal<string | null>(null);
@@ -152,6 +153,12 @@ export class DashboardComponent implements OnDestroy {
     await window.electronAPI.saveAccounts(clean);
   }
 
+  private async updateAccountsAndSave(updater: (accounts: Account[]) => Account[]): Promise<void> {
+    const updated = updater(this.accounts());
+    this.accounts.set(updated);
+    await this.saveAccounts(updated);
+  }
+
   private resetDragState(): void {
     this.dragOverBoardId.set(null);
     this.draggingAccountId.set(null);
@@ -182,7 +189,7 @@ export class DashboardComponent implements OnDestroy {
   }
 
   getFolderColor(colorName: string): string {
-    return `var(--folder-color-${colorName}, var(--folder-color-blue))`;
+    return `var(--folder-color-${colorName}, var(--folder-color-default))`;
   }
 
   getCurrentBoardName(): string {
@@ -372,13 +379,13 @@ export class DashboardComponent implements OnDestroy {
     this.draggingAccountId.set(null);
 
     // Update the account's boardId without reloading all accounts
-    const updated = this.accounts().map((acc) =>
-      String(acc.id) === accountId
-        ? { ...acc, boardId: boardId === null ? undefined : boardId }
-        : acc
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) =>
+        String(acc.id) === accountId
+          ? { ...acc, boardId: boardId === null ? undefined : boardId }
+          : acc
+      )
     );
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
   }
 
   selectBoard(boardId: string | null): void {
@@ -387,6 +394,7 @@ export class DashboardComponent implements OnDestroy {
   }
 
   startCreatingBoard(): void {
+    this.newBoardColor.set(this.boardService.getRandomFolderColor());
     this.isCreatingBoard.set(true);
     setTimeout(() => this.newBoardInput?.nativeElement?.focus(), 0);
   }
@@ -395,9 +403,10 @@ export class DashboardComponent implements OnDestroy {
     if (this.isConfirmingBoard) return;
     this.isConfirmingBoard = true;
     const name = this.newBoardName().trim();
+    const color = this.newBoardColor();
     this.isCreatingBoard.set(false);
     this.newBoardName.set('');
-    if (name) await this.boardService.createBoard(name);
+    if (name) await this.boardService.createBoardWithColor(name, color);
     this.isConfirmingBoard = false;
   }
 
@@ -449,11 +458,9 @@ export class DashboardComponent implements OnDestroy {
 
   async deleteBoard(boardId: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
-    const updated = this.accounts().map((acc) =>
-      acc.boardId === boardId ? { ...acc, boardId: undefined } : acc
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) => (acc.boardId === boardId ? { ...acc, boardId: undefined } : acc))
     );
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
     await this.boardService.deleteBoard(boardId);
   }
 
@@ -560,31 +567,25 @@ export class DashboardComponent implements OnDestroy {
 
   async onAccountsAdded(newAccounts: Account[]): Promise<void> {
     const processed = await this.enrichAccountsWithRiotData(newAccounts);
-    const updated = [...this.accounts(), ...processed];
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
+    await this.updateAccountsAndSave((accounts) => [...accounts, ...processed]);
     this.updateMasteryBackground();
   }
 
   async onAccountUpdated(updatedAccount: Account): Promise<void> {
-    const updated = this.accounts().map((acc) =>
-      acc.id === updatedAccount.id ? updatedAccount : acc
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) => (acc.id === updatedAccount.id ? updatedAccount : acc))
     );
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
   }
 
   async onAccountDeleted(deletedAccount: Account): Promise<void> {
-    const updated = this.accounts().filter((acc) => acc.id !== deletedAccount.id);
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.filter((acc) => acc.id !== deletedAccount.id)
+    );
   }
 
   async onRemoveFromFolder(account: Account): Promise<void> {
-    const updated = this.accounts().map((acc) =>
-      acc.id === account.id ? { ...acc, boardId: undefined } : acc
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) => (acc.id === account.id ? { ...acc, boardId: undefined } : acc))
     );
-    this.accounts.set(updated);
-    await this.saveAccounts(updated);
   }
 }
