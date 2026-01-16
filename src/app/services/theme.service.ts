@@ -24,6 +24,14 @@ export class ThemeService {
     this.initTheme();
   }
 
+  getTheme() {
+    return this._theme();
+  }
+
+  getOppositeTheme() {
+    return this._theme() === 'light' ? 'dark' : 'light';
+  }
+
   private initTheme() {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const savedVariant = localStorage.getItem('themeVariant') || 'default';

@@ -15,6 +15,7 @@ import { SettingsService } from '../../services/settings.service';
 import { BoardService } from '../../services/board.service';
 import { LOL_DATA } from '../../models/constants';
 import { VERSION, REVISION } from '../../../environments/version';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -78,6 +79,7 @@ export class DashboardComponent implements OnDestroy {
   private riotService = inject(RiotService);
   public settingsService = inject(SettingsService);
   public boardService = inject(BoardService);
+  public themeService = inject(ThemeService);
 
   // Computed properties
   public displayedBoards = computed(() =>

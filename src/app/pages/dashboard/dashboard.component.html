@@ -3,11 +3,20 @@
   <div>
     <!-- Branding -->
     <div class="branding">
-      <h1>LoL Vault</h1>
+      <div>
+        <img
+          src="assets/branding/LV-no-bg_{{ themeService.getOppositeTheme() }}.svg"
+          alt="LoL Vault Logo"
+          width="32"
+        />
+        <h1>LoL Vault</h1>
+      </div>
       <h4>All your accounts – tracked in one place</h4>
 
       <span>v{{ version[0] }} (831-{{ version[1] }})</span>
     </div>
+
+    <hr />
 
     <!-- Board/Folder List -->
     <div class="folder-list">
@@ -54,7 +63,7 @@
           draggable="true"
           (dragstart)="onFolderDragStart($event, board, i)"
         >
-          <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon"/>
+          <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
         </div>
         <span
           class="folder-color-dot"
@@ -218,7 +227,7 @@
             [attr.data-account-id]="account.id"
             [attr.data-account-index]="i"
           >
-            <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon"/>
+            <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
           </div>
           <app-acc-card
             [account]="account"

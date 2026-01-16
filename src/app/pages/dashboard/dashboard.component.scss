@@ -13,7 +13,7 @@ h4 {
 
 span {
   color: var(--secondary-text);
-  font-size: 12px;
+  font-size: 11px;
   filter: brightness(0.7);
 }
 
@@ -29,6 +29,12 @@ section:first-of-type {
   flex-direction: row;
 }
 
+hr {
+  width: 50%;
+  filter: brightness(0.4);
+  border-color: var(--border-color);
+}
+
 // Left sidebar
 section:first-of-type > div:first-of-type {
   border-right: 2px solid var(--border-color);
@@ -42,7 +48,16 @@ section:first-of-type > div:first-of-type {
   overflow: visible;
 
   .branding {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 8px;
+
+    & > div:first-of-type {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
   }
 
   .folder-list {
@@ -133,7 +148,7 @@ section:first-of-type > div:first-of-type {
 
         .folder-actions .folder-count {
           background-color: var(--outline);
-          color: var(--inverted-text);
+          color: white;
         }
 
         .folder-color-dot {
@@ -173,7 +188,7 @@ section:first-of-type > div:first-of-type {
         .folder-count {
           font-size: 12px;
           background-color: var(--border-color);
-          color: var(--inverted-text);
+          color: white;
           padding: 2px 8px;
           border-radius: 10px;
           min-width: 24px;
