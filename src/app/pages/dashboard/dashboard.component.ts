@@ -149,7 +149,7 @@ export class DashboardComponent implements OnDestroy {
   }
 
   private async saveAccounts(accounts: Account[]): Promise<void> {
-    const clean = accounts.map(({ profileIconId, topChampionId, ...rest }) => rest);
+    const clean = accounts.map(({ topChampionId, ...rest }) => rest);
     await window.electronAPI.saveAccounts(clean);
   }
 
@@ -462,8 +462,7 @@ export class DashboardComponent implements OnDestroy {
   async loadAccounts(): Promise<void> {
     try {
       const loaded = await window.electronAPI.loadAccounts();
-      const updated = await this.enrichAccountsWithRiotData(loaded);
-      this.accounts.set(updated);
+      this.accounts.set(loaded);
       this.updateMasteryBackground();
     } catch (error) {
       console.error('Error loading accounts:', error);
@@ -576,5 +575,12 @@ export class DashboardComponent implements OnDestroy {
     await this.updateAccountsAndSave((accounts) =>
       accounts.map((acc) => (acc.id === account.id ? { ...acc, boardId: undefined } : acc))
     );
+  }
+
+  async onAccountRefreshed(updatedAccount: Account): Promise<void> {
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) => (acc.id === updatedAccount.id ? updatedAccount : acc))
+    );
+    this.updateMasteryBackground();
   }
 }
