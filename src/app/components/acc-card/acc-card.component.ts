@@ -176,4 +176,77 @@ export class AccCardComponent {
     if (!base) return '';
     return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
   }
+
+  getAbbreviatedRank(rank: string | undefined): string {
+    if (!rank) return '';
+    const parts = rank.split(' ');
+    const tier = parts[0]?.toUpperCase();
+    const division = parts[1];
+
+    // Special cases for Master, Grandmaster, Challenger
+    if (tier === 'MASTER') return 'M';
+    if (tier === 'GRANDMASTER') return 'GM';
+    if (tier === 'CHALLENGER') return 'C';
+
+    // Regular ranks: PLATINUM II -> P2
+    const tierAbbrev = tier?.charAt(0) || '';
+    const divisionNum = this.romanToNumber(division);
+    return `${tierAbbrev}${divisionNum}`;
+  }
+
+  private romanToNumber(roman: string | undefined): string {
+    if (!roman) return '';
+    const romanMap: Record<string, string> = {
+      I: '1',
+      II: '2',
+      III: '3',
+      IV: '4',
+    };
+    return romanMap[roman] || roman;
+  }
+
+  getWinrate(): number {
+    const acc = this.account();
+    if (!acc?.wins && !acc?.losses) return 0;
+    const total = (acc.wins || 0) + (acc.losses || 0);
+    if (total === 0) return 0;
+    return Math.round(((acc.wins || 0) / total) * 100);
+  }
+
+  getTotalGames(): number {
+    const acc = this.account();
+    return (acc?.wins || 0) + (acc?.losses || 0);
+  }
+
+  getOpGGLink(): string {
+    const acc = this.account();
+    if (!acc?.name || !acc?.server) return '';
+    const [displayName, tag] = acc.name.split('#');
+    const serverMap: Record<string, string> = {
+      EUW: 'euw',
+      EUNE: 'eune',
+      NA: 'na',
+      KR: 'kr',
+      JP: 'jp',
+      BR: 'br',
+      LAN: 'lan',
+      LAS: 'las',
+      OCE: 'oce',
+      TR: 'tr',
+      RU: 'ru',
+      PH: 'ph',
+      SG: 'sg',
+      TH: 'th',
+      TW: 'tw',
+      VN: 'vn',
+    };
+    const server = serverMap[acc.server.toUpperCase()] || acc.server.toLowerCase();
+    return `https://op.gg/lol/summoners/${server}/${encodeURIComponent(displayName)}-${encodeURIComponent(tag || '')}`;
+  }
+
+  openOpGG(event: Event): void {
+    event.stopPropagation();
+    const link = this.getOpGGLink();
+    (window as any).electronAPI.openExternal(link);
+  }
 }

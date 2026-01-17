@@ -1,6 +1,6 @@
 {
   "name": "lolvault",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "main": "main.js",
   "author": "LoL Vault",
   "description": "League of Legends account manager and launcher",

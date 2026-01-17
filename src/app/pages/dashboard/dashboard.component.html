@@ -42,79 +42,79 @@
 
       <!-- User Created Boards -->
       @for (board of displayedBoards(); track board.id; let i = $index) {
-      <div
-        class="folder-item draggable"
-        tabindex="0"
-        role="button"
-        [class.active]="boardService.getSelectedBoardId()() === board.id"
-        [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
-        [class.dragging]="draggingFolderId() === board.id"
-        [class.hovered]="hoveredFolderId() === board.id"
-        (click)="selectBoard(board.id)"
-        (keydown.enter)="selectBoard(board.id)"
-        (mouseenter)="onFolderMouseEnter(board.id)"
-        (mouseleave)="onFolderMouseLeave()"
-        (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
-        (dragleave)="onDragLeave()"
-        (drop)="onDrop($event, board.id)"
-      >
         <div
-          class="folder-drag-handle"
-          draggable="true"
-          (dragstart)="onFolderDragStart($event, board, i)"
+          class="folder-item draggable"
+          tabindex="0"
+          role="button"
+          [class.active]="boardService.getSelectedBoardId()() === board.id"
+          [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
+          [class.dragging]="draggingFolderId() === board.id"
+          [class.hovered]="hoveredFolderId() === board.id"
+          (click)="selectBoard(board.id)"
+          (keydown.enter)="selectBoard(board.id)"
+          (mouseenter)="onFolderMouseEnter(board.id)"
+          (mouseleave)="onFolderMouseLeave()"
+          (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
+          (dragleave)="onDragLeave()"
+          (drop)="onDrop($event, board.id)"
         >
-          <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
-        </div>
-        <span
-          class="folder-color-dot"
-          [style.background-color]="getFolderColor(board.color)"
-        ></span>
-        @if (editingBoardId() === board.id) {
-        <input
-          type="text"
-          class="board-name-input"
-          [value]="editingBoardName()"
-          (input)="editingBoardName.set($any($event.target).value)"
-          (keydown)="onEditBoardKeydown($event)"
-          (blur)="confirmEditBoard()"
-          (click)="$event.stopPropagation()"
-        />
-        } @else {
-        <span class="folder-name" (dblclick)="startEditingBoard(board, $event)">{{
-          board.name
-        }}</span>
-        }
-        <div class="folder-actions">
-          <button
-            class="folder-delete-btn"
-            (click)="deleteBoard(board.id, $event)"
-            title="Delete board"
+          <div
+            class="folder-drag-handle"
+            draggable="true"
+            (dragstart)="onFolderDragStart($event, board, i)"
           >
-            <img src="assets/icons/trash.svg" alt="Delete" width="16" />
-          </button>
-          <span class="folder-count">{{ getAccountCountForBoard(board.id) }}</span>
+            <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
+          </div>
+          <span
+            class="folder-color-dot"
+            [style.background-color]="getFolderColor(board.color)"
+          ></span>
+          @if (editingBoardId() === board.id) {
+            <input
+              type="text"
+              class="board-name-input"
+              [value]="editingBoardName()"
+              (input)="editingBoardName.set($any($event.target).value)"
+              (keydown)="onEditBoardKeydown($event)"
+              (blur)="confirmEditBoard()"
+              (click)="$event.stopPropagation()"
+            />
+          } @else {
+            <span class="folder-name" (dblclick)="startEditingBoard(board, $event)">{{
+              board.name
+            }}</span>
+          }
+          <div class="folder-actions">
+            <button
+              class="folder-delete-btn"
+              (click)="deleteBoard(board.id, $event)"
+              title="Delete board"
+            >
+              <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+            </button>
+            <span class="folder-count">{{ getAccountCountForBoard(board.id) }}</span>
+          </div>
         </div>
-      </div>
       }
 
       <!-- New Board Input -->
       @if (isCreatingBoard()) {
-      <div class="folder-item new-board-input-container">
-        <span
-          class="folder-color-dot"
-          [style.background-color]="getFolderColor(newBoardColor())"
-        ></span>
-        <input
-          #newBoardInput
-          type="text"
-          class="new-board-name-input"
-          placeholder="Board name..."
-          [value]="newBoardName()"
-          (input)="newBoardName.set($any($event.target).value)"
-          (keydown)="onNewBoardKeydown($event)"
-          (blur)="onNewBoardBlur()"
-        />
-      </div>
+        <div class="folder-item new-board-input-container">
+          <span
+            class="folder-color-dot"
+            [style.background-color]="getFolderColor(newBoardColor())"
+          ></span>
+          <input
+            #newBoardInput
+            type="text"
+            class="new-board-name-input"
+            placeholder="Board name..."
+            [value]="newBoardName()"
+            (input)="newBoardName.set($any($event.target).value)"
+            (keydown)="onNewBoardKeydown($event)"
+            (blur)="onNewBoardBlur()"
+          />
+        </div>
       }
     </div>
 
@@ -125,12 +125,12 @@
       </button>
 
       <button
-        title="New Board"
+        title="New Folder"
         class="btn-icon-outlined new-board-btn"
         (click)="startCreatingBoard()"
       >
-        <img src="assets/icons/plus.svg" class="icon" alt="New Board" width="17" />
-        New Board
+        <img src="assets/icons/plus.svg" class="icon" alt="New Folder" width="17" />
+        New Folder
       </button>
     </div>
   </div>
@@ -140,13 +140,13 @@
     <!-- Actual Data -->
     <div class="data">
       @if (settingsService.getShowMasteryBackground() && championId()) {
-      <img
-        [src]="
-          'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
-        "
-        class="mastery-bg"
-        alt="Mastery Background"
-      />
+        <img
+          [src]="
+            'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
+          "
+          class="mastery-bg"
+          alt="Mastery Background"
+        />
       }
 
       <div class="dash-header">
@@ -170,36 +170,36 @@
               <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
             </button>
             @if (isSortMenuOpen()) {
-            <div class="sort-dropdown">
-              <button
-                class="sort-option"
-                [class.active]="currentSort() === 'highest'"
-                (click)="setSortOption('highest')"
-              >
-                Highest Rank
-              </button>
-              <button
-                class="sort-option"
-                [class.active]="currentSort() === 'lowest'"
-                (click)="setSortOption('lowest')"
-              >
-                Lowest Rank
-              </button>
-              <button
-                class="sort-option"
-                [class.active]="currentSort() === 'unranked'"
-                (click)="setSortOption('unranked')"
-              >
-                Unranked
-              </button>
-              <button
-                class="sort-option"
-                [class.active]="currentSort() === 'all'"
-                (click)="setSortOption('all')"
-              >
-                Show All
-              </button>
-            </div>
+              <div class="sort-dropdown">
+                <button
+                  class="sort-option"
+                  [class.active]="currentSort() === 'highest'"
+                  (click)="setSortOption('highest')"
+                >
+                  Highest Rank
+                </button>
+                <button
+                  class="sort-option"
+                  [class.active]="currentSort() === 'lowest'"
+                  (click)="setSortOption('lowest')"
+                >
+                  Lowest Rank
+                </button>
+                <button
+                  class="sort-option"
+                  [class.active]="currentSort() === 'unranked'"
+                  (click)="setSortOption('unranked')"
+                >
+                  Unranked
+                </button>
+                <button
+                  class="sort-option"
+                  [class.active]="currentSort() === 'all'"
+                  (click)="setSortOption('all')"
+                >
+                  Show All
+                </button>
+              </div>
             }
           </div>
           <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
@@ -214,32 +214,32 @@
         (drop)="onAccountsListDrop($event)"
       >
         @for (account of displayedAccounts(); track account.id; let i = $index) {
-        <div
-          class="account-drag-wrapper"
-          [class.dragging]="draggingAccountId() === account.id.toString()"
-          [class.hovered]="hoveredAccountId() === account.id.toString()"
-          (mouseenter)="onAccountMouseEnter(account.id.toString())"
-          (mouseleave)="onAccountMouseLeave()"
-        >
           <div
-            class="account-drag-handle"
-            draggable="true"
-            [attr.data-account-id]="account.id"
-            [attr.data-account-index]="i"
+            class="account-drag-wrapper"
+            [class.dragging]="draggingAccountId() === account.id.toString()"
+            [class.hovered]="hoveredAccountId() === account.id.toString()"
+            (mouseenter)="onAccountMouseEnter(account.id.toString())"
+            (mouseleave)="onAccountMouseLeave()"
           >
-            <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+            <div
+              class="account-drag-handle"
+              draggable="true"
+              [attr.data-account-id]="account.id"
+              [attr.data-account-index]="i"
+            >
+              <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+            </div>
+            <app-acc-card
+              [account]="account"
+              [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
+              (dragover)="onAccountDragOver($event, i)"
+              (drop)="onAccountDrop($event)"
+              (editRequested)="openEditModal($event)"
+              (deleteRequested)="openDeleteModal($event)"
+              (removeFromFolderRequested)="onRemoveFromFolder($event)"
+              (refreshRequested)="onAccountRefreshed($event)"
+            />
           </div>
-          <app-acc-card
-            [account]="account"
-            [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
-            (dragover)="onAccountDragOver($event, i)"
-            (drop)="onAccountDrop($event)"
-            (editRequested)="openEditModal($event)"
-            (deleteRequested)="openDeleteModal($event)"
-            (removeFromFolderRequested)="onRemoveFromFolder($event)"
-            (refreshRequested)="onAccountRefreshed($event)"
-          />
-        </div>
         }
       </div>
 

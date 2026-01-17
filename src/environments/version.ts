@@ -1,3 +1,3 @@
 // IMPORTANT: THIS FILE IS AUTO GENERATED! DO NOT MANUALLY EDIT OR CHECKIN!
-export const VERSION = '1.4.1';
-export const REVISION = 46;
+export const VERSION = '1.4.2';
+export const REVISION = 47;

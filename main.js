@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const { dialog } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
@@ -188,6 +188,11 @@ ipcMain.handle('open-file-dialog', async (event, options = {}) => {
     console.error('Error opening file dialog:', error);
     return { canceled: true, filePaths: [] };
   }
+});
+
+ipcMain.on('open-external-url', (url) => {
+  console.log('Main process opening:', url);
+  shell.openExternal(url);
 });
 
 // Helper function to get the correct data path
