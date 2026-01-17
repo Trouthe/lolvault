@@ -54,10 +54,24 @@ export class AddAccountModalComponent {
     // Fetch PUUID and ranked info
     let puuid: string | undefined;
     let fetchedRank: string | undefined;
+    let profileIconId: number | undefined;
+    let summonerLevel: number | undefined;
+    let leaguePoints: number | undefined;
+    let wins: number | undefined;
+    let losses: number | undefined;
+    let hotStreak: boolean | undefined;
 
     try {
       puuid = await this.riotService.getPUUID(acc.displayName, acc.tag, acc.server);
       console.log('Fetched PUUID:', puuid);
+
+      // Fetch basic account info (profile icon and level)
+      const basicInfo = await this.riotService.getBasicAccountInfo(puuid, acc.server);
+      if (basicInfo) {
+        profileIconId = basicInfo.profileIconId;
+        summonerLevel = basicInfo.summonerLevel;
+        console.log('Fetched basic info:', { profileIconId, summonerLevel });
+      }
 
       // Fetch ranked info
       const rankedInfo = await this.riotService.getRankedInfo(puuid, acc.server);
@@ -68,7 +82,10 @@ export class AddAccountModalComponent {
         );
         if (soloQueue) {
           fetchedRank = `${soloQueue.tier} ${soloQueue.rank}`;
-          console.log('Fetched rank:', fetchedRank);
+          leaguePoints = soloQueue.leaguePoints;
+          wins = soloQueue.wins;
+          losses = soloQueue.losses;
+          hotStreak = soloQueue.hotStreak;
         }
       }
     } catch (error) {
@@ -83,6 +100,13 @@ export class AddAccountModalComponent {
       game: 'League of Legends',
       server: acc.server,
       rank: fetchedRank,
+      profileIconId,
+      summonerLevel,
+      leaguePoints,
+      wins,
+      losses,
+      hotStreak,
+      lastRefreshed: Date.now(),
     };
     this.accountsAdded.emit([account]);
     this.resetForm();

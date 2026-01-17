@@ -1,7 +1,11 @@
 @if (account()) {
 <div class="acc-card">
   @if (showRemoveFromFolder()) {
-  <button class="remove-from-folder-btn" (click)="requestRemoveFromFolder()" title="Remove from folder">
+  <button
+    class="remove-from-folder-btn"
+    (click)="requestRemoveFromFolder()"
+    title="Remove from folder"
+  >
     <img src="assets/icons/plus.svg" alt="Remove" width="12" />
   </button>
   }
@@ -44,6 +48,24 @@
       <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
     </button>
     <hr />
+    <button
+      class="action-btn refresh-btn"
+      (click)="refreshAccount()"
+      [disabled]="isRefreshing() || isRefreshOnCooldown()"
+      [class.refreshing]="isRefreshing()"
+      [class.cooldown]="isRefreshOnCooldown()"
+      [title]="
+        isRefreshOnCooldown() ? 'Cooldown: ' + getCooldownRemaining() : 'Refresh Account Data'
+      "
+    >
+      <img
+        src="assets/icons/refresh.svg"
+        class="icon"
+        [class.spinning]="isRefreshing()"
+        alt="Refresh"
+        width="16"
+      />
+    </button>
     <button
       class="action-btn launch-btn"
       (click)="launchAccount()"
