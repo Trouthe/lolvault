@@ -1,0 +1,106 @@
+{
+  "name": "lolvault-electron",
+  "version": "1.4.2",
+  "main": "main.js",
+  "author": "LoL Vault",
+  "description": "League of Legends account manager and launcher",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
+    "build-electron": "ng build && electron .",
+    "dist": "ng build --configuration production && electron-builder",
+    "dist:win": "ng build --configuration production && electron-builder --win",
+    "dist:portable": "ng build --configuration production && electron-builder --win portable",
+    "dist:all": "ng build --configuration production && electron-builder --win --x64",
+    "lint": "ng lint"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^21.1.0",
+    "@angular/compiler": "^21.1.0",
+    "@angular/core": "^21.1.0",
+    "@angular/forms": "^21.1.0",
+    "@angular/platform-browser": "^21.1.0",
+    "@angular/platform-browser-dynamic": "^21.1.0",
+    "@angular/router": "^21.1.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "^0.16.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^21.1.0",
+    "@angular/cli": "^21.1.0",
+    "@angular/compiler-cli": "^21.1.0",
+    "@types/jasmine": "~5.1.0",
+    "angular-eslint": "^21.1.0",
+    "concurrently": "^9.2.1",
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "jasmine-core": "^5.13.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.0",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.lolvault.app",
+    "productName": "LoL Vault",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/lolvault/**/*",
+      "main.js",
+      "preload.js",
+      "src/app/data/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src/app/data",
+        "to": "data",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LoL Vault",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "LoLVault-${version}-portable.exe"
+    }
+  }
+}

@@ -3,18 +3,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ng serve",
+      "name": "Electron: Debug",
       "type": "chrome",
       "request": "launch",
-      "preLaunchTask": "npm: start",
+      "preLaunchTask": "Electron: Start Dev",
       "url": "http://localhost:4200/"
     },
     {
-      "name": "ng test",
+      "name": "Web: Debug",
       "type": "chrome",
       "request": "launch",
-      "preLaunchTask": "npm: test",
-      "url": "http://localhost:9876/debug.html"
+      "preLaunchTask": "Web: Start Dev",
+      "url": "http://localhost:4300/"
     }
   ]
 }

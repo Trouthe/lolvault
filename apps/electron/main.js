@@ -28,7 +28,10 @@ function decrypt(encryptedText) {
     const buffer = Buffer.from(encryptedText, 'base64');
     return safeStorage.decryptString(buffer);
   } catch (error) {
-    console.error('Decryption error:', error);
+    console.warn(
+      'Decryption failed, returning original value (might be plaintext):',
+      error.message
+    );
     return encryptedText;
   }
 }
@@ -38,7 +41,12 @@ function encryptAccount(account) {
 }
 
 function decryptAccount(account) {
-  return { ...account, username: decrypt(account.username), password: decrypt(account.password) };
+  try {
+    return { ...account, username: decrypt(account.username), password: decrypt(account.password) };
+  } catch (error) {
+    console.error('Error decrypting account:', error);
+    return account;
+  }
 }
 
 let mainWindow;
@@ -65,7 +73,7 @@ function createWindow() {
     console.log('File exists:', fs.existsSync(indexPath));
     mainWindow.loadFile(indexPath);
 
-    // Uncomment for debugging
+    //! Uncomment for debugging
     // mainWindow.webContents.openDevTools();
   }
 }
@@ -236,7 +244,10 @@ ipcMain.handle('load-accounts', async () => {
 
     const data = fs.readFileSync(accountsPath, 'utf8');
     const accounts = JSON.parse(data);
-    return accounts.map(decryptAccount);
+
+    // Try to decrypt accounts, but if all fail, might need to reset
+    const decryptedAccounts = accounts.map(decryptAccount);
+    return decryptedAccounts;
   } catch (error) {
     console.error('Error loading accounts:', error);
     return [];

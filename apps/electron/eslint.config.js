@@ -5,6 +5,13 @@ const angular = require('angular-eslint');
 
 module.exports = tseslint.config(
   {
+    languageOptions: {
+      parser: require('@typescript-eslint/parser'),
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.spec.json'],
+      },
+    },
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,
@@ -16,19 +23,11 @@ module.exports = tseslint.config(
     rules: {
       '@angular-eslint/directive-selector': [
         'error',
-        {
-          type: 'attribute',
-          prefix: 'app',
-          style: 'camelCase',
-        },
+        { type: 'attribute', prefix: 'app', style: 'camelCase' },
       ],
       '@angular-eslint/component-selector': [
         'error',
-        {
-          type: 'element',
-          prefix: 'app',
-          style: 'kebab-case',
-        },
+        { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
     },
   },
