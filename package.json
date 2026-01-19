@@ -1,108 +1,41 @@
 {
-  "name": "lolvault",
-  "version": "1.4.2",
-  "main": "main.js",
-  "author": "LoL Vault",
-  "description": "League of Legends account manager and launcher",
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "electron": "electron .",
-    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
-    "build-electron": "ng build && electron .",
-    "dist": "ng build --configuration production && electron-builder",
-    "dist:win": "ng build --configuration production && electron-builder --win",
-    "dist:portable": "ng build --configuration production && electron-builder --win portable",
-    "dist:all": "ng build --configuration production && electron-builder --win --x64",
-    "lint": "ng lint"
-  },
+  "name": "lolvault-monorepo",
+  "version": "1.0.0",
+  "description": "LoL Vault Monorepo - Electron App, Web App, and Firebase Backend",
   "private": true,
-  "dependencies": {
-    "@angular/common": "^21.1.0",
-    "@angular/compiler": "^21.1.0",
-    "@angular/core": "^21.1.0",
-    "@angular/forms": "^21.1.0",
-    "@angular/platform-browser": "^21.1.0",
-    "@angular/platform-browser-dynamic": "^21.1.0",
-    "@angular/router": "^21.1.0",
-    "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "zone.js": "^0.16.0"
+  "workspaces": [
+    "apps/electron",
+    "apps/web",
+    "backend/functions"
+  ],
+  "scripts": {
+    "start:electron": "npm run start --workspace=apps/electron",
+    "start:electron:dev": "npm run electron-dev --workspace=apps/electron",
+    "start:electron:prod": "npm run build-electron --workspace=apps/electron",
+    "build:electron": "npm run build --workspace=apps/electron",
+    "dist:electron": "npm run dist --workspace=apps/electron",
+    "dist:electron:win": "npm run dist:win --workspace=apps/electron",
+    "dist:electron:portable": "npm run dist:portable --workspace=apps/electron",
+    "test:electron": "npm run test --workspace=apps/electron",
+    "lint:electron": "npm run lint --workspace=apps/electron",
+    
+    "start:web": "npm run start --workspace=apps/web",
+    "start:web:dev": "npm run start --workspace=apps/web",
+    "start:web:prod": "npm run build:prod --workspace=apps/web && npx serve apps/web/dist/lolvault-web/browser",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:web:prod": "npm run build:prod --workspace=apps/web",
+    "test:web": "npm run test --workspace=apps/web",
+    "lint:web": "npm run lint --workspace=apps/web",
+    
+    "build:functions": "npm run build --workspace=backend/functions",
+    "deploy:functions": "cd backend && firebase deploy --only functions",
+    "serve:functions": "npm run serve --workspace=backend/functions",
+    "emulators": "cd backend && firebase emulators:start",
+    
+    "install:all": "npm install && npm install --workspace=apps/electron && npm install --workspace=apps/web && npm install --workspace=backend/functions",
+    "clean": "rimraf apps/electron/node_modules apps/web/node_modules backend/functions/node_modules node_modules"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^21.1.0",
-    "@angular/cli": "^21.1.0",
-    "@angular/compiler-cli": "^21.1.0",
-    "@types/jasmine": "~5.1.0",
-    "angular-eslint": "^21.1.0",
-    "concurrently": "^9.2.1",
-    "electron": "^39.0.0",
-    "electron-builder": "^26.0.12",
-    "eslint": "^9.33.0",
-    "eslint-config-prettier": "^10.1.8",
-    "jasmine-core": "^5.13.0",
-    "karma": "~6.4.0",
-    "karma-chrome-launcher": "~3.2.0",
-    "karma-coverage": "~2.2.0",
-    "karma-jasmine": "~5.1.0",
-    "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.53.0",
-    "wait-on": "^9.0.3"
-  },
-  "build": {
-    "appId": "com.lolvault.app",
-    "productName": "LoL Vault",
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "files": [
-      "dist/lolvault/**/*",
-      "main.js",
-      "preload.js",
-      "src/app/data/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "src/app/data",
-        "to": "data",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico",
-      "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "LoL Vault",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "deleteAppDataOnUninstall": false,
-      "runAfterFinish": true,
-      "menuCategory": true
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
-    }
+    "rimraf": "^6.0.0"
   }
 }

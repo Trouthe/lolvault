@@ -1,0 +1,116 @@
+@if (account()) {
+  <div class="acc-card">
+    @if (account()!.hotStreak) {
+      <div class="hot-streak-indicator" title="On a hot streak!">
+        <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
+      </div>
+    }
+    @if (showRemoveFromFolder()) {
+      <button
+        class="remove-from-folder-btn"
+        (click)="requestRemoveFromFolder()"
+        title="Remove from folder"
+      >
+        <img src="assets/icons/plus.svg" alt="Remove" width="12" />
+      </button>
+    }
+    <div class="account-info">
+      <div class="account-details">
+        <div [class]="account()!.rank ? 'profile-icon' : ''">
+          <img
+            src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
+              account()!.profileIconId || 29
+            }}.png"
+            alt="profile icon"
+            width="48"
+          />
+          @if (account()!.rank) {
+            <img
+              src="assets/emblems/Wings/{{ getRankName(account()!.rank) }}.webp"
+              alt="wing"
+              width="48"
+            />
+          }
+        </div>
+
+        <div>
+          <div class="name-row">
+            <strong>{{ account()!.name }}</strong>
+            @if (account()!.name.includes('#') && account()!.server) {
+              <button class="opgg-link" (click)="openOpGG($event)" title="Open OP.GG">
+                <img src="assets/icons/external-link.svg" alt="OP.GG" width="14" />
+              </button>
+            }
+          </div>
+          <p>
+            {{ account()!.username }}
+            @if (account()!.server) {
+              <span class="server">- {{ account()!.server }}</span>
+            }
+          </p>
+        </div>
+      </div>
+
+      @if (account()!.rank) {
+        <div class="stats-container">
+          <div class="stats-group winloss-group">
+            <span class="wl-record">
+              <span class="wins">{{ account()!.wins || 0 }}W</span>
+              <span class="losses">{{ account()!.losses || 0 }}L</span>
+            </span>
+            <span class="winrate">{{ getWinrate() }}% WR</span>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stats-group lp-group">
+            <span class="lp">{{ account()!.leaguePoints || 0 }}LP</span>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stats-group rank-group">
+            <span class="rank-abbrev">{{ getAbbreviatedRank(account()!.rank) }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="button-collection">
+      <button class="action-btn delete-btn" (click)="requestDelete()" title="Delete Account">
+        <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+      </button>
+      <button class="action-btn edit-btn" (click)="requestEdit()" title="Edit Account">
+        <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+      </button>
+      <hr />
+      <button
+        class="action-btn refresh-btn"
+        (click)="refreshAccount()"
+        [disabled]="isRefreshing() || isRefreshOnCooldown()"
+        [class.refreshing]="isRefreshing()"
+        [class.cooldown]="isRefreshOnCooldown()"
+        [title]="
+          isRefreshOnCooldown() ? 'Cooldown: ' + getCooldownRemaining() : 'Refresh Account Data'
+        "
+      >
+        <img
+          src="assets/icons/refresh.svg"
+          class="icon"
+          [class.spinning]="isRefreshing()"
+          alt="Refresh"
+          width="16"
+        />
+      </button>
+      <button
+        class="action-btn launch-btn"
+        (click)="launchAccount()"
+        [disabled]="isLaunching()"
+        [class.launching]="isLaunching()"
+        title="Launch Account"
+      >
+        @if (isLaunching()) {
+          <div class="spinner"></div>
+        } @else {
+          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+        }
+      </button>
+    </div>
+  </div>
+}

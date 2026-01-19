@@ -3,8 +3,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "start",
+      "label": "Electron: Start Dev",
+      "type": "shell",
+      "command": "npm run start:electron:dev",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -18,11 +19,27 @@
             "regexp": "bundle generation complete"
           }
         }
-      }
+      },
+      "group": "build"
     },
     {
-      "type": "npm",
-      "script": "test",
+      "label": "Electron: Build",
+      "type": "shell",
+      "command": "npm run build:electron",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "Electron: Dist Portable",
+      "type": "shell",
+      "command": "npm run dist:electron:portable",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "Web: Start Dev",
+      "type": "shell",
+      "command": "npm run start:web:dev",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -36,7 +53,37 @@
             "regexp": "bundle generation complete"
           }
         }
-      }
+      },
+      "group": "build"
+    },
+    {
+      "label": "Web: Build",
+      "type": "shell",
+      "command": "npm run build:web",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "Functions: Build",
+      "type": "shell",
+      "command": "npm run build:functions",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "Functions: Deploy",
+      "type": "shell",
+      "command": "npm run deploy:functions",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Firebase: Emulators",
+      "type": "shell",
+      "command": "npm run emulators",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
     }
   ]
 }
