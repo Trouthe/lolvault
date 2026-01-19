@@ -198,7 +198,7 @@ ipcMain.handle('open-file-dialog', async (options = {}) => {
   }
 });
 
-ipcMain.on('open-external-url', (url) => {
+ipcMain.on('open-external-url', (event, url) => {
   console.log('Main process opening:', url);
   shell.openExternal(url);
 });
