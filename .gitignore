@@ -46,10 +46,6 @@ Thumbs.db
 apps/electron/release/
 *.blockmap
 
-# Sensitive data
-apps/electron/src/app/data/accounts.json
-apps/electron/src/app/data/boards.json
-
 # Firebase
 .firebase/
 *.local
