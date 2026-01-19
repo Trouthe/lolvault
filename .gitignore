@@ -50,4 +50,7 @@ apps/electron/release/
 .firebase/
 *.local
 backend/functions/lib/
-src/app/data/boards.json
+
+# Local app data
+apps/electron/src/app/data/boards.json
+apps/electron/src/app/data/accounts.json
