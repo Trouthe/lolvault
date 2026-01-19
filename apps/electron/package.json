@@ -1,6 +1,6 @@
 {
   "name": "lolvault-electron",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "main": "main.js",
   "author": "LoL Vault",
   "description": "League of Legends account manager and launcher",
@@ -39,7 +39,7 @@
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^21.1.0",
     "concurrently": "^9.2.1",
-    "electron": "^39.0.0",
+    "electron": "39.2.7",
     "electron-builder": "^26.0.12",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",

@@ -93,7 +93,7 @@ app.on('activate', () => {
 });
 
 // Handle account launch requests from renderer
-ipcMain.handle('launch-account', async (event, accountData) => {
+ipcMain.handle('launch-account', async (accountData) => {
   const { account, riotClientPath, psFilePath, nircmdPath, windowTitle } = accountData;
 
   // Resolve absolute paths for PowerShell script and nircmd
@@ -177,7 +177,7 @@ ipcMain.handle('launch-account', async (event, accountData) => {
 });
 
 // Open file dialog for selecting executables (from renderer)
-ipcMain.handle('open-file-dialog', async (event, options = {}) => {
+ipcMain.handle('open-file-dialog', async (options = {}) => {
   try {
     const win = BrowserWindow.getFocusedWindow();
     const result = await dialog.showOpenDialog(win, {
@@ -255,7 +255,7 @@ ipcMain.handle('load-accounts', async () => {
 });
 
 // Handle saving accounts
-ipcMain.handle('save-accounts', async (event, accounts) => {
+ipcMain.handle('save-accounts', async (accounts) => {
   try {
     if (!Array.isArray(accounts)) {
       console.error(
@@ -310,7 +310,7 @@ ipcMain.handle('load-boards', async () => {
 });
 
 // Handle saving boards
-ipcMain.handle('save-boards', async (event, boards) => {
+ipcMain.handle('save-boards', async (boards) => {
   try {
     if (!Array.isArray(boards)) {
       console.error('save-boards received non-array data, rejecting save.');
