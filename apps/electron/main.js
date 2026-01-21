@@ -96,6 +96,19 @@ app.on('activate', () => {
 ipcMain.handle('launch-account', async (event, accountData) => {
   const { account, riotClientPath, psFilePath, nircmdPath, windowTitle } = accountData;
 
+  // Validate Riot Client path
+  if (!riotClientPath || riotClientPath === 'undefined' || riotClientPath.trim() === '') {
+    const error = 'Riot Client path is not set. Please set it in Settings.';
+    console.error(error);
+    return { success: false, error };
+  }
+
+  if (!fs.existsSync(riotClientPath)) {
+    const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
+    console.error(error);
+    return { success: false, error };
+  }
+
   // Resolve absolute paths for PowerShell script and nircmd
   let absolutePsFilePath, absoluteNircmdPath;
 
