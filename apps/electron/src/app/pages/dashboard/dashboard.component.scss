@@ -41,6 +41,7 @@ section:first-of-type > div:first-of-type {
   padding: 16px;
   height: calc(100vh - 32px);
   width: 25%;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -88,7 +89,7 @@ section:first-of-type > div:first-of-type {
         border-color 0.15s ease,
         opacity 0.15s ease,
         transform 0.15s ease,
-        padding-right 0.15s ease;
+        margin-right 0.15s ease;
       border: 2px solid transparent;
       position: relative;
 
@@ -127,7 +128,7 @@ section:first-of-type > div:first-of-type {
       &.draggable.hovered:not(.dragging) {
         background-color: var(--card);
         transform: translateX(24px);
-        padding-right: 36px;
+        margin-right: 24px;
 
         .folder-drag-handle {
           opacity: 1;
@@ -427,8 +428,9 @@ section:first-of-type > div:nth-of-type(2) {
   .account-drag-wrapper {
     position: relative;
     transition:
-      transform 0.25s ease-in-out,
-      padding-right 0.2s ease-in-out;
+      transform 0.15s ease-in-out,
+      margin-right 0.15s ease-in-out;
+    will-change: transform, margin-right;
 
     &::before {
       content: '';
@@ -465,7 +467,7 @@ section:first-of-type > div:nth-of-type(2) {
 
     &.hovered:not(.dragging) {
       transform: translateX(24px);
-      padding-right: 24px;
+      margin-right: 24px;
 
       .account-drag-handle {
         opacity: 1;

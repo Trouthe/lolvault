@@ -2,6 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   border: 2px solid var(--border-color);
   border-radius: 12px;
   padding: 12px 12px 12px 16px;
@@ -16,6 +17,12 @@
   &:hover {
     border-color: var(--outline);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .stats-divider {
+    width: 1px;
+    height: 28px;
+    background-color: var(--border-color);
   }
 
   .hot-streak-indicator {
@@ -79,17 +86,30 @@
     opacity: 1;
   }
 
-  .account-info {
+  .card-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .account-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    min-width: 0;
     margin-right: 12px;
     gap: 12px;
 
     .account-details {
       display: flex;
       gap: 8px;
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
 
       .profile-icon {
         position: relative;
@@ -134,12 +154,31 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        min-width: 0;
+        max-width: 100%;
+        &.account-text {
+          flex: 1 1 auto;
+          width: 0;
+          max-width: 100%;
+          overflow: hidden;
+        }
 
         .name-row {
           display: flex;
           align-items: center;
+          justify-content: start;
           gap: 6px;
           flex-direction: row;
+          min-width: 0;
+
+          strong {
+            flex: 0 1 auto;
+            max-width: calc(100% - 24px);
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
           .opgg-link {
             background: none;
@@ -149,6 +188,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
             opacity: 0.6;
             transition:
               opacity 0.15s ease,
@@ -180,6 +220,20 @@
           padding-top: 3px;
           margin: 0;
 
+          &.account-subtitle {
+            min-width: 0;
+            max-width: 100%;
+
+            .subtitle-text {
+              display: block;
+              min-width: 0;
+              max-width: 100%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+          }
+
           .server {
             color: var(--secondary-text);
             opacity: 0.8;
@@ -195,13 +249,8 @@
       padding: 8px 12px;
       background-color: var(--background);
       border-radius: 8px;
-      border: 1px solid var(--border-color);
-
-      .stats-divider {
-        width: 1px;
-        height: 28px;
-        background-color: var(--border-color);
-      }
+      height: 30px;
+      border: 2px solid var(--border-color);
 
       .stats-group {
         display: flex;
@@ -255,14 +304,19 @@
 
   .button-collection {
     display: flex;
+    align-items: center;
     background-color: var(--card);
     border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 4px;
+    flex-shrink: 0;
+    height: 38px;
 
     hr {
-      border: 1px solid var(--border-color);
+      border: none;
+      border-right: 1px solid var(--border-color);
       margin-inline: 8px 8px;
+      height: 75%;
     }
 
     .action-btn {
@@ -302,6 +356,74 @@
     @keyframes spin {
       to {
         transform: rotate(360deg);
+      }
+    }
+  }
+
+  .launch-btn-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  .acc-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+
+    .card-top {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .account-info {
+      flex: 1;
+      margin-right: 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      min-width: 0;
+
+      .account-details {
+        width: 100%;
+      }
+
+      .stats-container {
+        align-self: flex-start;
+        width: fit-content;
+        max-width: 100%;
+      }
+    }
+
+    .button-collection {
+      align-self: flex-end;
+
+      .launch-btn-inline {
+        display: none;
+      }
+    }
+
+    .launch-btn-mobile {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background-color: var(--background);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--primary-text);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
     }
   }
