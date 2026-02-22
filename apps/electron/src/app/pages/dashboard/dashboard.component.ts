@@ -370,13 +370,28 @@ export class DashboardComponent implements OnDestroy {
     this.isDraggingAccount.set(false);
     this.draggingAccountId.set(null);
 
-    await this.updateAccountsAndSave((accounts) =>
-      accounts.map((acc) =>
-        String(acc.id) === accountId
-          ? { ...acc, boardId: boardId === null ? undefined : boardId }
-          : acc
-      )
-    );
+    // If dropping to All Accounts (boardId === null) or dragging from All Accounts (currentAccountBoardId === null),
+    // treat it as a move (update existing account's boardId) to avoid duplicates in the "All Accounts" view.
+    // Only create a new copied account when dragging between two specific boards.
+    if (currentAccountBoardId === null || boardId === null) {
+      await this.updateAccountsAndSave((accounts) =>
+        accounts.map((acc) =>
+          acc.id === account.id ? { ...acc, boardId: boardId === null ? undefined : boardId } : acc
+        )
+      );
+    } else {
+      const newId =
+        (typeof window !== 'undefined' && window.crypto?.randomUUID?.()) ||
+        `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+      const copiedAccount: Account = {
+        ...account,
+        id: newId,
+        boardId: boardId === null ? undefined : boardId,
+      };
+
+      await this.updateAccountsAndSave((accounts) => [...accounts, copiedAccount]);
+    }
   }
 
   selectBoard(boardId: string | null): void {
