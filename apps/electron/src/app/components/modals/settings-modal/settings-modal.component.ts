@@ -18,6 +18,8 @@ export class SettingsModalComponent {
   themeService = inject(ThemeService);
   settingsService = inject(SettingsService);
 
+  isMac = navigator.userAgent.toLowerCase().includes('mac');
+
   close() {
     this.closeModal.emit();
   }
@@ -50,7 +52,8 @@ export class SettingsModalComponent {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const api = (window as any).electronAPI;
 
-      const result = await api.openFilePicker({ title: 'Select RiotClientServices.exe' });
+      const title = this.isMac ? 'Select Riot Client.app' : 'Select RiotClientServices.exe';
+      const result = await api.openFilePicker({ title });
       if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
         const selected: string = result.filePaths[0];
         this.settingsService.updateRiotClientPath(selected);

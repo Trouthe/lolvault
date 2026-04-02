@@ -15,6 +15,7 @@ declare global {
       saveAccounts: (accounts: any[]) => Promise<{ success: boolean; error?: string }>;
       loadBoards: () => Promise<Board[]>;
       saveBoards: (boards: Board[]) => Promise<{ success: boolean; error?: string }>;
+      getPlatform: () => Promise<string>;
     };
   }
 }
@@ -41,6 +42,7 @@ export class AccCardComponent {
   isLaunching = signal(false);
   isRefreshing = signal(false);
 
+  // Windows-only paths (unused on macOS)
   private psFilePath = 'src/app/data/core-actions/login-action.ps1';
   private nircmdPath = 'src/app/data/core-actions/nircmdc.exe';
   private windowTitle = 'Riot Client';
@@ -55,13 +57,20 @@ export class AccCardComponent {
     this.isLaunching.set(true);
 
     try {
-      const result = await window.electronAPI.launchAccount({
+      const launchData: any = {
         account: acc,
         riotClientPath: this.settingsService.getRiotClientPath(),
-        psFilePath: this.psFilePath,
-        nircmdPath: this.nircmdPath,
         windowTitle: this.windowTitle,
-      });
+      };
+
+      // Only include Windows-specific paths on Windows
+      const isMac = navigator.userAgent.toLowerCase().includes('mac');
+      if (!isMac) {
+        launchData.psFilePath = this.psFilePath;
+        launchData.nircmdPath = this.nircmdPath;
+      }
+
+      const result = await window.electronAPI.launchAccount(launchData);
 
       if (result.success) {
         console.log('Account launched successfully');
@@ -109,9 +118,7 @@ export class AccCardComponent {
 
   async refreshAccount(): Promise<void> {
     const acc = this.account();
-    if (!acc || this.isRefreshing() || this.isRefreshOnCooldown()) {
-      return;
-    }
+    if (!acc || this.isRefreshing() || this.isRefreshOnCooldown()) return;
 
     if (!acc.name?.includes('#') || !acc.server) {
       console.warn('Cannot refresh: missing name or server');

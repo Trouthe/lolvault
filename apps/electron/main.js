@@ -82,20 +82,21 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+
+const isMac = process.platform === 'darwin';
+
+// Expose platform to renderer
+ipcMain.handle('get-platform', () => process.platform);
 
 // Handle account launch requests from renderer
 ipcMain.handle('launch-account', async (event, accountData) => {
-  const { account, riotClientPath, psFilePath, nircmdPath, windowTitle } = accountData;
+  const { account, riotClientPath, windowTitle } = accountData;
 
   // Validate Riot Client path
   if (!riotClientPath || riotClientPath === 'undefined' || riotClientPath.trim() === '') {
@@ -104,41 +105,129 @@ ipcMain.handle('launch-account', async (event, accountData) => {
     return { success: false, error };
   }
 
-  if (!fs.existsSync(riotClientPath)) {
-    const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
-    console.error(error);
-    return { success: false, error };
+  // On macOS, check for .app bundle or direct path
+  if (isMac) {
+    const isAppBundle = riotClientPath.endsWith('.app');
+    const pathToCheck = isAppBundle ? riotClientPath : riotClientPath;
+    if (!fs.existsSync(pathToCheck)) {
+      const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
+      console.error(error);
+      return { success: false, error };
+    }
+  } else {
+    if (!fs.existsSync(riotClientPath)) {
+      const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
+      console.error(error);
+      return { success: false, error };
+    }
   }
+
+  if (isMac) return launchAccountMac(account, riotClientPath, windowTitle);
+  else return launchAccountWindows(account, accountData, riotClientPath, windowTitle);
+});
+
+// macOS launch using open command + AppleScript for auto-login
+function launchAccountMac(account, riotClientPath, windowTitle) {
+  return new Promise((resolve) => {
+    // Determine launch command based on path type
+    const isAppBundle = riotClientPath.endsWith('.app');
+    const launchCmd = isAppBundle
+      ? `open -a "${riotClientPath}" --args --launch-product=league_of_legends --launch-patchline=live`
+      : `"${riotClientPath}" --launch-product=league_of_legends --launch-patchline=live`;
+
+    exec(launchCmd, (err) => {
+      if (err) {
+        console.error('Riot Client launch error:', err);
+        resolve({
+          success: false,
+          error: 'Failed to launch Riot Client: ' + err.message,
+        });
+        return;
+      }
+
+      // Resolve path to macOS login script
+      let scriptPath;
+      if (app.isPackaged) {
+        scriptPath = path.join(
+          process.resourcesPath,
+          'data',
+          'core-actions',
+          'login-action-mac.sh'
+        );
+      } else {
+        scriptPath = path.resolve(__dirname, 'src/app/data/core-actions/login-action-mac.sh');
+      }
+
+      if (!fs.existsSync(scriptPath)) {
+        console.warn('macOS login script not found, skipping auto-login:', scriptPath);
+        resolve({
+          success: true,
+          warning:
+            'Auto-login script not found. Riot Client launched but credentials were not entered automatically.',
+        });
+        return;
+      }
+
+      // Escape single quotes in args for shell
+      const escapeShellArg = (val) => `'${String(val).replace(/'/g, "'\\''")}' `;
+
+      const shCommand = [
+        '/bin/bash',
+        `"${scriptPath}"`,
+        '-windowTitle',
+        escapeShellArg(windowTitle || 'Riot Client'),
+        '-username',
+        escapeShellArg(account.username),
+        '-password',
+        escapeShellArg(account.password),
+      ].join(' ');
+
+      exec(shCommand, (error, stdout, stderr) => {
+        if (error) {
+          console.error('macOS login script error:', error);
+          console.error('stderr:', stderr);
+          resolve({
+            success: false,
+            error: 'Auto-login failed: ' + error.message,
+          });
+        } else {
+          console.log('macOS login script output:', stdout);
+          resolve({ success: true });
+        }
+      });
+    });
+  });
+}
+
+// Windows launch using PowerShell + NirCmd
+function launchAccountWindows(account, accountData, riotClientPath, windowTitle) {
+  const { psFilePath, nircmdPath } = accountData;
 
   // Resolve absolute paths for PowerShell script and nircmd
   let absolutePsFilePath, absoluteNircmdPath;
 
   if (app.isPackaged) {
-    // In production, these files should be in the resources/data directory
     const dataPath = path.join(process.resourcesPath, 'data');
     absolutePsFilePath = path.join(dataPath, 'core-actions', 'login-action.ps1');
     absoluteNircmdPath = path.join(dataPath, 'core-actions', 'nircmdc.exe');
   } else {
-    // In development, use the paths as provided
     absolutePsFilePath = path.resolve(__dirname, psFilePath);
     absoluteNircmdPath = path.resolve(__dirname, nircmdPath);
   }
 
-  // Check if files exist
   if (!fs.existsSync(absolutePsFilePath)) {
     const error = `PowerShell script not found: ${absolutePsFilePath}`;
     console.error(error);
-    return { success: false, error };
+    return Promise.resolve({ success: false, error });
   }
 
   if (!fs.existsSync(absoluteNircmdPath)) {
     const error = `NirCmd executable not found: ${absoluteNircmdPath}`;
     console.error(error);
-    return { success: false, error };
+    return Promise.resolve({ success: false, error });
   }
 
   return new Promise((resolve) => {
-    // Launch Riot Client
     exec(
       `"${riotClientPath}" --launch-product=league_of_legends --launch-patchline=live`,
       (err) => {
@@ -151,7 +240,6 @@ ipcMain.handle('launch-account', async (event, accountData) => {
           return;
         }
 
-        // Run PowerShell script for auto-login
         const quotePsArg = (value) => `"${String(value).replace(/"/g, '""')}"`;
 
         const psCommand = [
@@ -188,7 +276,7 @@ ipcMain.handle('launch-account', async (event, accountData) => {
       }
     );
   });
-});
+}
 
 // Open file dialog for selecting executables (from renderer)
 ipcMain.handle('open-file-dialog', async (event, options = {}) => {
@@ -198,10 +286,15 @@ ipcMain.handle('open-file-dialog', async (event, options = {}) => {
       title: options.title || 'Select Riot Client executable',
       defaultPath: options.defaultPath || undefined,
       properties: ['openFile'],
-      filters: [
-        { name: 'Executables', extensions: ['exe'] },
-        { name: 'All Files', extensions: ['*'] },
-      ],
+      filters: isMac
+        ? [
+            { name: 'Applications', extensions: ['app'] },
+            { name: 'All Files', extensions: ['*'] },
+          ]
+        : [
+            { name: 'Executables', extensions: ['exe'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
     });
 
     if (result.canceled) return { canceled: true, filePaths: [] };
@@ -220,6 +313,11 @@ ipcMain.on('open-external-url', (event, url) => {
 // Helper function to get the correct data path
 function getDataPath() {
   if (app.isPackaged) {
+    if (isMac) {
+      // On macOS, always use Application Support for data persistence
+      return path.join(app.getPath('userData'), 'data');
+    }
+
     // For portable exe, check if we're running from a temp extracted location
     // If so, use a persistent location instead
     const exeDir = path.dirname(process.execPath);
@@ -246,9 +344,7 @@ ipcMain.handle('load-accounts', async () => {
     const accountsPath = path.join(dataPath, 'accounts.json');
 
     // Ensure the data directory exists
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
-    }
+    if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
 
     // If accounts.json doesn't exist, create it with an empty array
     if (!fs.existsSync(accountsPath)) {
@@ -285,9 +381,7 @@ ipcMain.handle('save-accounts', async (event, accounts) => {
     const accountsPath = path.join(dataPath, 'accounts.json');
 
     // Ensure the data directory exists
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
-    }
+    if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
 
     const encryptedAccounts = accounts.map(encryptAccount);
     fs.writeFileSync(accountsPath, JSON.stringify(encryptedAccounts, null, 2), 'utf8');
@@ -305,9 +399,7 @@ ipcMain.handle('load-boards', async () => {
     const boardsPath = path.join(dataPath, 'boards.json');
 
     // Ensure the data directory exists
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
-    }
+    if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
 
     // If boards.json doesn't exist, create it with an empty array
     if (!fs.existsSync(boardsPath)) {
@@ -335,9 +427,7 @@ ipcMain.handle('save-boards', async (event, boards) => {
     const boardsPath = path.join(dataPath, 'boards.json');
 
     // Ensure the data directory exists
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
-    }
+    if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
 
     fs.writeFileSync(boardsPath, JSON.stringify(boards, null, 2), 'utf8');
     return { success: true };

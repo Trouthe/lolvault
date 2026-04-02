@@ -16,7 +16,8 @@
     "dist": "ng build --configuration production && electron-builder",
     "dist:win": "ng build --configuration production && electron-builder --win",
     "dist:portable": "ng build --configuration production && electron-builder --win portable",
-    "dist:all": "ng build --configuration production && electron-builder --win --x64",
+    "dist:mac": "ng build --configuration production && electron-builder --mac",
+    "dist:all": "ng build --configuration production && electron-builder --win --mac --x64",
     "lint": "ng lint"
   },
   "private": true,
@@ -86,6 +87,30 @@
       ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.utilities",
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "LoLVault-${version}-mac-${arch}.dmg"
     },
     "nsis": {
       "oneClick": false,

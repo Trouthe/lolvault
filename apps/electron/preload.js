@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveBoards: (boards) => ipcRenderer.invoke('save-boards', boards),
   openFilePicker: (options) => ipcRenderer.invoke('open-file-dialog', options),
   openExternal: (url) => ipcRenderer.send('open-external-url', url),
+  getPlatform: () => ipcRenderer.invoke('get-platform'),
 });

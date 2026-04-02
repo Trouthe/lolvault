@@ -5,8 +5,13 @@ export interface AppSettings {
   showMasteryBackground: boolean;
 }
 
+function getDefaultRiotClientPath(): string {
+  if (navigator.userAgent.toLowerCase().includes('mac')) return '/Applications/Riot Client.app';
+  return 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe';
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
-  riotClientPath: 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe',
+  riotClientPath: getDefaultRiotClientPath(),
   showMasteryBackground: false,
 };
 

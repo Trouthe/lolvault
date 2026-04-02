@@ -16,6 +16,7 @@
     "dist:electron": "npm run dist --workspace=apps/electron",
     "dist:electron:win": "npm run dist:win --workspace=apps/electron",
     "dist:electron:portable": "npm run dist:portable --workspace=apps/electron",
+    "dist:electron:mac": "npm run dist:mac --workspace=apps/electron",
     "test:electron": "npm run test --workspace=apps/electron",
     "lint:electron": "npm run lint --workspace=apps/electron",
     

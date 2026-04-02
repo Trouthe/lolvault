@@ -1,116 +1,121 @@
 @if (isOpen()) {
-<div class="modal-overlay" (click)="close()" tabindex="0">
-  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
-    <div class="modal-header">
-      <div class="section-header">
-        <img src="assets/icons/settings.svg" class="icon" width="18" alt="Data" />
-        <h2>Settings</h2>
-      </div>
-      <img
-        src="assets/icons/plus.svg"
-        class="close-btn"
-        (click)="close()"
-        alt="Close"
-        tabindex="0"
-      />
-    </div>
-
-    <hr />
-
-    <div class="settings-section">
-      <div class="section-header">
-        <img src="assets/icons/theme.svg" class="icon" width="16" alt="Data" />
-        <h3>Appearance</h3>
+  <div class="modal-overlay" (click)="close()" tabindex="0">
+    <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+      <div class="modal-header">
+        <div class="section-header">
+          <img src="assets/icons/settings.svg" class="icon" width="18" alt="Data" />
+          <h2>Settings</h2>
+        </div>
+        <img
+          src="assets/icons/plus.svg"
+          class="close-btn"
+          (click)="close()"
+          alt="Close"
+          tabindex="0"
+        />
       </div>
 
-      <div class="theme-options">
-        <button
-          class="theme-btn"
-          [class.active]="themeService.theme() === 'light'"
-          (click)="setLightTheme()"
-        >
-          <div class="theme-preview light-preview"></div>
-          <span>Light Theme</span>
-        </button>
+      <hr />
 
-        <button
-          class="theme-btn"
-          [class.active]="themeService.theme() === 'dark'"
-          (click)="setDarkTheme()"
-        >
-          <div class="theme-preview dark-preview"></div>
-          <span>Dark Theme</span>
-        </button>
-      </div>
+      <div class="settings-section">
+        <div class="section-header">
+          <img src="assets/icons/theme.svg" class="icon" width="16" alt="Data" />
+          <h3>Appearance</h3>
+        </div>
 
-      <div class="theme-variant-selector">
-        <div class="select-wrapper">
-          <select
-            id="theme-variant"
-            [ngModel]="themeService.themeVariant()"
-            (ngModelChange)="themeService.setThemeVariant($event)"
-            class="form-select"
-            name="themeVariant"
+        <div class="theme-options">
+          <button
+            class="theme-btn"
+            [class.active]="themeService.theme() === 'light'"
+            (click)="setLightTheme()"
           >
-            @for (variant of themeService.themeVariants; track variant.id) {
-            <option [value]="variant.id">{{ variant.name }}</option>
-            }
-          </select>
+            <div class="theme-preview light-preview"></div>
+            <span>Light Theme</span>
+          </button>
+
+          <button
+            class="theme-btn"
+            [class.active]="themeService.theme() === 'dark'"
+            (click)="setDarkTheme()"
+          >
+            <div class="theme-preview dark-preview"></div>
+            <span>Dark Theme</span>
+          </button>
         </div>
-      </div>
 
-      <div class="toggle-setting">
-        <label for="mastery-bg-toggle" class="toggle-label">
-          <span>Show Mastery Background</span>
-          <small>Display your highest mastery champion as a background</small>
-        </label>
-        <div class="toggle-switch">
-          <input
-            type="checkbox"
-            id="mastery-bg-toggle"
-            [checked]="settingsService.getShowMasteryBackground()"
-            (change)="onMasteryBackgroundToggle($event)"
-          />
-          <span class="slider"></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="section-header">
-        <img src="assets/icons/play.svg" class="icon" width="16" alt="Game" />
-        <h3>Riot Client Path</h3>
-      </div>
-
-      <div class="path-setting">
-        <div class="path-display">
-          <code>{{ settingsService.getRiotClientPath() }}</code>
-          <button class="btn btn-primary" (click)="browseForRiotClient()">Browse</button>
-        </div>
-        <small class="path-hint">
-          Click "Browse" to set the path to your RiotClientServices.exe file if the path displayed
-          above does not match.
-        </small>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="section-header">
-        <img src="assets/icons/database.svg" class="icon" width="16" alt="Data" />
-        <h3>Data</h3>
-      </div>
-
-      <div class="export-buttons">
-        <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
-          <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
-          <div>
-            <span>Export as CSV</span>
-            <br />
-            <small>Download accounts in spreadsheet format</small>
+        <div class="theme-variant-selector">
+          <div class="select-wrapper">
+            <select
+              id="theme-variant"
+              [ngModel]="themeService.themeVariant()"
+              (ngModelChange)="themeService.setThemeVariant($event)"
+              class="form-select"
+              name="themeVariant"
+            >
+              @for (variant of themeService.themeVariants; track variant.id) {
+                <option [value]="variant.id">{{ variant.name }}</option>
+              }
+            </select>
           </div>
-        </button>
+        </div>
+
+        <div class="toggle-setting">
+          <label for="mastery-bg-toggle" class="toggle-label">
+            <span>Show Mastery Background</span>
+            <small>Display your highest mastery champion as a background</small>
+          </label>
+          <div class="toggle-switch">
+            <input
+              type="checkbox"
+              id="mastery-bg-toggle"
+              [checked]="settingsService.getShowMasteryBackground()"
+              (change)="onMasteryBackgroundToggle($event)"
+            />
+            <span class="slider"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-header">
+          <img src="assets/icons/play.svg" class="icon" width="16" alt="Game" />
+          <h3>Riot Client Path</h3>
+        </div>
+
+        <div class="path-setting">
+          <div class="path-display">
+            <code>{{ settingsService.getRiotClientPath() }}</code>
+            <button class="btn btn-primary" (click)="browseForRiotClient()">Browse</button>
+          </div>
+          <small class="path-hint">
+            @if (isMac) {
+              Click "Browse" to set the path to your Riot Client.app (usually in /Applications) if
+              the path displayed above does not match.
+            } @else {
+              Click "Browse" to set the path to your RiotClientServices.exe file if the path
+              displayed above does not match.
+            }
+          </small>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-header">
+          <img src="assets/icons/database.svg" class="icon" width="16" alt="Data" />
+          <h3>Data</h3>
+        </div>
+
+        <div class="export-buttons">
+          <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
+            <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
+            <div>
+              <span>Export as CSV</span>
+              <br />
+              <small>Download accounts in spreadsheet format</small>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 }

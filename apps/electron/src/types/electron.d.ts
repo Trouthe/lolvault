@@ -4,14 +4,15 @@ import { Board } from '../app/models/interfaces/Board';
 export interface LaunchAccountData {
   account: Account;
   riotClientPath: string;
-  psFilePath: string;
-  nircmdPath: string;
+  psFilePath?: string;
+  nircmdPath?: string;
   windowTitle: string;
 }
 
 export interface LaunchResult {
   success: boolean;
   error?: string;
+  warning?: string;
 }
 
 export interface ElectronAPI {
@@ -24,6 +25,7 @@ export interface ElectronAPI {
     title?: string;
     defaultPath?: string;
   }) => Promise<{ canceled: boolean; filePaths: string[] }>;
+  getPlatform: () => Promise<string>;
 }
 
 declare global {
