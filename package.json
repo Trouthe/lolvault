@@ -13,10 +13,9 @@
     "start:electron:dev": "npm run electron-dev --workspace=apps/electron",
     "start:electron:prod": "npm run build-electron --workspace=apps/electron",
     "build:electron": "npm run build --workspace=apps/electron",
-    "dist:electron": "npm run dist --workspace=apps/electron",
     "dist:electron:win": "npm run dist:win --workspace=apps/electron",
-    "dist:electron:portable": "npm run dist:portable --workspace=apps/electron",
     "dist:electron:mac": "npm run dist:mac --workspace=apps/electron",
+    "dist:electron:all": "npm run dist:all --workspace=apps/electron",
     "test:electron": "npm run test --workspace=apps/electron",
     "lint:electron": "npm run lint --workspace=apps/electron",
     

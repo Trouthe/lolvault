@@ -9,16 +9,14 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "lint": "ng lint",
     "test": "ng test",
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",
-    "dist": "ng build --configuration production && electron-builder",
-    "dist:win": "ng build --configuration production && electron-builder --win",
-    "dist:portable": "ng build --configuration production && electron-builder --win portable",
+    "dist:win": "ng build --configuration production && electron-builder --win portable --x64",
     "dist:mac": "ng build --configuration production && electron-builder --mac",
-    "dist:all": "ng build --configuration production && electron-builder --win --mac --x64",
-    "lint": "ng lint"
+    "dist:all": "ng build --configuration production && electron-builder --win portable --x64 --mac"
   },
   "private": true,
   "dependencies": {
@@ -93,15 +91,7 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
+            "universal"
           ]
         }
       ],
@@ -110,22 +100,11 @@
       "identity": null
     },
     "dmg": {
-      "artifactName": "LoLVault-${version}-mac-${arch}.dmg"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "LoL Vault",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "deleteAppDataOnUninstall": false
+      "icon": "build/icon.icns",
+      "artifactName": "LoLVault.dmg"
     },
     "portable": {
-      "artifactName": "LoLVault-${version}-portable.exe"
+      "artifactName": "LoLVault.exe"
     }
   }
 }
