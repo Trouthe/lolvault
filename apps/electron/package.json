@@ -75,7 +75,29 @@
       "dist/lolvault/**/*",
       "main.js",
       "preload.js",
-      "src/app/data/**/*"
+      "src/app/data/**/*",
+      {
+        "from": "../../node_modules",
+        "to": "node_modules",
+        "filter": [
+          "electron-updater/**",
+          "builder-util-runtime/**",
+          "fs-extra/**",
+          "graceful-fs/**",
+          "jsonfile/**",
+          "universalify/**",
+          "js-yaml/**",
+          "argparse/**",
+          "lazy-val/**",
+          "lodash.escaperegexp/**",
+          "lodash.isequal/**",
+          "semver/**",
+          "tiny-typed-emitter/**",
+          "debug/**",
+          "ms/**",
+          "sax/**"
+        ]
+      }
     ],
     "extraResources": [
       {
