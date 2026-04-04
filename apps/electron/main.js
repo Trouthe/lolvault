@@ -102,12 +102,12 @@ function setupAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.disableDifferentialDownload = true;
 
-  // Force electron-updater to use api.github.com instead of falling back to
-  // web scraping (github.com/releases returns 406 with JSON Accept header)
+  // Use generic provider so electron-updater fetches the yml directly
+  // instead of using the GitHub provider which hits github.com/releases
+  // with Accept: application/json and gets a 406
   autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'Trouthe',
-    repo: 'lolvault',
+    provider: 'generic',
+    url: 'https://github.com/Trouthe/lolvault/releases/latest/download',
   });
 
   autoUpdater.on('update-available', (info) => {
