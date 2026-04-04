@@ -99,7 +99,7 @@ let downloadedUpdateFile = null;
 
 function setupAutoUpdater() {
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.disableDifferentialDownload = true;
 
   // Force electron-updater to use api.github.com instead of falling back to
@@ -124,6 +124,10 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('error', (error) => {
+    // On macOS we do our own install via shell script, so ignore the
+    // ShipIt signature validation error that fires after the download
+    // completes — the file is already saved and ready to use.
+    if (process.platform === 'darwin' && downloadedUpdateFile) return;
     mainWindow?.webContents.send('update-error', error?.message || 'Unknown error');
   });
 
