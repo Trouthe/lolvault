@@ -17,9 +17,9 @@
     "dist:win": "ng build --configuration production && electron-builder --win --x64",
     "dist:mac": "ng build --configuration production && electron-builder --mac",
     "dist:all": "ng build --configuration production && electron-builder --win --x64 --mac",
-    "release:win": "ng build --configuration production && electron-builder --win --x64 --publish always",
-    "release:mac": "ng build --configuration production && electron-builder --mac --publish always",
-    "release:all": "ng build --configuration production && electron-builder --win --x64 --mac --publish always"
+    "release:win": "ng build --configuration production && dotenv -e .env -- electron-builder --win --x64 --publish always",
+    "release:mac": "ng build --configuration production && dotenv -e .env -- electron-builder --mac --publish always",
+    "release:all": "ng build --configuration production && dotenv -e .env -- electron-builder --win --x64 --mac --publish always"
   },
   "private": true,
   "dependencies": {
@@ -42,6 +42,7 @@
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^21.1.0",
     "concurrently": "^9.2.1",
+    "dotenv-cli": "^11.0.0",
     "electron": "39.2.7",
     "electron-builder": "^26.0.12",
     "eslint": "^9.33.0",
@@ -104,12 +105,6 @@
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
           "arch": [
             "universal"
           ]
