@@ -69,7 +69,8 @@ export class UpdateBannerComponent implements OnInit {
   }
 
   retry(): void {
-    this.state.set('available');
+    this.state.set('hidden');
     this.errorMessage.set('');
+    this.api.checkForUpdates();
   }
 }

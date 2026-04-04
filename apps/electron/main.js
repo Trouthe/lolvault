@@ -101,6 +101,14 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // Force electron-updater to use api.github.com instead of falling back to
+  // web scraping (github.com/releases returns 406 with JSON Accept header)
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'Trouthe',
+    repo: 'lolvault',
+  });
+
   autoUpdater.on('update-available', (info) => {
     mainWindow?.webContents.send('update-available', info.version);
   });
