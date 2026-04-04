@@ -100,6 +100,7 @@ let downloadedUpdateFile = null;
 function setupAutoUpdater() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.disableDifferentialDownload = true;
 
   // Force electron-updater to use api.github.com instead of falling back to
   // web scraping (github.com/releases returns 406 with JSON Accept header)
