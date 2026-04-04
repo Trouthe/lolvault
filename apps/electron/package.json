@@ -14,9 +14,12 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",
-    "dist:win": "ng build --configuration production && electron-builder --win portable --x64",
+    "dist:win": "ng build --configuration production && electron-builder --win --x64",
     "dist:mac": "ng build --configuration production && electron-builder --mac",
-    "dist:all": "ng build --configuration production && electron-builder --win portable --x64 --mac"
+    "dist:all": "ng build --configuration production && electron-builder --win --x64 --mac",
+    "release:win": "ng build --configuration production && electron-builder --win --x64 --publish always",
+    "release:mac": "ng build --configuration production && electron-builder --mac --publish always",
+    "release:all": "ng build --configuration production && electron-builder --win --x64 --mac --publish always"
   },
   "private": true,
   "dependencies": {
@@ -27,6 +30,7 @@
     "@angular/platform-browser": "^21.1.0",
     "@angular/platform-browser-dynamic": "^21.1.0",
     "@angular/router": "^21.1.0",
+    "electron-updater": "^6.8.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.16.0"
@@ -59,6 +63,13 @@
       "output": "release",
       "buildResources": "build"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Trouthe",
+        "repo": "lolvault"
+      }
+    ],
     "files": [
       "dist/lolvault/**/*",
       "main.js",
@@ -86,10 +97,19 @@
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
+    "portable": {
+      "artifactName": "LoLVault.exe"
+    },
     "mac": {
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "universal"
           ]
@@ -101,10 +121,7 @@
     },
     "dmg": {
       "icon": "build/icon.icns",
-      "artifactName": "LoLVault.dmg"
-    },
-    "portable": {
-      "artifactName": "LoLVault.exe"
+      "artifactName": "LoLVault-${version}.dmg"
     }
   }
 }

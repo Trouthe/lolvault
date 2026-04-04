@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const { dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
 
 function encrypt(text) {
@@ -79,7 +80,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  setupAutoUpdater();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -87,6 +91,94 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// ── Auto-Updater ──
+
+let downloadedUpdateFile = null;
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update-available', info.version);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update-progress', progress.percent);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    downloadedUpdateFile = info.downloadedFile || null;
+    mainWindow?.webContents.send('update-downloaded');
+  });
+
+  autoUpdater.on('error', (error) => {
+    mainWindow?.webContents.send('update-error', error?.message || 'Unknown error');
+  });
+
+  // Only check for updates in production
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('Auto-update check failed:', err);
+    });
+  }
+}
+
+ipcMain.handle('start-update-download', () => {
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.error('Download update failed:', err);
+    mainWindow?.webContents.send('update-error', err?.message || 'Download failed');
+  });
+});
+
+ipcMain.handle('install-update', () => {
+  if (process.platform === 'darwin') {
+    autoUpdater.quitAndInstall(false, true);
+  } else {
+    installPortableUpdate();
+  }
+});
+
+function installPortableUpdate() {
+  if (!downloadedUpdateFile || !fs.existsSync(downloadedUpdateFile)) {
+    mainWindow?.webContents.send('update-error', 'Downloaded update file not found');
+    return;
+  }
+
+  const currentExe = process.execPath;
+  const currentDir = path.dirname(currentExe);
+  const batchPath = path.join(currentDir, '_lolvault_update.cmd');
+
+  const script = [
+    '@echo off',
+    'timeout /t 3 /nobreak > nul',
+    `del "${currentExe}.old" 2>nul`,
+    `move "${currentExe}" "${currentExe}.old"`,
+    `copy /y "${downloadedUpdateFile}" "${currentExe}"`,
+    `start "" "${currentExe}"`,
+    `del "%~f0"`,
+  ].join('\r\n');
+
+  fs.writeFileSync(batchPath, script);
+
+  const child = spawn('cmd', ['/c', batchPath], {
+    detached: true,
+    stdio: 'ignore',
+    cwd: currentDir,
+  });
+  child.unref();
+
+  app.quit();
+}
+
+ipcMain.handle('check-for-updates', () => {
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('Manual update check failed:', err);
+    });
+  }
 });
 
 const isMac = process.platform === 'darwin';

@@ -1,0 +1,36 @@
+@if (state() !== 'hidden') {
+  <div class="update-banner" [class.error]="state() === 'error'">
+    @switch (state()) {
+      @case ('available') {
+        <div class="banner-content">
+          <span class="banner-text">New Version Available — v{{ newVersion() }}</span>
+          <div class="banner-actions">
+            <button class="banner-btn primary" (click)="startDownload()">Update Now</button>
+            <button class="banner-btn dismiss" (click)="dismiss()" title="Dismiss">✕</button>
+          </div>
+        </div>
+      }
+      @case ('downloading') {
+        <div class="banner-content downloading">
+          <span class="banner-text">Downloading update… {{ downloadPercent() }}%</span>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" [style.width.%]="downloadPercent()"></div>
+          </div>
+        </div>
+      }
+      @case ('downloaded') {
+        <div class="banner-content">
+          <span class="banner-text">Update Ready!</span>
+          <button class="banner-btn primary" (click)="installUpdate()">Restart & Apply</button>
+        </div>
+      }
+      @case ('error') {
+        <div class="banner-content">
+          <span class="banner-text">Update failed</span>
+          <button class="banner-btn primary" (click)="retry()">Retry</button>
+          <button class="banner-btn dismiss" (click)="dismiss()" title="Dismiss">✕</button>
+        </div>
+      }
+    }
+  </div>
+}
