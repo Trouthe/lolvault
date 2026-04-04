@@ -118,10 +118,14 @@ function setupAutoUpdater() {
     mainWindow?.webContents.send('update-error', error?.message || 'Unknown error');
   });
 
-  // Only check for updates in production
+  // Only check for updates in production, wait for renderer to be ready
   if (app.isPackaged) {
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('Auto-update check failed:', err);
+    mainWindow.webContents.on('did-finish-load', () => {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          console.error('Auto-update check failed:', err);
+        });
+      }, 2000);
     });
   }
 }

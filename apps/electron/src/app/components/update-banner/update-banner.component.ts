@@ -49,6 +49,7 @@ export class UpdateBannerComponent implements OnInit {
       this.ngZone.run(() => {
         this.errorMessage.set(message);
         this.state.set('error');
+        console.log(`Update failed${this.errorMessage() ? ': ' + this.errorMessage() : ''}`);
       });
     });
   }

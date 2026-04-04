@@ -60,6 +60,7 @@
   "build": {
     "appId": "com.lolvault.app",
     "productName": "LoL Vault",
+    "npmRebuild": false,
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -111,7 +112,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -120,13 +121,23 @@
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
-    "portable": {
-      "artifactName": "LoLVault.exe"
+    "nsis": {
+      "artifactName": "LoLVaultSetup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "mac": {
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "universal"
           ]
