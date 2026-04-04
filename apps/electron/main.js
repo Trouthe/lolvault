@@ -148,11 +148,45 @@ ipcMain.handle('start-update-download', () => {
 
 ipcMain.handle('install-update', () => {
   if (process.platform === 'darwin') {
-    autoUpdater.quitAndInstall(false, true);
+    installMacUpdate();
   } else {
     installPortableUpdate();
   }
 });
+
+function installMacUpdate() {
+  if (!downloadedUpdateFile || !fs.existsSync(downloadedUpdateFile)) {
+    mainWindow?.webContents.send('update-error', 'Downloaded update file not found');
+    return;
+  }
+
+  // app.getPath('exe') = /Applications/LoL Vault.app/Contents/MacOS/LoL Vault
+  // Go up 3 levels to reach LoL Vault.app
+  const currentAppPath = path.dirname(path.dirname(path.dirname(app.getPath('exe'))));
+  const tmpDir = path.join(app.getPath('temp'), `lolvault-update-${Date.now()}`);
+
+  const scriptLines = [
+    '#!/bin/bash',
+    'sleep 3',
+    `mkdir -p "${tmpDir}"`,
+    `unzip -o "${downloadedUpdateFile}" -d "${tmpDir}"`,
+    `APP_PATH=$(find "${tmpDir}" -name "*.app" -maxdepth 2 | head -1)`,
+    'if [ -z "$APP_PATH" ]; then exit 1; fi',
+    `rm -rf "${currentAppPath}"`,
+    `cp -R "$APP_PATH" "${currentAppPath}"`,
+    `open "${currentAppPath}"`,
+    `rm -rf "${tmpDir}"`,
+  ];
+
+  const scriptPath = path.join(app.getPath('temp'), 'lolvault-update.sh');
+  fs.writeFileSync(scriptPath, scriptLines.join('\n'));
+  fs.chmodSync(scriptPath, '755');
+
+  const child = spawn('bash', [scriptPath], { detached: true, stdio: 'ignore' });
+  child.unref();
+
+  app.quit();
+}
 
 function installPortableUpdate() {
   if (!downloadedUpdateFile || !fs.existsSync(downloadedUpdateFile)) {
