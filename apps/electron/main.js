@@ -101,6 +101,9 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.disableDifferentialDownload = true;
+  // GitHub's releases/latest/download routing 404s when a ?noCache query
+  // param is appended — disable it so the URL is clean for the redirect
+  autoUpdater.isAddNoCacheQuery = false;
 
   // Use generic provider so electron-updater fetches the yml directly
   // instead of using the GitHub provider which hits github.com/releases
