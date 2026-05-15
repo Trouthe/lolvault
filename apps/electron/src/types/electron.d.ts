@@ -26,10 +26,13 @@ export interface ElectronAPI {
     defaultPath?: string;
   }) => Promise<{ canceled: boolean; filePaths: string[] }>;
   getPlatform: () => Promise<string>;
-}
 
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI;
-  }
+  // Auto-update
+  onUpdateAvailable: (callback: (version: string) => void) => void;
+  onUpdateProgress: (callback: (percent: number) => void) => void;
+  onUpdateDownloaded: (callback: () => void) => void;
+  onUpdateError: (callback: (message: string) => void) => void;
+  startUpdateDownload: () => Promise<void>;
+  installUpdate: () => Promise<void>;
+  checkForUpdates: () => Promise<void>;
 }

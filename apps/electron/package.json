@@ -1,6 +1,6 @@
 {
   "name": "lolvault-electron",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "main": "main.js",
   "author": "LoL Vault",
   "description": "League of Legends account manager and launcher",
@@ -14,9 +14,12 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",
-    "dist:win": "ng build --configuration production && electron-builder --win portable --x64",
+    "dist:win": "ng build --configuration production && electron-builder --win --x64",
     "dist:mac": "ng build --configuration production && electron-builder --mac",
-    "dist:all": "ng build --configuration production && electron-builder --win portable --x64 --mac"
+    "dist:all": "ng build --configuration production && electron-builder --win --x64 --mac",
+    "release:win": "ng build --configuration production && dotenv -e .env -- electron-builder --win --x64 --publish always",
+    "release:mac": "ng build --configuration production && dotenv -e .env -- electron-builder --mac --publish always",
+    "release:all": "ng build --configuration production && dotenv -e .env -- electron-builder --win --x64 --mac --publish always"
   },
   "private": true,
   "dependencies": {
@@ -27,6 +30,7 @@
     "@angular/platform-browser": "^21.1.0",
     "@angular/platform-browser-dynamic": "^21.1.0",
     "@angular/router": "^21.1.0",
+    "electron-updater": "^6.8.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.16.0"
@@ -38,6 +42,7 @@
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^21.1.0",
     "concurrently": "^9.2.1",
+    "dotenv-cli": "^11.0.0",
     "electron": "39.2.7",
     "electron-builder": "^26.0.12",
     "eslint": "^9.33.0",
@@ -55,15 +60,45 @@
   "build": {
     "appId": "com.lolvault.app",
     "productName": "LoL Vault",
+    "npmRebuild": false,
     "directories": {
       "output": "release",
       "buildResources": "build"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Trouthe",
+        "repo": "lolvault"
+      }
+    ],
     "files": [
       "dist/lolvault/**/*",
       "main.js",
       "preload.js",
-      "src/app/data/**/*"
+      "src/app/data/**/*",
+      {
+        "from": "../../node_modules",
+        "to": "node_modules",
+        "filter": [
+          "electron-updater/**",
+          "builder-util-runtime/**",
+          "fs-extra/**",
+          "graceful-fs/**",
+          "jsonfile/**",
+          "universalify/**",
+          "js-yaml/**",
+          "argparse/**",
+          "lazy-val/**",
+          "lodash.escaperegexp/**",
+          "lodash.isequal/**",
+          "semver/**",
+          "tiny-typed-emitter/**",
+          "debug/**",
+          "ms/**",
+          "sax/**"
+        ]
+      }
     ],
     "extraResources": [
       {
@@ -77,7 +112,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -86,10 +121,23 @@
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
+    "nsis": {
+      "artifactName": "LoLVaultSetup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
     "mac": {
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "universal"
           ]
@@ -101,10 +149,7 @@
     },
     "dmg": {
       "icon": "build/icon.icns",
-      "artifactName": "LoLVault.dmg"
-    },
-    "portable": {
-      "artifactName": "LoLVault.exe"
+      "artifactName": "LoLVault-${version}.dmg"
     }
   }
 }

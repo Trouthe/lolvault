@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const { dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
 
 function encrypt(text) {
@@ -79,7 +80,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  setupAutoUpdater();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -87,6 +91,148 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// ── Auto-Updater ──
+
+let downloadedUpdateFile = null;
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.disableDifferentialDownload = true;
+  // GitHub's releases/latest/download routing 404s when a ?noCache query
+  // param is appended — disable it so the URL is clean for the redirect
+  autoUpdater.isAddNoCacheQuery = false;
+
+  // Use generic provider so electron-updater fetches the yml directly
+  // instead of using the GitHub provider which hits github.com/releases
+  // with Accept: application/json and gets a 406
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: 'https://github.com/Trouthe/lolvault/releases/latest/download',
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update-available', info.version);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update-progress', progress.percent);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    downloadedUpdateFile = info.downloadedFile || null;
+    mainWindow?.webContents.send('update-downloaded');
+  });
+
+  autoUpdater.on('error', (error) => {
+    // On macOS we do our own install via shell script, so ignore the
+    // ShipIt signature validation error that fires after the download
+    // completes — the file is already saved and ready to use.
+    if (process.platform === 'darwin' && downloadedUpdateFile) return;
+    mainWindow?.webContents.send('update-error', error?.message || 'Unknown error');
+  });
+
+  // Only check for updates in production, wait for renderer to be ready
+  if (app.isPackaged) {
+    mainWindow.webContents.on('did-finish-load', () => {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          console.error('Auto-update check failed:', err);
+        });
+      }, 2000);
+    });
+  }
+}
+
+ipcMain.handle('start-update-download', () => {
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.error('Download update failed:', err);
+    mainWindow?.webContents.send('update-error', err?.message || 'Download failed');
+  });
+});
+
+ipcMain.handle('install-update', () => {
+  if (process.platform === 'darwin') {
+    installMacUpdate();
+  } else {
+    installPortableUpdate();
+  }
+});
+
+function installMacUpdate() {
+  if (!downloadedUpdateFile || !fs.existsSync(downloadedUpdateFile)) {
+    mainWindow?.webContents.send('update-error', 'Downloaded update file not found');
+    return;
+  }
+
+  // app.getPath('exe') = /Applications/LoL Vault.app/Contents/MacOS/LoL Vault
+  // Go up 3 levels to reach LoL Vault.app
+  const currentAppPath = path.dirname(path.dirname(path.dirname(app.getPath('exe'))));
+  const tmpDir = path.join(app.getPath('temp'), `lolvault-update-${Date.now()}`);
+
+  const scriptLines = [
+    '#!/bin/bash',
+    'sleep 3',
+    `mkdir -p "${tmpDir}"`,
+    `unzip -o "${downloadedUpdateFile}" -d "${tmpDir}"`,
+    `APP_PATH=$(find "${tmpDir}" -name "*.app" -maxdepth 2 | head -1)`,
+    'if [ -z "$APP_PATH" ]; then exit 1; fi',
+    `rm -rf "${currentAppPath}"`,
+    `cp -R "$APP_PATH" "${currentAppPath}"`,
+    `open "${currentAppPath}"`,
+    `rm -rf "${tmpDir}"`,
+  ];
+
+  const scriptPath = path.join(app.getPath('temp'), 'lolvault-update.sh');
+  fs.writeFileSync(scriptPath, scriptLines.join('\n'));
+  fs.chmodSync(scriptPath, '755');
+
+  const child = spawn('bash', [scriptPath], { detached: true, stdio: 'ignore' });
+  child.unref();
+
+  app.quit();
+}
+
+function installPortableUpdate() {
+  if (!downloadedUpdateFile || !fs.existsSync(downloadedUpdateFile)) {
+    mainWindow?.webContents.send('update-error', 'Downloaded update file not found');
+    return;
+  }
+
+  const currentExe = process.execPath;
+  const currentDir = path.dirname(currentExe);
+  const batchPath = path.join(currentDir, '_lolvault_update.cmd');
+
+  const script = [
+    '@echo off',
+    'timeout /t 3 /nobreak > nul',
+    `del "${currentExe}.old" 2>nul`,
+    `move "${currentExe}" "${currentExe}.old"`,
+    `copy /y "${downloadedUpdateFile}" "${currentExe}"`,
+    `start "" "${currentExe}"`,
+    `del "%~f0"`,
+  ].join('\r\n');
+
+  fs.writeFileSync(batchPath, script);
+
+  const child = spawn('cmd', ['/c', batchPath], {
+    detached: true,
+    stdio: 'ignore',
+    cwd: currentDir,
+  });
+  child.unref();
+
+  app.quit();
+}
+
+ipcMain.handle('check-for-updates', () => {
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('Manual update check failed:', err);
+    });
+  }
 });
 
 const isMac = process.platform === 'darwin';

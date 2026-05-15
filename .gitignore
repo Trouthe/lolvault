@@ -48,6 +48,9 @@ apps/electron/release/
 
 # Firebase
 .firebase/
+
+# Secrets
+.env
 *.local
 backend/functions/lib/
 

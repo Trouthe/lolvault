@@ -8,6 +8,7 @@ import { AddAccountModalComponent } from '../../components/modals/add-account-mo
 import { EditAccountModalComponent } from '../../components/modals/edit-account-modal/edit-account-modal.component';
 import { DeleteAccountModalComponent } from '../../components/modals/delete-account-modal/delete-account-modal.component';
 import { SettingsModalComponent } from '../../components/modals/settings-modal/settings-modal.component';
+import { UpdateBannerComponent } from '../../components/update-banner/update-banner.component';
 import { Account } from '../../models/interfaces/Account';
 import { Board } from '../../models/interfaces/Board';
 import { RiotService } from '../../services/riot.service';
@@ -28,6 +29,7 @@ import { ThemeService } from '../../services/theme.service';
     EditAccountModalComponent,
     DeleteAccountModalComponent,
     SettingsModalComponent,
+    UpdateBannerComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
