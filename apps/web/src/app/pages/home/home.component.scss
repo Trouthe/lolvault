@@ -589,15 +589,15 @@
 
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  animation: rise-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translateY(22px) scale(0.985);
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes rise-in {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 @media (max-width: 1040px) {

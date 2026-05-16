@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { PaddleService } from '../../services/paddle.service';
 import { PricingService, type RecurringPrice } from '../../services/pricing.service';
 
@@ -30,7 +30,7 @@ const FALLBACK_YEARLY: PlanPrice = {
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly title = 'LoL Vault';
 
   readonly releasesUrl = 'https://github.com/Trouthe/lolvault/releases/latest';
@@ -76,10 +76,53 @@ export class HomeComponent implements OnInit {
 
   private readonly paddleService = inject(PaddleService);
   private readonly pricingService = inject(PricingService);
+  private readonly hostElement = inject(ElementRef<HTMLElement>);
+
+  private revealObserver?: IntersectionObserver;
 
   ngOnInit(): void {
     this.paddleService.init();
     void this.loadPricing();
+  }
+
+  ngAfterViewInit(): void {
+    this.setupScrollReveals();
+  }
+
+  ngOnDestroy(): void {
+    this.revealObserver?.disconnect();
+  }
+
+  private setupScrollReveals(): void {
+    const revealNodes = Array.from(
+      this.hostElement.nativeElement.querySelectorAll('.reveal')
+    ) as HTMLElement[];
+
+    if (!revealNodes.length) {
+      return;
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      revealNodes.forEach((node) => node.classList.add('is-visible'));
+      return;
+    }
+
+    this.revealObserver = new IntersectionObserver(
+      (entries, observer) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+
+          (entry.target as HTMLElement).classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      },
+      {
+        threshold: 0.16,
+        rootMargin: '0px 0px -8% 0px',
+      }
+    );
+
+    revealNodes.forEach((node) => this.revealObserver?.observe(node));
   }
 
   private async loadPricing(): Promise<void> {
