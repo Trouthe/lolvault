@@ -1,4 +1,5 @@
 export const environment = {
+  paddlePricingApiUrl: '/api/paddle/pricing',
   firebaseConfig: {
     apiKey: 'AIzaSyDjB0kRJrBWL8exTK-AqpAEInBJbFJXlwM',
     authDomain: 'lolvault.firebaseapp.com',

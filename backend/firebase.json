@@ -14,7 +14,13 @@
   "hosting": {
     "public": "../apps/web/dist/lolvault-web/browser",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    "rewrites": [
+      {
+        "source": "/api/paddle/pricing",
+        "function": { "functionId": "getPaddlePremiumPricing", "region": "us-central1" }
+      },
+      { "source": "**", "destination": "/index.html" }
+    ]
   },
   "emulators": {
     "functions": { "port": 5001 },
