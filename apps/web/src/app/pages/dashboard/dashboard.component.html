@@ -286,7 +286,9 @@
                   <div class="card-top">
                     <div class="account-info">
                       <div class="account-details">
-                        <div [class]="account.rank && !isAccountLocked(account) ? 'profile-icon' : ''">
+                        <div
+                          [class]="account.rank && !isAccountLocked(account) ? 'profile-icon' : ''"
+                        >
                           <img
                             [src]="
                               'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/' +
@@ -351,41 +353,41 @@
                       }
                     </div>
 
-                    <div class="button-collection">
-                      <button
-                        class="action-btn delete-btn"
-                        (click)="openDeleteModal(account)"
-                        [disabled]="isAccountLocked(account)"
-                        title="Delete Account"
-                      >
-                        <img src="assets/icons/trash.svg" alt="Delete" width="16" />
-                      </button>
+                    @if (!isAccountLocked(account)) {
+                      <div class="button-collection">
+                        <button
+                          class="action-btn delete-btn"
+                          (click)="openDeleteModal(account)"
+                          title="Delete Account"
+                        >
+                          <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+                        </button>
 
-                      <button
-                        class="action-btn edit-btn"
-                        (click)="openEditModal(account)"
-                        [disabled]="isAccountLocked(account)"
-                        title="Edit Account"
-                      >
-                        <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
-                      </button>
+                        <button
+                          class="action-btn edit-btn"
+                          (click)="openEditModal(account)"
+                          title="Edit Account"
+                        >
+                          <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+                        </button>
 
-                      <button
-                        class="action-btn refresh-btn"
-                        (click)="refreshAccount(account)"
-                        [disabled]="isRefreshing(account.id) || isAccountLocked(account)"
-                        [class.refreshing]="isRefreshing(account.id)"
-                        title="Refresh Account Data"
-                      >
-                        <img
-                          src="assets/icons/refresh.svg"
-                          class="icon"
-                          [class.spinning]="isRefreshing(account.id)"
-                          alt="Refresh"
-                          width="16"
-                        />
-                      </button>
-                    </div>
+                        <button
+                          class="action-btn refresh-btn"
+                          (click)="refreshAccount(account)"
+                          [disabled]="isRefreshing(account.id)"
+                          [class.refreshing]="isRefreshing(account.id)"
+                          title="Refresh Account Data"
+                        >
+                          <img
+                            src="assets/icons/refresh.svg"
+                            class="icon"
+                            [class.spinning]="isRefreshing(account.id)"
+                            alt="Refresh"
+                            width="16"
+                          />
+                        </button>
+                      </div>
+                    }
                   </div>
                 </div>
               </div>

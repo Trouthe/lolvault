@@ -817,20 +817,24 @@
       min-width: 0;
       width: 100%;
 
+      div img {
+        border-radius: 8px;
+      }
+
       .profile-icon {
         position: relative;
         margin-inline: 0.5rem 1rem;
 
         img:nth-of-type(1) {
           border-radius: 999px;
-          scale: 0.75;
+          transform: scale(0.75);
         }
 
         img:nth-of-type(2) {
           position: absolute;
           bottom: 15%;
           left: 0;
-          scale: 2;
+          transform: scale(2);
           user-select: none;
           -webkit-user-drag: none;
         }
