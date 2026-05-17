@@ -95,6 +95,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly primaryCtaLabel = computed(() => (this.currentUser() ? 'Dashboard' : 'Get Started'));
 
   private revealObserver?: IntersectionObserver;
+  private revealFailSafeTimerId?: number;
 
   ngOnInit(): void {
     this.paddleService.init();
@@ -107,6 +108,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.revealObserver?.disconnect();
+    if (this.revealFailSafeTimerId !== undefined) {
+      window.clearTimeout(this.revealFailSafeTimerId);
+    }
   }
 
   private setupScrollReveals(): void {
@@ -139,6 +143,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     revealNodes.forEach((node) => this.revealObserver?.observe(node));
+
+    // Failsafe for some hosted builds where observers can miss lower sections.
+    this.revealFailSafeTimerId = window.setTimeout(() => {
+      revealNodes.forEach((node) => node.classList.add('is-visible'));
+    }, 1800);
   }
 
   private async loadPricing(): Promise<void> {
@@ -146,8 +155,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       const pricing = await this.pricingService.getPremiumPricing();
       this.monthlyPrice.set(this.toPlanPrice(pricing.monthly));
       this.yearlyPrice.set(this.toPlanPrice(pricing.yearly));
-    } catch (error) {
-      console.error('Failed to load dynamic Paddle pricing. Using fallback values.', error);
+    } catch {
+      // Keep fallback values when live pricing endpoints are unavailable.
     }
   }
 
@@ -171,6 +180,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   setBillingCycle(cycle: BillingCycle): void {
     this.billingCycle.set(cycle);
+  }
+
+  scrollToSection(sectionId: string, event: Event): void {
+    event.preventDefault();
+
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   buyPremium(): void {

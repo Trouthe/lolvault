@@ -21,18 +21,44 @@ export interface PremiumPricingResponse {
   providedIn: 'root',
 })
 export class PricingService {
-  async getPremiumPricing(): Promise<PremiumPricingResponse> {
-    const response = await fetch(environment.paddlePricingApiUrl, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
-    });
+  private static readonly fallbackPricingUrls = [
+    '/api/paddle/pricing',
+    'https://us-central1-lolvault.cloudfunctions.net/getPaddlePremiumPricing',
+  ];
 
-    if (!response.ok) {
-      throw new Error(`Pricing request failed with status ${response.status}`);
+  async getPremiumPricing(): Promise<PremiumPricingResponse> {
+    const pricingUrls = this.getPricingUrls();
+    let lastError: unknown;
+
+    for (const url of pricingUrls) {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Pricing request failed with status ${response.status}`);
+        }
+
+        return (await response.json()) as PremiumPricingResponse;
+      } catch (error) {
+        lastError = error;
+      }
     }
 
-    return (await response.json()) as PremiumPricingResponse;
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+
+    throw new Error('Pricing request failed for all configured endpoints.');
+  }
+
+  private getPricingUrls(): string[] {
+    const primary = (environment.paddlePricingApiUrl || '').trim();
+    const all = [primary, ...PricingService.fallbackPricingUrls].filter((url) => url.length > 0);
+    return [...new Set(all)];
   }
 }

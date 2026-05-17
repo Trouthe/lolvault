@@ -22,6 +22,10 @@ body {
   color: var(--primary-text);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .icon {
   color: var(--primary-text);
   transition: filter 0.2s;

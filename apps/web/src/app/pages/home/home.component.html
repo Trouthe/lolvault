@@ -1,37 +1,31 @@
 <main class="home-page">
   <div class="intro-shell reveal">
     <header class="site-header">
-      <a class="brand" href="#hero" aria-label="LoL Vault Home">
+      <a class="brand" href="#hero" (click)="scrollToSection('hero', $event)" aria-label="LoL Vault Home">
         <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
         <span>{{ title }}</span>
       </a>
 
       <nav class="site-nav" aria-label="Primary">
-        <a href="#safety">Safety</a>
-        <a href="#download">Download</a>
-        <a href="#packages">Packages</a>
-        <a href="#socials">Socials</a>
+        <a href="#safety" (click)="scrollToSection('safety', $event)">Data Model</a>
+        <a href="#download" (click)="scrollToSection('download', $event)">Launch Status</a>
+        <a href="#packages" (click)="scrollToSection('packages', $event)">Packages</a>
+        <a href="#socials" (click)="scrollToSection('socials', $event)">Discord</a>
       </nav>
-
-      <a class="btn btn-primary" [href]="primaryCtaHref()">
-        {{ primaryCtaLabel() }}
-      </a>
     </header>
 
     <section id="hero" class="section hero">
       <div class="hero-copy">
-        <h1>Manage Every League Account With Precision.</h1>
+        <h1>Web-First League Account Management.</h1>
         <p class="hero-description">
-          Keep smurfs organized, launch faster, and control every account from one clean desktop
-          workspace.
+          Track accounts by Riot ID, organize boards, and monitor ranked progress from one clean web
+          dashboard.
         </p>
 
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#download">Download for Mac &amp; Windows</a>
-          <a class="btn btn-outline" href="#packages">See Packages</a>
+          <a class="btn btn-primary" [href]="primaryCtaHref()">{{ primaryCtaLabel() }}</a>
+          <a class="btn btn-outline" href="#safety" (click)="scrollToSection('safety', $event)">See How It Works</a>
         </div>
-
-        <p class="hero-meta">Local-first setup. No logins. No cloud dependency.</p>
       </div>
 
       <figure class="hero-shot" aria-label="LoL Vault app preview screenshot">
@@ -45,9 +39,10 @@
 
   <section id="safety" class="section safety">
     <div class="section-header reveal">
-      <h2>Your Data Stays On Your Computer</h2>
+      <h2>Built For Organized League Workflows</h2>
       <p class="section-subtitle">
-        Local-first by default, with explicit online calls only for product features that need it.
+        Everything is designed for fast account organization, clean tracking, and smooth day-to-day
+        use.
       </p>
     </div>
 
@@ -55,10 +50,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">01</span></div>
         <div class="step-content">
-          <h3>Encrypted local vault</h3>
+          <h3>Unified account profiles</h3>
           <p>
-            Accounts are encrypted and saved on your machine. Encryption material stays tied to your
-            device.
+            Keep each account profile clear and structured with Riot ID, server, rank context, and
+            performance snapshots.
           </p>
         </div>
       </article>
@@ -66,10 +61,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">02</span></div>
         <div class="step-content">
-          <h3>Internet only for required features</h3>
+          <h3>Fast dashboard operations</h3>
           <p>
-            The app goes online for account stats, license validation, and update checks. Core vault
-            data still remains local.
+            Sort, filter, and manage boards quickly with a layout designed for high-volume account
+            workflows.
           </p>
         </div>
       </article>
@@ -77,10 +72,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">03</span></div>
         <div class="step-content">
-          <h3>Free mode can stay login-free</h3>
+          <h3>Community updates on Discord</h3>
           <p>
-            Free users can use LoL Vault without login with up to 3 accounts. Subscription tiers
-            require an account.
+            Changelogs, previews, and release announcements are shared directly in Discord so you can
+            stay up to date.
           </p>
         </div>
       </article>
@@ -89,7 +84,11 @@
 
   <section id="download" class="section download">
     <div class="section-header reveal">
-      <h2>Pick Your Platform</h2>
+      <h2>Downloads Are Coming Soon</h2>
+      <p class="section-subtitle">
+        Desktop builds are coming soon. Join Discord to be first to know when each platform goes
+        live.
+      </p>
     </div>
 
     <div class="download-table" role="list" aria-label="Download options">
@@ -103,16 +102,9 @@
             </svg>
             <h3>Windows</h3>
           </div>
-          <p>Installer build for 64-bit Windows, updated with each release.</p>
+          <p>Coming Soon. Windows installer access will return in a future rollout.</p>
         </div>
-        <a
-          class="btn btn-outline"
-          [href]="windowsDownloadUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Download for Windows
-        </a>
+        <button class="btn btn-outline btn-disabled" type="button" disabled>Coming Soon</button>
       </article>
 
       <article class="download-row reveal" role="listitem">
@@ -125,16 +117,9 @@
             </svg>
             <h3>macOS</h3>
           </div>
-          <p>Universal macOS build available in the latest GitHub release.</p>
+          <p>Coming Soon. macOS installer access will return in a future rollout.</p>
         </div>
-        <a
-          class="btn btn-outline"
-          [href]="macDownloadUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Download for macOS
-        </a>
+        <button class="btn btn-outline btn-disabled" type="button" disabled>Coming Soon</button>
       </article>
     </div>
   </section>
@@ -147,20 +132,20 @@
     <div class="packages-grid">
       <article class="plan free-plan reveal">
         <p class="plan-label">Free</p>
-        <h3>Starter Vault</h3>
-        <p class="plan-summary">Perfect for testing your setup with a small rotation.</p>
+        <h3>Web Starter</h3>
+        <p class="plan-summary">Perfect for testing your setup with a small account rotation.</p>
         <ul>
           <li>Up to 3 League accounts</li>
-          <li>Core launcher workflow</li>
-          <li>Local data storage</li>
+          <li>Account plus server tracking</li>
+          <li>Core web dashboard workflow</li>
         </ul>
-        <a class="btn btn-outline" href="#download">Get Started Free</a>
+        <a class="btn btn-outline" [href]="primaryCtaHref()">Go Free</a>
       </article>
 
       <article class="plan premium-plan reveal">
         <p class="plan-label">Premium</p>
-        <h3>Unlimited Vault</h3>
-        <p class="plan-summary">No account cap. Built for boosters and multi-account operators.</p>
+        <h3>Unlimited Web Vault</h3>
+        <p class="plan-summary">No account cap. Built for serious multi-account workflows.</p>
         <div class="billing-switch" role="group" aria-label="Select billing cycle">
           <button
             type="button"
@@ -187,8 +172,8 @@
         </div>
         <ul>
           <li>Unlimited accounts</li>
-          <li>No usage restrictions</li>
-          <li>Priority feature roadmap input</li>
+          <li>Advanced account organization</li>
+          <li>Priority roadmap input on Discord</li>
         </ul>
         <div class="plan-actions">
           <button class="btn btn-primary" (click)="buyPremium()">{{ premiumButtonLabel() }}</button>
@@ -198,20 +183,22 @@
   </section>
 
   <section id="socials" class="section socials">
-    <div class="social-shell reveal">
-      <h2>Roadmap, Feedback, and Community Updates Live On Discord</h2>
-      <p>
-        Join the server to follow what is being built next, share requests, and help shape LoL Vault
-        with the community.
-      </p>
+    <div class="social-shell is-visible">
+      <div class="social-copy">
+        <p class="social-kicker">Community</p>
+        <h2>Stay In The Loop On Discord</h2>
+        <p>
+          Get release alerts, roadmap previews, and community Q&amp;A in one place.
+        </p>
+      </div>
       <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
         Join Discord
       </a>
-      <p>
-        LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
-        Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
-        Riot Games, Inc.
-      </p>
     </div>
+    <p class="social-legal">
+      LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
+      Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
+      Riot Games, Inc.
+    </p>
   </section>
 </main>
