@@ -117,6 +117,37 @@
 
           <div class="dash-header">
             <h1>{{ currentBoardTitle() }}</h1>
+
+            <div class="profile-menu">
+              <button
+                type="button"
+                class="profile-avatar-btn"
+                (click)="toggleProfileMenu($event)"
+                aria-label="Open profile menu"
+              >
+                <img
+                  class="profile-avatar"
+                  [src]="profileImageUrl()"
+                  [alt]="currentUser()?.email || 'User avatar'"
+                  (error)="onProfileImageError($event)"
+                />
+              </button>
+
+              @if (isProfileMenuOpen()) {
+                <div class="profile-dropdown">
+                  <p class="profile-email">{{ currentUser()?.email || 'No email available' }}</p>
+
+                  <button
+                    type="button"
+                    class="profile-signout-btn"
+                    (click)="signOutUser()"
+                    [disabled]="!currentUser()"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              }
+            </div>
           </div>
 
           <div class="search-section">

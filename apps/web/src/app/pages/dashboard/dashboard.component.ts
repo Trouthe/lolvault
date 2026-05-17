@@ -1,6 +1,10 @@
-import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import type { User } from 'firebase/auth';
 import { BUILD_LABEL, VERSION } from '../../../environments/version';
+import { AuthService } from '../../services/auth.service';
 
 type SortOption = 'all' | 'highest' | 'lowest' | 'unranked';
 type BoardColor =
@@ -149,12 +153,17 @@ const DASHBOARD_ACCOUNTS: DashboardAccount[] = [
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   readonly version = [VERSION, BUILD_LABEL];
+  readonly defaultProfileImage =
+    'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/29.png';
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly boards = signal<DashboardBoard[]>(DASHBOARD_BOARDS);
   readonly accounts = signal<DashboardAccount[]>(DASHBOARD_ACCOUNTS);
 
   readonly selectedBoardId = signal<string | null>(null);
   readonly isSortMenuOpen = signal(false);
+  readonly isProfileMenuOpen = signal(false);
   readonly currentSort = signal<SortOption>('all');
 
   readonly isCreatingBoard = signal(false);
@@ -183,6 +192,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly servers = SERVERS;
 
   readonly logoThemeSuffix = computed(() => (this.theme() === 'light' ? 'dark' : 'light'));
+  readonly currentUser = toSignal<User | null>(this.authService.currentUser$, {
+    initialValue: null,
+  });
+  readonly profileImageUrl = computed(
+    () => this.currentUser()?.photoURL || this.defaultProfileImage
+  );
 
   readonly displayedBoards = computed(() => this.boards());
   readonly totalAccountCount = computed(() => this.accounts().length);
@@ -239,7 +254,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    this.applyBodyOverflowForViewport();
   }
 
   ngOnDestroy(): void {
@@ -248,8 +263,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('.sort-menu-container') && this.isSortMenuOpen()) {
+    const target = event.target as HTMLElement | null;
+
+    if (target && !target.closest('.sort-menu-container') && this.isSortMenuOpen()) {
       this.isSortMenuOpen.set(false);
+    }
+
+    if (target && !target.closest('.profile-menu') && this.isProfileMenuOpen()) {
+      this.isProfileMenuOpen.set(false);
+    }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.applyBodyOverflowForViewport();
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.stopPropagation();
+    this.isProfileMenuOpen.update((open) => !open);
+  }
+
+  onProfileImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    target.src = this.defaultProfileImage;
+  }
+
+  async signOutUser(): Promise<void> {
+    try {
+      await this.authService.signOut();
+      this.isProfileMenuOpen.set(false);
+      await this.router.navigateByUrl('/auth');
+    } catch (error) {
+      console.error('Failed to sign out:', error);
     }
   }
 
@@ -765,6 +811,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.singleRiotId = '';
     this.singleServer = '';
     this.bulkAccountsText = '';
+  }
+
+  private applyBodyOverflowForViewport(): void {
+    if (window.matchMedia('(max-width: 1000px)').matches) {
+      document.body.style.overflow = this.previousBodyOverflow;
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
   }
 
   private initializeAppearance(): void {

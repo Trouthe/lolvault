@@ -349,6 +349,80 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+
+    .profile-menu {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .profile-avatar-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 2px solid var(--border-color);
+      background: var(--card);
+      padding: 0;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+
+      &:hover {
+        border-color: var(--outline);
+      }
+    }
+
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 40;
+      min-width: 230px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 2px solid var(--border-color);
+      background: var(--card);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-email {
+      margin: 0;
+      font-size: 13px;
+      color: var(--secondary-text);
+      word-break: break-word;
+    }
+
+    .profile-signout-btn {
+      width: 100%;
+      border: 2px solid var(--border-color);
+      background: transparent;
+      color: var(--primary-text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: var(--muted);
+      }
+
+      &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+    }
   }
 
   .search-section {
@@ -1379,7 +1453,14 @@
 }
 
 @media (max-width: 1000px) {
+  :host {
+    height: auto;
+    min-height: 100vh;
+  }
+
   .dashboard-page {
+    height: auto;
+    min-height: 100vh;
     overflow-y: auto;
 
     &::-webkit-scrollbar {
@@ -1387,6 +1468,11 @@
     }
     scrollbar-width: none;
     -ms-overflow-style: none;
+  }
+
+  .dashboard-shell {
+    height: auto;
+    overflow: visible;
   }
 
   .electron-dashboard {
@@ -1402,6 +1488,10 @@
     > div:first-of-type {
       border-right: none;
       border-bottom: 2px solid var(--border-color);
+    }
+
+    > div:nth-of-type(2) {
+      overflow-y: visible;
     }
   }
 
