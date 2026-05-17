@@ -1,0 +1,9 @@
+[build]
+  base = "apps/web"
+  command = "npm run build:prod"
+  publish = "dist/lolvault-web/browser"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

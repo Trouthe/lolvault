@@ -1,0 +1,656 @@
+<main class="dashboard-page">
+  <section class="dashboard-shell">
+    <section class="electron-dashboard">
+      <div>
+        <div class="branding">
+          <div>
+            <img
+              [src]="'assets/branding/LV-no-bg_' + logoThemeSuffix() + '.svg'"
+              alt="LoL Vault Logo"
+              width="32"
+            />
+            <h1>LoL Vault</h1>
+          </div>
+          <h4>All your accounts - tracked in one place</h4>
+          <span>v{{ version[0] }} ({{ version[1] }})</span>
+        </div>
+
+        <hr />
+
+        <div class="folder-list">
+          <div
+            class="folder-item"
+            tabindex="0"
+            role="button"
+            [class.active]="selectedBoardId() === null"
+            (click)="selectBoard(null)"
+            (keydown.enter)="selectBoard(null)"
+          >
+            <span
+              class="folder-color-dot"
+              [style.background-color]="getFolderColor('default')"
+            ></span>
+            <span class="folder-name">All Accounts</span>
+            <div class="folder-actions">
+              <span class="folder-count">{{ totalAccountCount() }}</span>
+            </div>
+          </div>
+
+          @for (board of displayedBoards(); track board.id) {
+            <div
+              class="folder-item draggable"
+              tabindex="0"
+              role="button"
+              [class.active]="selectedBoardId() === board.id"
+              [class.hovered]="hoveredFolderId() === board.id"
+              (click)="selectBoard(board.id)"
+              (keydown.enter)="selectBoard(board.id)"
+              (mouseenter)="onFolderMouseEnter(board.id)"
+              (mouseleave)="onFolderMouseLeave()"
+            >
+              <div class="folder-drag-handle">
+                <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
+              </div>
+              <span
+                class="folder-color-dot"
+                [style.background-color]="getFolderColor(board.color)"
+              ></span>
+              <span class="folder-name">{{ board.name }}</span>
+              <div class="folder-actions">
+                <button
+                  class="folder-delete-btn"
+                  (click)="deleteBoard(board.id, $event)"
+                  title="Delete board"
+                >
+                  <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+                </button>
+                <span class="folder-count">{{ getBoardAccountCount(board.id) }}</span>
+              </div>
+            </div>
+          }
+
+          @if (isCreatingBoard()) {
+            <div class="folder-item new-board-input-container">
+              <span
+                class="folder-color-dot"
+                [style.background-color]="getFolderColor(newBoardColor())"
+              ></span>
+              <input
+                type="text"
+                class="new-board-name-input"
+                placeholder="Board name..."
+                [value]="newBoardName()"
+                (input)="newBoardName.set($any($event.target).value)"
+                (keydown)="onNewBoardKeydown($event)"
+                (blur)="onNewBoardBlur()"
+              />
+            </div>
+          }
+        </div>
+
+        <div class="sidebar-buttons">
+          <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
+            <img src="assets/icons/settings.svg" class="icon" alt="Settings" width="17" />
+            Settings
+          </button>
+
+          <button
+            title="New Folder"
+            class="btn-icon-outlined new-board-btn"
+            (click)="startCreatingBoard()"
+          >
+            <img src="assets/icons/plus.svg" class="icon" alt="New Folder" width="17" />
+            New Folder
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="data">
+          @if (showMasteryBackground()) {
+            <img
+              src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Ahri_0.jpg"
+              class="mastery-bg"
+              alt="Mastery Background"
+            />
+          }
+
+          <div class="dash-header">
+            <h1>{{ currentBoardTitle() }}</h1>
+          </div>
+
+          <div class="search-section">
+            <div class="search-container">
+              <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Search accounts by name, server, or rank..."
+                [(ngModel)]="searchQuery"
+                (ngModelChange)="onSearchChange($event)"
+              />
+            </div>
+
+            <div class="header-actions">
+              <div class="sort-menu-container">
+                <button
+                  title="Sort"
+                  class="btn-icon-outlined settings-btn"
+                  (click)="toggleSortMenu()"
+                >
+                  <img src="assets/icons/sort.svg" class="icon" alt="Sort" width="16" />
+                </button>
+
+                @if (isSortMenuOpen()) {
+                  <div class="sort-dropdown">
+                    <button
+                      class="sort-option"
+                      [class.active]="currentSort() === 'highest'"
+                      (click)="setSortOption('highest')"
+                    >
+                      Highest Rank
+                    </button>
+                    <button
+                      class="sort-option"
+                      [class.active]="currentSort() === 'lowest'"
+                      (click)="setSortOption('lowest')"
+                    >
+                      Lowest Rank
+                    </button>
+                    <button
+                      class="sort-option"
+                      [class.active]="currentSort() === 'unranked'"
+                      (click)="setSortOption('unranked')"
+                    >
+                      Unranked
+                    </button>
+                    <button
+                      class="sort-option"
+                      [class.active]="currentSort() === 'all'"
+                      (click)="setSortOption('all')"
+                    >
+                      Show All
+                    </button>
+                  </div>
+                }
+              </div>
+
+              <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
+                <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
+              </button>
+            </div>
+          </div>
+
+          <div class="accounts-list">
+            @for (account of displayedAccounts(); track account.id) {
+              <div
+                class="account-drag-wrapper"
+                [class.hovered]="hoveredAccountId() === account.id.toString()"
+                (mouseenter)="onAccountMouseEnter(account.id.toString())"
+                (mouseleave)="onAccountMouseLeave()"
+              >
+                <div class="account-drag-handle">
+                  <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+                </div>
+
+                <div class="acc-card">
+                  @if (account.hotStreak) {
+                    <div class="hot-streak-indicator" title="On a hot streak!">
+                      <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
+                    </div>
+                  }
+
+                  @if (selectedBoardId() !== null) {
+                    <button
+                      class="remove-from-folder-btn"
+                      (click)="onRemoveFromFolder(account)"
+                      title="Remove from folder"
+                    >
+                      <img src="assets/icons/plus.svg" alt="Remove" width="12" />
+                    </button>
+                  }
+
+                  <div class="card-top">
+                    <div class="account-info">
+                      <div class="account-details">
+                        <div [class]="account.rank ? 'profile-icon' : ''">
+                          <img
+                            [src]="
+                              'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/' +
+                              (account.profileIconId || 29) +
+                              '.png'
+                            "
+                            alt="Profile Icon"
+                            width="48"
+                          />
+
+                          @if (account.rank) {
+                            <img
+                              [src]="'assets/emblems/Wings/' + getRankName(account.rank) + '.webp'"
+                              alt="Rank Wing"
+                              width="48"
+                            />
+                          }
+                        </div>
+
+                        <div class="account-text">
+                          <div class="name-row">
+                            <strong>{{ account.name }}</strong>
+                            @if (account.name.includes('#') && account.server) {
+                              <button
+                                class="opgg-link"
+                                (click)="openOpGG($event, account)"
+                                title="Open OP.GG"
+                              >
+                                <img src="assets/icons/external-link.svg" alt="OP.GG" width="14" />
+                              </button>
+                            }
+                          </div>
+
+                          <p class="account-subtitle">
+                            <span class="subtitle-text">
+                              {{ account.name.split('#')[0] }}
+                              <span class="server">- {{ account.server }}</span>
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      @if (account.rank) {
+                        <div class="stats-container">
+                          <div class="stats-group winloss-group">
+                            <span class="wl-record">
+                              <span class="wins">{{ account.wins || 0 }}W</span>
+                              <span class="losses">{{ account.losses || 0 }}L</span>
+                            </span>
+                            <span class="winrate">{{ getWinrate(account) }}% WR</span>
+                          </div>
+                          <div class="stats-divider"></div>
+                          <div class="stats-group lp-group">
+                            <span class="lp">{{ account.leaguePoints || 0 }}LP</span>
+                          </div>
+                          <div class="stats-divider"></div>
+                          <div class="stats-group rank-group">
+                            <span class="rank-abbrev">{{ getAbbreviatedRank(account.rank) }}</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="button-collection">
+                      <button
+                        class="action-btn delete-btn"
+                        (click)="openDeleteModal(account)"
+                        title="Delete Account"
+                      >
+                        <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+                      </button>
+
+                      <button
+                        class="action-btn edit-btn"
+                        (click)="openEditModal(account)"
+                        title="Edit Account"
+                      >
+                        <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+                      </button>
+
+                      <button
+                        class="action-btn refresh-btn"
+                        (click)="refreshAccount(account)"
+                        [disabled]="isRefreshing(account.id)"
+                        [class.refreshing]="isRefreshing(account.id)"
+                        title="Refresh Account Data"
+                      >
+                        <img
+                          src="assets/icons/refresh.svg"
+                          class="icon"
+                          [class.spinning]="isRefreshing(account.id)"
+                          alt="Refresh"
+                          width="16"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (displayedAccounts().length === 0) {
+              <div class="empty-state">
+                <h3>No accounts in this view</h3>
+                <p>Try another board, search term, or sort option.</p>
+              </div>
+            }
+          </div>
+
+          <p>League of Legends is a trademark of Riot Games, Inc.</p>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  @if (isModalOpen()) {
+    <div
+      class="modal-overlay"
+      (click)="closeModal()"
+      (keydown.enter)="closeModal()"
+      (keydown.space)="closeModal()"
+      tabindex="0"
+    >
+      <div
+        class="modal-content add-account-modal"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+        tabindex="0"
+      >
+        <div class="modal-header">
+          <div>
+            <h2>Add New Account</h2>
+            <p>Add a single account or multiple accounts in bulk</p>
+          </div>
+          <img
+            src="assets/icons/plus.svg"
+            class="close-btn"
+            (click)="closeModal()"
+            (keydown.enter)="closeModal()"
+            (keydown.space)="closeModal()"
+            alt="Close"
+            tabindex="0"
+            role="button"
+          />
+        </div>
+
+        <div class="modal-tabs">
+          <button
+            class="tab-btn"
+            [class.active]="activeAddTab() === 'single'"
+            (click)="setActiveTab('single')"
+          >
+            Single Account
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeAddTab() === 'bulk'"
+            (click)="setActiveTab('bulk')"
+          >
+            Bulk Import
+          </button>
+        </div>
+
+        @if (activeAddTab() === 'single') {
+          <form class="single-account-form" (ngSubmit)="addSingleAccount()">
+            <div class="form-group">
+              <label for="single-riot-id">Riot ID (displayName#tag) *</label>
+              <input
+                type="text"
+                id="single-riot-id"
+                [(ngModel)]="singleRiotId"
+                name="singleRiotId"
+                placeholder="spice#2123"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="single-server">Server *</label>
+              <div class="select-wrapper">
+                <select
+                  id="single-server"
+                  class="form-select"
+                  [(ngModel)]="singleServer"
+                  name="singleServer"
+                  required
+                >
+                  <option value="">Select Server</option>
+                  @for (server of servers; track server) {
+                    <option [value]="server">{{ server }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Account</button>
+          </form>
+        } @else {
+          <div class="bulk-import-form">
+            <div class="form-group">
+              <label for="bulkAccounts">Bulk Import</label>
+              <textarea
+                id="bulkAccounts"
+                [(ngModel)]="bulkAccountsText"
+                name="bulkAccountsText"
+                placeholder="spice#2123:EUW:Gold II&#10;quickfox#7788:NA:Emerald I&#10;sample#2222:EUNE"
+                rows="8"
+              ></textarea>
+            </div>
+
+            <p>Format: <span>displayName#tag:server:rank</span> (one per line)</p>
+
+            <button type="button" class="btn btn-primary" (click)="importBulkAccounts()">
+              Import Accounts
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (isEditModalOpen() && editingAccount()) {
+    <div
+      class="modal-overlay"
+      (click)="closeEditModal()"
+      (keydown.enter)="closeEditModal()"
+      (keydown.space)="closeEditModal()"
+      tabindex="0"
+    >
+      <div
+        class="modal-content"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+        tabindex="0"
+      >
+        <header>
+          <h2>Edit Account</h2>
+          <img
+            src="assets/icons/plus.svg"
+            class="close-btn"
+            (click)="closeEditModal()"
+            (keydown.enter)="closeEditModal()"
+            (keydown.space)="closeEditModal()"
+            alt="Close"
+            tabindex="0"
+            role="button"
+          />
+        </header>
+
+        <div class="modal-form-grid">
+          <label for="edit-name">Riot ID (displayName#tag)</label>
+          <input
+            id="edit-name"
+            type="text"
+            [ngModel]="editName()"
+            (ngModelChange)="editName.set($event)"
+            name="editName"
+          />
+
+          <label for="edit-server">Server</label>
+          <div class="select-wrapper">
+            <select
+              id="edit-server"
+              class="form-select"
+              [ngModel]="editServer()"
+              (ngModelChange)="editServer.set($event)"
+              name="editServer"
+            >
+              @for (server of servers; track server) {
+                <option [value]="server">{{ server }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <footer>
+          <button type="button" class="btn btn-secondary" (click)="closeEditModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="saveEditedAccount()">Save</button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (isDeleteModalOpen() && deletingAccount()) {
+    <div
+      class="modal-overlay"
+      (click)="closeDeleteModal()"
+      (keydown.enter)="closeDeleteModal()"
+      (keydown.space)="closeDeleteModal()"
+      tabindex="0"
+    >
+      <div
+        class="modal-content"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+        tabindex="0"
+      >
+        <header>
+          <h2>Delete Account</h2>
+          <img
+            src="assets/icons/plus.svg"
+            class="close-btn"
+            (click)="closeDeleteModal()"
+            (keydown.enter)="closeDeleteModal()"
+            (keydown.space)="closeDeleteModal()"
+            alt="Close"
+            tabindex="0"
+            role="button"
+          />
+        </header>
+
+        <p class="modal-message">
+          Are you sure you want to delete {{ deletingAccount()!.name }} from this dashboard?
+        </p>
+
+        <footer>
+          <button type="button" class="btn btn-secondary" (click)="closeDeleteModal()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-danger" (click)="confirmDeleteAccount()">
+            Delete
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (isSettingsOpen()) {
+    <div
+      class="modal-overlay"
+      (click)="closeSettings()"
+      (keydown.enter)="closeSettings()"
+      (keydown.space)="closeSettings()"
+      tabindex="0"
+    >
+      <div
+        class="modal-content settings-modal"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+        tabindex="0"
+      >
+        <div class="modal-header">
+          <div class="section-header">
+            <img src="assets/icons/settings.svg" class="icon" width="18" alt="Settings" />
+            <h2>Settings</h2>
+          </div>
+          <img
+            src="assets/icons/plus.svg"
+            class="close-btn"
+            (click)="closeSettings()"
+            (keydown.enter)="closeSettings()"
+            (keydown.space)="closeSettings()"
+            alt="Close"
+            tabindex="0"
+            role="button"
+          />
+        </div>
+
+        <hr />
+
+        <div class="settings-section">
+          <div class="section-header">
+            <img src="assets/icons/theme.svg" class="icon" width="16" alt="Theme" />
+            <h3>Appearance</h3>
+          </div>
+
+          <div class="theme-options">
+            <button
+              class="theme-btn"
+              [class.active]="theme() === 'light'"
+              (click)="setLightTheme()"
+            >
+              <div class="theme-preview light-preview"></div>
+              <span>Light Theme</span>
+            </button>
+
+            <button class="theme-btn" [class.active]="theme() === 'dark'" (click)="setDarkTheme()">
+              <div class="theme-preview dark-preview"></div>
+              <span>Dark Theme</span>
+            </button>
+          </div>
+
+          <div class="theme-variant-selector">
+            <div class="select-wrapper">
+              <select
+                id="theme-variant"
+                [ngModel]="themeVariant()"
+                (ngModelChange)="setThemeVariant($event)"
+                class="form-select"
+                name="themeVariant"
+              >
+                @for (variant of themeVariants; track variant.id) {
+                  <option [value]="variant.id">{{ variant.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-setting">
+            <label for="mastery-bg-toggle" class="toggle-label">
+              <span>Show Mastery Background</span>
+              <small>Display your highest mastery champion as a background</small>
+            </label>
+            <div class="toggle-switch">
+              <input
+                type="checkbox"
+                id="mastery-bg-toggle"
+                [checked]="showMasteryBackground()"
+                (change)="onMasteryBackgroundToggle($event)"
+              />
+              <span class="slider"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header">
+            <img src="assets/icons/database.svg" class="icon" width="16" alt="Data" />
+            <h3>Data</h3>
+          </div>
+
+          <div class="export-buttons">
+            <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
+              <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />
+              <div>
+                <span>Export as CSV</span>
+                <br />
+                <small>Download accounts in spreadsheet format</small>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</main>

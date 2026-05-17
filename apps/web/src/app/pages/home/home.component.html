@@ -1,0 +1,217 @@
+<main class="home-page">
+  <div class="intro-shell reveal">
+    <header class="site-header">
+      <a class="brand" href="#hero" aria-label="LoL Vault Home">
+        <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
+        <span>{{ title }}</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#safety">Safety</a>
+        <a href="#download">Download</a>
+        <a href="#packages">Packages</a>
+        <a href="#socials">Socials</a>
+      </nav>
+
+      <a class="btn btn-primary" [href]="primaryCtaHref()">
+        {{ primaryCtaLabel() }}
+      </a>
+    </header>
+
+    <section id="hero" class="section hero">
+      <div class="hero-copy">
+        <h1>Manage Every League Account With Precision.</h1>
+        <p class="hero-description">
+          Keep smurfs organized, launch faster, and control every account from one clean desktop
+          workspace.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#download">Download for Mac &amp; Windows</a>
+          <a class="btn btn-outline" href="#packages">See Packages</a>
+        </div>
+
+        <p class="hero-meta">Local-first setup. No logins. No cloud dependency.</p>
+      </div>
+
+      <figure class="hero-shot" aria-label="LoL Vault app preview screenshot">
+        <img
+          src="image.png"
+          alt="LoL Vault interface showing active sessions, account status, and performance metrics."
+        />
+      </figure>
+    </section>
+  </div>
+
+  <section id="safety" class="section safety">
+    <div class="section-header reveal">
+      <h2>Your Data Stays On Your Computer</h2>
+      <p class="section-subtitle">
+        Local-first by default, with explicit online calls only for product features that need it.
+      </p>
+    </div>
+
+    <div class="safety-frame" role="list" aria-label="Local safety guarantees">
+      <article class="safety-step reveal" role="listitem">
+        <div class="step-badge"><span class="step-index">01</span></div>
+        <div class="step-content">
+          <h3>Encrypted local vault</h3>
+          <p>
+            Accounts are encrypted and saved on your machine. Encryption material stays tied to your
+            device.
+          </p>
+        </div>
+      </article>
+
+      <article class="safety-step reveal" role="listitem">
+        <div class="step-badge"><span class="step-index">02</span></div>
+        <div class="step-content">
+          <h3>Internet only for required features</h3>
+          <p>
+            The app goes online for account stats, license validation, and update checks. Core vault
+            data still remains local.
+          </p>
+        </div>
+      </article>
+
+      <article class="safety-step reveal" role="listitem">
+        <div class="step-badge"><span class="step-index">03</span></div>
+        <div class="step-content">
+          <h3>Free mode can stay login-free</h3>
+          <p>
+            Free users can use LoL Vault without login with up to 3 accounts. Subscription tiers
+            require an account.
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="download" class="section download">
+    <div class="section-header reveal">
+      <h2>Pick Your Platform</h2>
+    </div>
+
+    <div class="download-table" role="list" aria-label="Download options">
+      <article class="download-row reveal" role="listitem">
+        <div class="platform-copy">
+          <div class="platform-title">
+            <svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M2 3.5 10.5 2v9H2V3.5Zm9.5-1.6L22 0v10.8h-10.5V1.9ZM2 12.2h8.5v9.1L2 20V12.2Zm9.5 0H22V24l-10.5-1.8v-10Z"
+              />
+            </svg>
+            <h3>Windows</h3>
+          </div>
+          <p>Installer build for 64-bit Windows, updated with each release.</p>
+        </div>
+        <a
+          class="btn btn-outline"
+          [href]="windowsDownloadUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download for Windows
+        </a>
+      </article>
+
+      <article class="download-row reveal" role="listitem">
+        <div class="platform-copy">
+          <div class="platform-title">
+            <svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M14.7 3.3c-.8.5-1.3 1.4-1.2 2.3 1 .1 1.9-.5 2.4-1.3.5-.8.8-1.8.7-2.8-.9.1-1.6.6-1.9 1.8Zm3.6 9.6c0-2.7 2.2-3.9 2.3-4-1.2-1.8-3.3-2-4-2.1-1.7-.2-3.2 1-4.1 1-.9 0-2.2-1-3.6-1-1.8 0-3.4 1.1-4.3 2.8-1.9 3.3-.5 8.2 1.4 10.9.9 1.4 2 3 3.5 2.9 1.4-.1 1.9-.9 3.6-.9 1.7 0 2.1.9 3.6.9 1.5 0 2.5-1.4 3.3-2.8 1.1-1.6 1.5-3.1 1.5-3.2-.1 0-3.2-1.2-3.2-4.5Z"
+              />
+            </svg>
+            <h3>macOS</h3>
+          </div>
+          <p>Universal macOS build available in the latest GitHub release.</p>
+        </div>
+        <a
+          class="btn btn-outline"
+          [href]="macDownloadUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download for macOS
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <section id="packages" class="section packages">
+    <div class="section-header reveal">
+      <h2>Choose Your Vault Capacity</h2>
+    </div>
+
+    <div class="packages-grid">
+      <article class="plan free-plan reveal">
+        <p class="plan-label">Free</p>
+        <h3>Starter Vault</h3>
+        <p class="plan-summary">Perfect for testing your setup with a small rotation.</p>
+        <ul>
+          <li>Up to 3 League accounts</li>
+          <li>Core launcher workflow</li>
+          <li>Local data storage</li>
+        </ul>
+        <a class="btn btn-outline" href="#download">Get Started Free</a>
+      </article>
+
+      <article class="plan premium-plan reveal">
+        <p class="plan-label">Premium</p>
+        <h3>Unlimited Vault</h3>
+        <p class="plan-summary">No account cap. Built for boosters and multi-account operators.</p>
+        <div class="billing-switch" role="group" aria-label="Select billing cycle">
+          <button
+            type="button"
+            class="billing-option"
+            [class.active]="billingCycle() === 'monthly'"
+            (click)="setBillingCycle('monthly')"
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            class="billing-option"
+            [class.active]="billingCycle() === 'yearly'"
+            (click)="setBillingCycle('yearly')"
+          >
+            Yearly
+          </button>
+        </div>
+        <div class="premium-pricing" aria-label="Premium package pricing">
+          <p>
+            <span>{{ premiumPrice() }}</span> {{ premiumPeriodLabel() }}
+          </p>
+          <p class="billing-note">{{ premiumBillingHint() }}</p>
+        </div>
+        <ul>
+          <li>Unlimited accounts</li>
+          <li>No usage restrictions</li>
+          <li>Priority feature roadmap input</li>
+        </ul>
+        <div class="plan-actions">
+          <button class="btn btn-primary" (click)="buyPremium()">{{ premiumButtonLabel() }}</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="socials" class="section socials">
+    <div class="social-shell reveal">
+      <h2>Roadmap, Feedback, and Community Updates Live On Discord</h2>
+      <p>
+        Join the server to follow what is being built next, share requests, and help shape LoL Vault
+        with the community.
+      </p>
+      <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
+        Join Discord
+      </a>
+      <p>
+        LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
+        Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
+        Riot Games, Inc.
+      </p>
+    </div>
+  </section>
+</main>

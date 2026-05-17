@@ -15,7 +15,7 @@ import { RiotService } from '../../services/riot.service';
 import { SettingsService } from '../../services/settings.service';
 import { BoardService } from '../../services/board.service';
 import { LOL_DATA } from '../../models/constants';
-import { VERSION, REVISION } from '../../../environments/version';
+import { VERSION, BUILD_LABEL } from '../../../environments/version';
 import { ThemeService } from '../../services/theme.service';
 
 @Component({
@@ -37,7 +37,7 @@ import { ThemeService } from '../../services/theme.service';
 export class DashboardComponent implements OnDestroy {
   @ViewChild('newBoardInput') newBoardInput!: ElementRef<HTMLInputElement>;
 
-  version = [VERSION, REVISION];
+  version = [VERSION, BUILD_LABEL];
 
   // Core state
   public accounts = signal<Account[]>([]);
