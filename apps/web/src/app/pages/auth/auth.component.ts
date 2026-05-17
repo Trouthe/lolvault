@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 function getErrorMessage(e: unknown, fallback: string): string {
@@ -14,6 +15,7 @@ function getErrorMessage(e: unknown, fallback: string): string {
 })
 export class AuthComponent {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly isLogin = signal(true);
   readonly loading = signal(false);
@@ -34,6 +36,7 @@ export class AuthComponent {
     this.error.set(null);
     try {
       await this.authService.signInWithGoogle();
+      await this.router.navigateByUrl('/dashboard');
     } catch (e: unknown) {
       this.error.set(getErrorMessage(e, 'Google sign-in failed.'));
     } finally {
@@ -52,6 +55,7 @@ export class AuthComponent {
       } else {
         await this.authService.signUpWithEmail(email!, password!);
       }
+      await this.router.navigateByUrl('/dashboard');
     } catch (e: unknown) {
       this.error.set(getErrorMessage(e, 'Authentication failed.'));
     } finally {

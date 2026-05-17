@@ -1,8 +1,9 @@
 {
   "name": "lolvault-web",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "description": "LoL Vault marketing and payment website",
   "scripts": {
+    "version:sync": "node version-control/version.js",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",

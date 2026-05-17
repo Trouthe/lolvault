@@ -5,6 +5,7 @@
   "author": "LoL Vault",
   "description": "League of Legends account manager and launcher",
   "scripts": {
+    "version:sync": "node version-control/version.js",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",

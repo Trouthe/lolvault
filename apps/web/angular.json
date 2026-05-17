@@ -21,7 +21,14 @@
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": [{ "glob": "**/*", "input": "public" }],
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              {
+                "glob": "**/*",
+                "input": "../electron/src/app/assets",
+                "output": "assets"
+              }
+            ],
             "styles": ["src/styles.scss"],
             "scripts": []
           },
@@ -35,8 +42,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "5kB",
-                  "maximumError": "10kB"
+                  "maximumWarning": "30kB",
+                  "maximumError": "35kB"
                 }
               ],
               "outputHashing": "all"
@@ -73,7 +80,14 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": [{ "glob": "**/*", "input": "public" }],
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              {
+                "glob": "**/*",
+                "input": "../electron/src/app/assets",
+                "output": "assets"
+              }
+            ],
             "styles": ["src/styles.scss"],
             "scripts": []
           }

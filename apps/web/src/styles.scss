@@ -1,3 +1,4 @@
+@use '../../electron/src/app/styles/colors';
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap');
 
 :root {
@@ -19,4 +20,17 @@ body {
   font-family: 'Geist', sans-serif;
   background: var(--background);
   color: var(--primary-text);
+}
+
+.icon {
+  color: var(--primary-text);
+  transition: filter 0.2s;
+}
+
+[data-theme='dark'] .icon {
+  filter: none;
+}
+
+[data-theme='light'] .icon {
+  filter: invert(1);
 }

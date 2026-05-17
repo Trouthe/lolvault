@@ -2,7 +2,7 @@
   <div class="intro-shell reveal">
     <header class="site-header">
       <a class="brand" href="#hero" aria-label="LoL Vault Home">
-        <img src="LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
+        <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
         <span>{{ title }}</span>
       </a>
 
@@ -13,8 +13,8 @@
         <a href="#socials">Socials</a>
       </nav>
 
-      <a class="btn btn-primary" [href]="releasesUrl" target="_blank" rel="noopener noreferrer">
-        Download App
+      <a class="btn btn-primary" [href]="primaryCtaHref()">
+        {{ primaryCtaLabel() }}
       </a>
     </header>
 
@@ -207,6 +207,11 @@
       <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
         Join Discord
       </a>
+      <p>
+        LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
+        Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
+        Riot Games, Inc.
+      </p>
     </div>
   </section>
 </main>

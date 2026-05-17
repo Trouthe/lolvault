@@ -1,0 +1,4 @@
+// IMPORTANT: THIS FILE IS AUTO GENERATED! DO NOT MANUALLY EDIT OR CHECKIN!
+export const VERSION = '0.1.1';
+export const REVISION = '083';
+export const BUILD_LABEL = 'w.517-083';

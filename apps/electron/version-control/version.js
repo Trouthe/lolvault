@@ -3,6 +3,9 @@ const { resolve } = require('path');
 const gitCommitCount = require('./git-commit-count');
 const { readFileSync } = require('fs');
 
+const ELECTRON_BUILD_PREFIX = 'e';
+const ELECTRON_BUILD_STAMP = '831';
+
 const count = gitCommitCount();
 
 async function getVersionAndWrite() {
@@ -13,14 +16,18 @@ async function getVersionAndWrite() {
 }
 
 function writeInfo(version, count) {
+  const revision = String(count || 0);
+  const buildLabel = `${ELECTRON_BUILD_PREFIX}.${ELECTRON_BUILD_STAMP}-${revision}`;
+
   const content = `// IMPORTANT: THIS FILE IS AUTO GENERATED! DO NOT MANUALLY EDIT OR CHECKIN!
 export const VERSION = '${version}';
-export const REVISION = ${count || 0};`;
+export const REVISION = '${revision}';
+export const BUILD_LABEL = '${buildLabel}';`;
 
   const filePath = resolve(__dirname, '../src/environments/version.ts');
   writeFileSync(filePath, content, { encoding: 'utf8' });
 
-  console.log(`Version information updated: ${version}, Revision: ${count || 0}`);
+  console.log(`Version information updated: ${version}, Build: ${buildLabel}`);
 }
 
 getVersionAndWrite();

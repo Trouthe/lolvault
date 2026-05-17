@@ -1,6 +1,17 @@
-import { AfterViewInit, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { PaddleService } from '../../services/paddle.service';
 import { PricingService, type RecurringPrice } from '../../services/pricing.service';
+import { AuthService } from '../../services/auth.service';
 
 type BillingCycle = 'monthly' | 'yearly';
 
@@ -76,7 +87,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly paddleService = inject(PaddleService);
   private readonly pricingService = inject(PricingService);
+  private readonly authService = inject(AuthService);
   private readonly hostElement = inject(ElementRef<HTMLElement>);
+
+  readonly currentUser = toSignal(this.authService.currentUser$, { initialValue: null });
+  readonly primaryCtaHref = computed(() => (this.currentUser() ? '/dashboard' : '/auth'));
+  readonly primaryCtaLabel = computed(() => (this.currentUser() ? 'Dashboard' : 'Get Started'));
 
   private revealObserver?: IntersectionObserver;
 
