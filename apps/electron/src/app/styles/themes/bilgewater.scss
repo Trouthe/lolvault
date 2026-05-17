@@ -11,6 +11,7 @@
   --card: oklch(0.18 0.035 210);
   --border-color: oklch(0.5 0.12 75);
   --outline: oklch(0.6 0.14 75);
+  --lock-accent: color-mix(in oklch, var(--outline) 62%, oklch(0.82 0.13 85) 38%);
 
   // Text - gold and sea foam
   --primary-text: oklch(0.88 0.08 75);
@@ -31,6 +32,7 @@
   --card: oklch(0.91 0.025 75);
   --border-color: oklch(0.68 0.1 75);
   --outline: oklch(0.52 0.08 210);
+  --lock-accent: color-mix(in oklch, var(--outline) 72%, oklch(0.7 0.11 85) 28%);
 
   // Text
   --primary-text: oklch(0.21 0.04 210);

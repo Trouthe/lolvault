@@ -33,6 +33,9 @@
             <span class="folder-name">All Accounts</span>
             <div class="folder-actions">
               <span class="folder-count">{{ totalAccountCount() }}</span>
+              @if (getLockedAccountCount(null) > 0) {
+                <span class="folder-locked-count">{{ getLockedAccountCount(null) }} locked</span>
+              }
             </div>
           </div>
 
@@ -65,6 +68,11 @@
                   <img src="assets/icons/trash.svg" alt="Delete" width="16" />
                 </button>
                 <span class="folder-count">{{ getBoardAccountCount(board.id) }}</span>
+                @if (getLockedAccountCount(board.id) > 0) {
+                  <span class="folder-locked-count"
+                    >{{ getLockedAccountCount(board.id) }} locked</span
+                  >
+                }
               </div>
             </div>
           }
@@ -206,17 +214,42 @@
                 }
               </div>
 
-              <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
+              <button
+                [title]="
+                  canAddAccounts()
+                    ? 'Add Account'
+                    : 'Free limit reached. Renew Premium to unlock more accounts.'
+                "
+                class="btn-icon-outlined"
+                (click)="addAccount()"
+                [disabled]="!canAddAccounts()"
+              >
                 <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
               </button>
             </div>
           </div>
 
+          @if (isPremiumLockActive()) {
+            <section class="premium-lock-banner" role="status" aria-live="polite">
+              <div class="premium-lock-copy">
+                <p class="lock-kicker">Premium access ended</p>
+                <h2>Some accounts are locked</h2>
+                <p>
+                  Your folders stay intact, and unlocked free slots are still usable.
+                  {{ lockedAccountCount() }} account{{ lockedAccountCount() === 1 ? '' : 's' }}
+                  currently require Premium.
+                </p>
+              </div>
+              <button class="btn btn-primary" (click)="goToPackages()">Renew Premium</button>
+            </section>
+          }
+
           <div class="accounts-list">
-            @for (account of displayedAccounts(); track account.id) {
+            @for (account of displayedAccounts(); track account.id; let index = $index) {
               <div
                 class="account-drag-wrapper"
                 [class.hovered]="hoveredAccountId() === account.id.toString()"
+                [class.locked]="isAccountLocked(account)"
                 (mouseenter)="onAccountMouseEnter(account.id.toString())"
                 (mouseleave)="onAccountMouseLeave()"
               >
@@ -224,7 +257,15 @@
                   <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
                 </div>
 
-                <div class="acc-card">
+                <div class="acc-card" [class.locked]="isAccountLocked(account)">
+                  @if (isAccountLocked(account)) {
+                    <div class="account-lock-strip">
+                      <span class="lock-dot"></span>
+                      <strong>Locked</strong>
+                      <span>Renew Premium to edit, refresh, or remove this account.</span>
+                    </div>
+                  }
+
                   @if (account.hotStreak) {
                     <div class="hot-streak-indicator" title="On a hot streak!">
                       <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
@@ -235,6 +276,7 @@
                     <button
                       class="remove-from-folder-btn"
                       (click)="onRemoveFromFolder(account)"
+                      [disabled]="isAccountLocked(account)"
                       title="Remove from folder"
                     >
                       <img src="assets/icons/plus.svg" alt="Remove" width="12" />
@@ -244,7 +286,7 @@
                   <div class="card-top">
                     <div class="account-info">
                       <div class="account-details">
-                        <div [class]="account.rank ? 'profile-icon' : ''">
+                        <div [class]="account.rank && !isAccountLocked(account) ? 'profile-icon' : ''">
                           <img
                             [src]="
                               'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/' +
@@ -255,7 +297,7 @@
                             width="48"
                           />
 
-                          @if (account.rank) {
+                          @if (account.rank && !isAccountLocked(account)) {
                             <img
                               [src]="'assets/emblems/Wings/' + getRankName(account.rank) + '.webp'"
                               alt="Rank Wing"
@@ -271,6 +313,7 @@
                               <button
                                 class="opgg-link"
                                 (click)="openOpGG($event, account)"
+                                [disabled]="isAccountLocked(account)"
                                 title="Open OP.GG"
                               >
                                 <img src="assets/icons/external-link.svg" alt="OP.GG" width="14" />
@@ -287,7 +330,7 @@
                         </div>
                       </div>
 
-                      @if (account.rank) {
+                      @if (account.rank && !isAccountLocked(account)) {
                         <div class="stats-container">
                           <div class="stats-group winloss-group">
                             <span class="wl-record">
@@ -312,6 +355,7 @@
                       <button
                         class="action-btn delete-btn"
                         (click)="openDeleteModal(account)"
+                        [disabled]="isAccountLocked(account)"
                         title="Delete Account"
                       >
                         <img src="assets/icons/trash.svg" alt="Delete" width="16" />
@@ -320,6 +364,7 @@
                       <button
                         class="action-btn edit-btn"
                         (click)="openEditModal(account)"
+                        [disabled]="isAccountLocked(account)"
                         title="Edit Account"
                       >
                         <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
@@ -328,7 +373,7 @@
                       <button
                         class="action-btn refresh-btn"
                         (click)="refreshAccount(account)"
-                        [disabled]="isRefreshing(account.id)"
+                        [disabled]="isRefreshing(account.id) || isAccountLocked(account)"
                         [class.refreshing]="isRefreshing(account.id)"
                         title="Refresh Account Data"
                       >
@@ -344,6 +389,13 @@
                   </div>
                 </div>
               </div>
+
+              @if (shouldShowAdAfter(index)) {
+                <aside class="account-ad-banner" aria-label="Advertisement placeholder">
+                  <p class="ad-slot-label">{{ getAdMockLabel(index) }}</p>
+                  <p class="ad-slot-copy">{{ getAdMockCopy(index) }}</p>
+                </aside>
+              }
             }
 
             @if (displayedAccounts().length === 0) {

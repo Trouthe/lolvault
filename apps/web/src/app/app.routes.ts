@@ -13,6 +13,16 @@ const redirectLoggedInFromAuth: CanActivateFn = () => {
   );
 };
 
+const redirectLoggedOutFromDashboard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return authService.currentUser$.pipe(
+    take(1),
+    map((user) => (user ? true : router.createUrlTree(['/'])))
+  );
+};
+
 export const routes: Routes = [
   {
     path: '',
@@ -25,6 +35,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
+    canActivate: [redirectLoggedOutFromDashboard],
     loadComponent: () =>
       import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },

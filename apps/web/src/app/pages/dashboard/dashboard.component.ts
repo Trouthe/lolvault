@@ -24,10 +24,16 @@ type BoardColor =
 
 type AddTab = 'single' | 'bulk';
 type ThemeMode = 'light' | 'dark';
+type PremiumEntitlementStatus = 'active' | 'expired' | 'none';
 
 interface ThemeVariantOption {
   id: string;
   name: string;
+}
+
+interface PremiumEntitlementState {
+  status: PremiumEntitlementStatus;
+  hadPremiumBefore: boolean;
 }
 
 interface DashboardBoard {
@@ -81,6 +87,10 @@ const THEME_VARIANTS: ThemeVariantOption[] = [
 ];
 
 const SETTINGS_STORAGE_KEY = 'lolvault-web-dashboard-settings';
+const PREMIUM_STATE_STORAGE_KEY = 'lolvault-web-premium-state';
+const FREE_ACCOUNT_LIMIT = 3;
+const ADS_INSERTION_INTERVAL = 3;
+const MAX_INLINE_AD_SLOTS = 2;
 
 const DASHBOARD_BOARDS: DashboardBoard[] = [
   { id: 'boosting', name: 'Boosting', color: 'cyan' },
@@ -191,6 +201,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly themeVariants = THEME_VARIANTS;
   readonly servers = SERVERS;
 
+  readonly premiumState = signal<PremiumEntitlementState>(this.loadPremiumState());
+  readonly freeAccountLimit = FREE_ACCOUNT_LIMIT;
+  readonly isPremiumActive = computed(() => this.premiumState().status === 'active');
+  readonly isPremiumLockActive = computed(
+    () => !this.isPremiumActive() && this.premiumState().hadPremiumBefore
+  );
+  readonly lockedAccountIds = computed(() => {
+    if (!this.isPremiumLockActive()) {
+      return new Set<number>();
+    }
+
+    const unlockedAccountIds = new Set(
+      this.accounts()
+        .slice(0, FREE_ACCOUNT_LIMIT)
+        .map((account) => account.id)
+    );
+
+    return new Set(
+      this.accounts()
+        .filter((account) => !unlockedAccountIds.has(account.id))
+        .map((account) => account.id)
+    );
+  });
+  readonly lockedAccountCount = computed(() => this.lockedAccountIds().size);
+  readonly canAddAccounts = computed(
+    () => !this.isPremiumLockActive() || this.accounts().length < FREE_ACCOUNT_LIMIT
+  );
+
   readonly logoThemeSuffix = computed(() => (this.theme() === 'light' ? 'dark' : 'light'));
   readonly currentUser = toSignal<User | null>(this.authService.currentUser$, {
     initialValue: null,
@@ -291,9 +329,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async signOutUser(): Promise<void> {
     try {
-      await this.authService.signOut();
       this.isProfileMenuOpen.set(false);
-      await this.router.navigateByUrl('/auth');
+      await this.authService.signOut();
+      await this.router.navigateByUrl('/', { replaceUrl: true });
     } catch (error) {
       console.error('Failed to sign out:', error);
     }
@@ -308,6 +346,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return this.accounts().length;
     }
     return this.accounts().filter((account) => account.boardId === boardId).length;
+  }
+
+  getLockedAccountCount(boardId: string | null): number {
+    const lockedIds = this.lockedAccountIds();
+    if (!lockedIds.size) {
+      return 0;
+    }
+
+    return this.accounts().filter((account) => {
+      if (!lockedIds.has(account.id)) {
+        return false;
+      }
+
+      if (boardId === null) {
+        return true;
+      }
+
+      return account.boardId === boardId;
+    }).length;
+  }
+
+  isAccountLocked(account: DashboardAccount): boolean {
+    return this.lockedAccountIds().has(account.id);
+  }
+
+  shouldShowAdAfter(index: number): boolean {
+    if (this.isPremiumActive()) {
+      return false;
+    }
+
+    const total = this.displayedAccounts().length;
+    if (total <= ADS_INSERTION_INTERVAL || index >= total - 1) {
+      return false;
+    }
+
+    const accountPosition = index + 1;
+    if (accountPosition % ADS_INSERTION_INTERVAL !== 0) {
+      return false;
+    }
+
+    const adSlot = Math.floor(accountPosition / ADS_INSERTION_INTERVAL);
+    return adSlot <= MAX_INLINE_AD_SLOTS;
+  }
+
+  getAdMockLabel(index: number): string {
+    const adSlot = Math.floor((index + 1) / ADS_INSERTION_INTERVAL);
+    return `Ad Slot ${adSlot}`;
+  }
+
+  getAdMockCopy(index: number): string {
+    const adSlot = Math.floor((index + 1) / ADS_INSERTION_INTERVAL);
+    const copyBySlot: Record<number, string> = {
+      1: 'Ad placement mockup. Sponsored content could appear between account cards.',
+      2: 'Second ad placement mockup. Keep this space for tasteful partner banners.',
+    };
+
+    return copyBySlot[adSlot] ?? 'Ad placement mockup. Banner content would render here.';
+  }
+
+  goToPackages(): void {
+    void this.router.navigate(['/'], { fragment: 'packages' });
   }
 
   getFolderColor(colorName: string): string {
@@ -423,6 +522,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   addAccount(): void {
+    if (!this.canAddAccounts()) {
+      return;
+    }
+
     this.resetAddAccountForm();
     this.activeAddTab.set('single');
     this.isModalOpen.set(true);
@@ -438,6 +541,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   addSingleAccount(): void {
+    if (!this.canAddAccounts()) {
+      return;
+    }
+
     const parsedRiotId = this.parseRiotId(this.singleRiotId);
     const server = this.singleServer.trim();
 
@@ -460,6 +567,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   importBulkAccounts(): void {
+    if (!this.canAddAccounts()) {
+      return;
+    }
+
     const lines = this.bulkAccountsText
       .split('\n')
       .map((line) => line.trim())
@@ -471,8 +582,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     let nextId = Math.max(0, ...this.accounts().map((account) => account.id)) + 1;
     const imported: DashboardAccount[] = [];
+    const allowedImportCount = this.isPremiumLockActive()
+      ? Math.max(0, FREE_ACCOUNT_LIMIT - this.accounts().length)
+      : Number.POSITIVE_INFINITY;
 
     for (const line of lines) {
+      if (imported.length >= allowedImportCount) {
+        break;
+      }
+
       const parts = line.split(':').map((part) => part.trim());
       if (!parts.length) {
         continue;
@@ -559,6 +677,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(account: DashboardAccount): void {
+    if (this.isAccountLocked(account)) {
+      return;
+    }
+
     this.editingAccount.set(account);
     this.editName.set(account.name);
     this.editServer.set(account.server);
@@ -572,7 +694,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   saveEditedAccount(): void {
     const account = this.editingAccount();
-    if (!account) {
+    if (!account || this.isAccountLocked(account)) {
       return;
     }
 
@@ -597,6 +719,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openDeleteModal(account: DashboardAccount): void {
+    if (this.isAccountLocked(account)) {
+      return;
+    }
+
     this.deletingAccount.set(account);
     this.isDeleteModalOpen.set(true);
   }
@@ -608,7 +734,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   confirmDeleteAccount(): void {
     const account = this.deletingAccount();
-    if (!account) {
+    if (!account || this.isAccountLocked(account)) {
       return;
     }
 
@@ -617,6 +743,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onRemoveFromFolder(account: DashboardAccount): void {
+    if (this.isAccountLocked(account)) {
+      return;
+    }
+
     this.accounts.update((accounts) =>
       accounts.map((item) =>
         item.id === account.id
@@ -634,6 +764,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshAccount(account: DashboardAccount): void {
+    if (this.isAccountLocked(account)) {
+      return;
+    }
+
     if (this.refreshingAccountId() === account.id) {
       return;
     }
@@ -852,6 +986,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to load dashboard settings:', error);
     }
+  }
+
+  private loadPremiumState(): PremiumEntitlementState {
+    const fallbackHadPremiumBefore = DASHBOARD_ACCOUNTS.length > FREE_ACCOUNT_LIMIT;
+
+    try {
+      const raw = localStorage.getItem(PREMIUM_STATE_STORAGE_KEY);
+      if (!raw) {
+        return {
+          status: fallbackHadPremiumBefore ? 'expired' : 'none',
+          hadPremiumBefore: fallbackHadPremiumBefore,
+        };
+      }
+
+      const parsed = JSON.parse(raw) as Partial<PremiumEntitlementState>;
+      const status = this.isPremiumStatus(parsed.status)
+        ? parsed.status
+        : fallbackHadPremiumBefore
+          ? 'expired'
+          : 'none';
+
+      const hadPremiumBefore =
+        typeof parsed.hadPremiumBefore === 'boolean' ? parsed.hadPremiumBefore : status !== 'none';
+
+      return {
+        status,
+        hadPremiumBefore,
+      };
+    } catch {
+      return {
+        status: fallbackHadPremiumBefore ? 'expired' : 'none',
+        hadPremiumBefore: fallbackHadPremiumBefore,
+      };
+    }
+  }
+
+  private isPremiumStatus(value: unknown): value is PremiumEntitlementStatus {
+    return value === 'active' || value === 'expired' || value === 'none';
   }
 
   private applyAppearance(): void {
