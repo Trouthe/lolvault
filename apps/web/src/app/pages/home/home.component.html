@@ -1,7 +1,12 @@
 <main class="home-page">
   <div class="intro-shell reveal">
     <header class="site-header">
-      <a class="brand" href="#hero" (click)="scrollToSection('hero', $event)" aria-label="LoL Vault Home">
+      <a
+        class="brand"
+        href="#hero"
+        (click)="scrollToSection('hero', $event)"
+        aria-label="LoL Vault Home"
+      >
         <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
         <span>{{ title }}</span>
       </a>
@@ -24,7 +29,9 @@
 
         <div class="hero-actions">
           <a class="btn btn-primary" [href]="primaryCtaHref()">{{ primaryCtaLabel() }}</a>
-          <a class="btn btn-outline" href="#safety" (click)="scrollToSection('safety', $event)">See How It Works</a>
+          <a class="btn btn-outline" href="#safety" (click)="scrollToSection('safety', $event)"
+            >See How It Works</a
+          >
         </div>
       </div>
 
@@ -74,8 +81,8 @@
         <div class="step-content">
           <h3>Community updates on Discord</h3>
           <p>
-            Changelogs, previews, and release announcements are shared directly in Discord so you can
-            stay up to date.
+            Changelogs, previews, and release announcements are shared directly in Discord so you
+            can stay up to date.
           </p>
         </div>
       </article>
@@ -122,26 +129,6 @@
         <button class="btn btn-outline btn-disabled" type="button" disabled>Coming Soon</button>
       </article>
     </div>
-  </section>
-
-  <section id="socials" class="section socials">
-    <div class="social-shell is-visible">
-      <div class="social-copy">
-        <p class="social-kicker">Community</p>
-        <h2>Stay In The Loop On Discord</h2>
-        <p>
-          Get release alerts, roadmap previews, and community Q&amp;A in one place.
-        </p>
-      </div>
-      <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
-        Join Discord
-      </a>
-    </div>
-    <p class="social-legal">
-      LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
-      Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
-      Riot Games, Inc.
-    </p>
   </section>
 
   <section id="packages" class="section packages">
@@ -200,5 +187,23 @@
         </div>
       </article>
     </div>
+  </section>
+
+  <section id="socials" class="section socials">
+    <div class="social-shell is-visible">
+      <div class="social-copy">
+        <p class="social-kicker">Community</p>
+        <h2>Stay In The Loop On Discord</h2>
+        <p>Get release alerts, roadmap previews, and community Q&amp;A in one place.</p>
+      </div>
+      <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
+        Join Discord
+      </a>
+    </div>
+    <p class="social-legal">
+      LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
+      Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
+      Riot Games, Inc.
+    </p>
   </section>
 </main>
