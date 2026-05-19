@@ -1,4 +1,12 @@
-import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -88,7 +96,6 @@ const THEME_VARIANTS: ThemeVariantOption[] = [
 
 const SETTINGS_STORAGE_KEY = 'lolvault-web-dashboard-settings';
 const PREMIUM_STATE_STORAGE_KEY = 'lolvault-web-premium-state';
-const FREE_ACCOUNT_LIMIT = 3;
 const ADS_INSERTION_INTERVAL = 3;
 const MAX_INLINE_AD_SLOTS = 2;
 
@@ -202,32 +209,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly servers = SERVERS;
 
   readonly premiumState = signal<PremiumEntitlementState>(this.loadPremiumState());
-  readonly freeAccountLimit = FREE_ACCOUNT_LIMIT;
   readonly isPremiumActive = computed(() => this.premiumState().status === 'active');
-  readonly isPremiumLockActive = computed(
-    () => !this.isPremiumActive() && this.premiumState().hadPremiumBefore
-  );
-  readonly lockedAccountIds = computed(() => {
-    if (!this.isPremiumLockActive()) {
-      return new Set<number>();
-    }
-
-    const unlockedAccountIds = new Set(
-      this.accounts()
-        .slice(0, FREE_ACCOUNT_LIMIT)
-        .map((account) => account.id)
-    );
-
-    return new Set(
-      this.accounts()
-        .filter((account) => !unlockedAccountIds.has(account.id))
-        .map((account) => account.id)
-    );
-  });
-  readonly lockedAccountCount = computed(() => this.lockedAccountIds().size);
-  readonly canAddAccounts = computed(
-    () => !this.isPremiumLockActive() || this.accounts().length < FREE_ACCOUNT_LIMIT
-  );
 
   readonly logoThemeSuffix = computed(() => (this.theme() === 'light' ? 'dark' : 'light'));
   readonly currentUser = toSignal<User | null>(this.authService.currentUser$, {
@@ -348,29 +330,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.accounts().filter((account) => account.boardId === boardId).length;
   }
 
-  getLockedAccountCount(boardId: string | null): number {
-    const lockedIds = this.lockedAccountIds();
-    if (!lockedIds.size) {
-      return 0;
-    }
-
-    return this.accounts().filter((account) => {
-      if (!lockedIds.has(account.id)) {
-        return false;
-      }
-
-      if (boardId === null) {
-        return true;
-      }
-
-      return account.boardId === boardId;
-    }).length;
-  }
-
-  isAccountLocked(account: DashboardAccount): boolean {
-    return this.lockedAccountIds().has(account.id);
-  }
-
   shouldShowAdAfter(index: number): boolean {
     if (this.isPremiumActive()) {
       return false;
@@ -403,10 +362,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     };
 
     return copyBySlot[adSlot] ?? 'Ad placement mockup. Banner content would render here.';
-  }
-
-  goToPackages(): void {
-    void this.router.navigate(['/'], { fragment: 'packages' });
   }
 
   getFolderColor(colorName: string): string {
@@ -522,10 +477,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   addAccount(): void {
-    if (!this.canAddAccounts()) {
-      return;
-    }
-
     this.resetAddAccountForm();
     this.activeAddTab.set('single');
     this.isModalOpen.set(true);
@@ -541,10 +492,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   addSingleAccount(): void {
-    if (!this.canAddAccounts()) {
-      return;
-    }
-
     const parsedRiotId = this.parseRiotId(this.singleRiotId);
     const server = this.singleServer.trim();
 
@@ -567,10 +514,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   importBulkAccounts(): void {
-    if (!this.canAddAccounts()) {
-      return;
-    }
-
     const lines = this.bulkAccountsText
       .split('\n')
       .map((line) => line.trim())
@@ -582,15 +525,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     let nextId = Math.max(0, ...this.accounts().map((account) => account.id)) + 1;
     const imported: DashboardAccount[] = [];
-    const allowedImportCount = this.isPremiumLockActive()
-      ? Math.max(0, FREE_ACCOUNT_LIMIT - this.accounts().length)
-      : Number.POSITIVE_INFINITY;
 
     for (const line of lines) {
-      if (imported.length >= allowedImportCount) {
-        break;
-      }
-
       const parts = line.split(':').map((part) => part.trim());
       if (!parts.length) {
         continue;
@@ -677,10 +613,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(account: DashboardAccount): void {
-    if (this.isAccountLocked(account)) {
-      return;
-    }
-
     this.editingAccount.set(account);
     this.editName.set(account.name);
     this.editServer.set(account.server);
@@ -694,7 +626,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   saveEditedAccount(): void {
     const account = this.editingAccount();
-    if (!account || this.isAccountLocked(account)) {
+    if (!account) {
       return;
     }
 
@@ -719,10 +651,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openDeleteModal(account: DashboardAccount): void {
-    if (this.isAccountLocked(account)) {
-      return;
-    }
-
     this.deletingAccount.set(account);
     this.isDeleteModalOpen.set(true);
   }
@@ -734,7 +662,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   confirmDeleteAccount(): void {
     const account = this.deletingAccount();
-    if (!account || this.isAccountLocked(account)) {
+    if (!account) {
       return;
     }
 
@@ -743,10 +671,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onRemoveFromFolder(account: DashboardAccount): void {
-    if (this.isAccountLocked(account)) {
-      return;
-    }
-
     this.accounts.update((accounts) =>
       accounts.map((item) =>
         item.id === account.id
@@ -764,10 +688,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshAccount(account: DashboardAccount): void {
-    if (this.isAccountLocked(account)) {
-      return;
-    }
-
     if (this.refreshingAccountId() === account.id) {
       return;
     }
@@ -989,7 +909,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadPremiumState(): PremiumEntitlementState {
-    const fallbackHadPremiumBefore = DASHBOARD_ACCOUNTS.length > FREE_ACCOUNT_LIMIT;
+    const fallbackHadPremiumBefore = false;
 
     try {
       const raw = localStorage.getItem(PREMIUM_STATE_STORAGE_KEY);

@@ -1,30 +1,37 @@
 <main class="home-page">
   <div class="intro-shell reveal">
     <header class="site-header">
-      <a class="brand" href="#hero" (click)="scrollToSection('hero', $event)" aria-label="LoL Vault Home">
+      <a
+        class="brand"
+        href="#hero"
+        (click)="scrollToSection('hero', $event)"
+        aria-label="LoL Vault Home"
+      >
         <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="brand-logo" />
         <span>{{ title }}</span>
       </a>
 
       <nav class="site-nav" aria-label="Primary">
-        <a href="#safety" (click)="scrollToSection('safety', $event)">Data Model</a>
-        <a href="#download" (click)="scrollToSection('download', $event)">Launch Status</a>
-        <a href="#packages" (click)="scrollToSection('packages', $event)">Packages</a>
+        <a href="#features" (click)="scrollToSection('features', $event)">What Is Live</a>
+        <a href="#roadmap" (click)="scrollToSection('roadmap', $event)">Roadmap</a>
+        <a href="#packages" (click)="scrollToSection('packages', $event)">Pricing</a>
         <a href="#socials" (click)="scrollToSection('socials', $event)">Discord</a>
       </nav>
     </header>
 
     <section id="hero" class="section hero">
       <div class="hero-copy">
-        <h1>Web-First League Account Management.</h1>
+        <h1>One vault for every League account.</h1>
         <p class="hero-description">
-          Track accounts by Riot ID, organize boards, and monitor ranked progress from one clean web
-          dashboard.
+          The account launcher is live and improving fast. You can already organize and launch
+          multiple League accounts, while live tracking and deep analytics are actively being built.
         </p>
 
         <div class="hero-actions">
           <a class="btn btn-primary" [href]="primaryCtaHref()">{{ primaryCtaLabel() }}</a>
-          <a class="btn btn-outline" href="#safety" (click)="scrollToSection('safety', $event)">See How It Works</a>
+          <a class="btn btn-outline" href="#roadmap" (click)="scrollToSection('roadmap', $event)">
+            View Roadmap
+          </a>
         </div>
       </div>
 
@@ -37,12 +44,12 @@
     </section>
   </div>
 
-  <section id="safety" class="section safety">
+  <section id="features" class="section safety">
     <div class="section-header reveal">
-      <h2>Built For Organized League Workflows</h2>
+      <h2>What is live in early access</h2>
       <p class="section-subtitle">
-        Everything is designed for fast account organization, clean tracking, and smooth day-to-day
-        use.
+        LoL Vault already gives you the core launcher workflow today, and each release keeps adding
+        quality-of-life improvements.
       </p>
     </div>
 
@@ -50,10 +57,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">01</span></div>
         <div class="step-content">
-          <h3>Unified account profiles</h3>
+          <h3>One-click account launcher</h3>
           <p>
-            Keep each account profile clear and structured with Riot ID, server, rank context, and
-            performance snapshots.
+            Launch the account you need from one place without manually typing credentials or
+            switching through multiple setups.
           </p>
         </div>
       </article>
@@ -61,10 +68,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">02</span></div>
         <div class="step-content">
-          <h3>Fast dashboard operations</h3>
+          <h3>Multi-account organization</h3>
           <p>
-            Sort, filter, and manage boards quickly with a layout designed for high-volume account
-            workflows.
+            Keep boards clean, search quickly, and stay focused across all your accounts in one
+            dashboard.
           </p>
         </div>
       </article>
@@ -72,10 +79,10 @@
       <article class="safety-step reveal" role="listitem">
         <div class="step-badge"><span class="step-index">03</span></div>
         <div class="step-content">
-          <h3>Community updates on Discord</h3>
+          <h3>Fast updates while we iterate</h3>
           <p>
-            Changelogs, previews, and release announcements are shared directly in Discord so you can
-            stay up to date.
+            Early access means frequent patches, tight feedback loops, and roadmap updates driven by
+            the community.
           </p>
         </div>
       </article>
@@ -84,10 +91,9 @@
 
   <section id="download" class="section download">
     <div class="section-header reveal">
-      <h2>Downloads Are Coming Soon</h2>
+      <h2>Launch status</h2>
       <p class="section-subtitle">
-        Desktop builds are coming soon. Join Discord to be first to know when each platform goes
-        live.
+        LoL Vault is in early access. Platform support is expanding as we stabilize each release.
       </p>
     </div>
 
@@ -102,9 +108,15 @@
             </svg>
             <h3>Windows</h3>
           </div>
-          <p>Coming Soon. Windows installer access will return in a future rollout.</p>
+          <p>Early access available now. Download the latest build and start free.</p>
         </div>
-        <button class="btn btn-outline btn-disabled" type="button" disabled>Coming Soon</button>
+        <a
+          class="btn btn-outline"
+          [href]="windowsDownloadUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Download</a
+        >
       </article>
 
       <article class="download-row reveal" role="listitem">
@@ -117,88 +129,160 @@
             </svg>
             <h3>macOS</h3>
           </div>
-          <p>Coming Soon. macOS installer access will return in a future rollout.</p>
+          <p>In progress during early access. Stability work is ongoing before full release.</p>
         </div>
         <button class="btn btn-outline btn-disabled" type="button" disabled>Coming Soon</button>
       </article>
     </div>
   </section>
 
-  <section id="socials" class="section socials">
-    <div class="social-shell is-visible">
-      <div class="social-copy">
-        <p class="social-kicker">Community</p>
-        <h2>Stay In The Loop On Discord</h2>
-        <p>
-          Get release alerts, roadmap previews, and community Q&amp;A in one place.
-        </p>
-      </div>
-      <a class="btn btn-primary" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
-        Join Discord
-      </a>
+  <section id="roadmap" class="section roadmap">
+    <div class="section-header reveal">
+      <h2>Roadmap</h2>
+      <p class="section-subtitle">
+        The product is moving fast in early access. Premium supporters get first access to each
+        roadmap release as it ships.
+      </p>
     </div>
-    <p class="social-legal">
-      LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
-      Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
-      Riot Games, Inc.
-    </p>
+
+    <div class="roadmap-grid" role="list" aria-label="Product roadmap phases">
+      <article class="roadmap-card live reveal" role="listitem">
+        <div class="roadmap-card-head">
+          <span class="roadmap-pill live">Early access</span>
+          <span class="roadmap-stage">Now</span>
+        </div>
+        <h3>Account launcher</h3>
+        <p>Launch accounts fast from one place with the current stable core experience.</p>
+        <ul>
+          <li>One-click account launch</li>
+          <li>Multi-account dashboard</li>
+          <li>Rank and LP overview</li>
+          <li>Windows support</li>
+          <li>macOS support in progress</li>
+        </ul>
+      </article>
+
+      <article class="roadmap-card next reveal" role="listitem">
+        <div class="roadmap-card-head">
+          <span class="roadmap-pill next">Up next</span>
+          <span class="roadmap-stage">Soon</span>
+        </div>
+        <h3>Live game tracker</h3>
+        <p>
+          The app will detect active sessions and refresh account stats automatically after each
+          game.
+        </p>
+        <ul>
+          <li>Active session detection</li>
+          <li>Auto-refresh on game end</li>
+          <li>Live account context</li>
+          <li>LP change after each game</li>
+        </ul>
+      </article>
+
+      <article class="roadmap-card planned reveal" role="listitem">
+        <div class="roadmap-card-head">
+          <span class="roadmap-pill planned">Planned</span>
+          <span class="roadmap-stage">Phase 3</span>
+        </div>
+        <h3>Deep account analytics</h3>
+        <p>A full analytics layer for performance trends across all your accounts.</p>
+        <ul>
+          <li>Recent match history</li>
+          <li>LP heatmap by day and time</li>
+          <li>Daily LP gain and loss trends</li>
+          <li>Champion performance</li>
+          <li>Weekly performance reports</li>
+          <li>Cross-account comparison</li>
+        </ul>
+      </article>
+    </div>
+
+    <aside id="socials" class="roadmap-community reveal" aria-label="Community invite">
+      <div class="roadmap-community-copy">
+        <p class="community-kicker">Join the community</p>
+        <h3>Join the Community</h3>
+        <p>Get updates, vote on features, report issues, and follow development in real time.</p>
+      </div>
+
+      <a
+        class="roadmap-community-link"
+        [href]="discordUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Open Discord community"
+      >
+        <svg class="discord-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M20.32 4.37A19.8 19.8 0 0 0 15.4 2.8c-.21.37-.45.86-.61 1.25a18.37 18.37 0 0 0-5.58 0c-.17-.4-.4-.88-.62-1.25A19.7 19.7 0 0 0 3.67 4.37C.56 9.02-.29 13.55.13 18.01a20.1 20.1 0 0 0 6.07 3.08c.49-.67.93-1.38 1.31-2.13-.72-.27-1.41-.6-2.07-.97.17-.12.33-.25.49-.37 3.98 1.87 8.31 1.87 12.24 0 .16.13.32.25.49.37-.66.38-1.35.7-2.07.97.38.75.82 1.46 1.31 2.13a20.04 20.04 0 0 0 6.07-3.08c.49-5.16-.84-9.65-3.65-13.64ZM8.02 15.25c-1.2 0-2.18-1.1-2.18-2.45 0-1.36.97-2.45 2.18-2.45 1.2 0 2.18 1.09 2.18 2.45 0 1.35-.98 2.45-2.18 2.45Zm7.96 0c-1.2 0-2.18-1.1-2.18-2.45 0-1.36.97-2.45 2.18-2.45 1.2 0 2.18 1.09 2.18 2.45 0 1.35-.98 2.45-2.18 2.45Z"
+          />
+        </svg>
+        <span>DISCORD</span>
+      </a>
+    </aside>
   </section>
 
   <section id="packages" class="section packages">
     <div class="section-header reveal">
-      <h2>Choose Your Vault Capacity</h2>
+      <h2>Become an Early Supporter</h2>
+      <p class="section-subtitle">
+        One-time premium access for early supporters. No recurring subscription.
+      </p>
     </div>
 
-    <div class="packages-grid">
-      <article class="plan free-plan reveal">
-        <p class="plan-label">Free</p>
-        <h3>Web Starter</h3>
-        <p class="plan-summary">Perfect for testing your setup with a small account rotation.</p>
-        <ul>
-          <li>Up to 3 League accounts</li>
-          <li>Account plus server tracking</li>
-          <li>Core web dashboard workflow</li>
-        </ul>
-        <a class="btn btn-outline" [href]="primaryCtaHref()">Go Free</a>
-      </article>
-
+    <div class="packages-layout" aria-label="Early supporter package">
       <article class="plan premium-plan reveal">
         <p class="plan-label">Premium</p>
-        <h3>Unlimited Web Vault</h3>
-        <p class="plan-summary">No account cap. Built for serious multi-account workflows.</p>
-        <div class="billing-switch" role="group" aria-label="Select billing cycle">
-          <button
-            type="button"
-            class="billing-option"
-            [class.active]="billingCycle() === 'monthly'"
-            (click)="setBillingCycle('monthly')"
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            class="billing-option"
-            [class.active]="billingCycle() === 'yearly'"
-            (click)="setBillingCycle('yearly')"
-          >
-            Yearly
-          </button>
-        </div>
+        <h3>Early Supporter</h3>
+        <p class="plan-summary">
+          Enter early as a premium supporter. You get early access to the application and everything
+          listed on the roadmap as it ships.
+        </p>
         <div class="premium-pricing" aria-label="Premium package pricing">
-          <p>
-            <span>{{ premiumPrice() }}</span> {{ premiumPeriodLabel() }}
+          <p class="price-line">
+            <span class="price-now">$9.99</span>
+            <span class="price-from">$19.99</span>
           </p>
-          <p class="billing-note">{{ premiumBillingHint() }}</p>
+          <p class="billing-note">{{ premiumBillingHint }}</p>
         </div>
         <ul>
-          <li>Unlimited accounts</li>
-          <li>Advanced account organization</li>
-          <li>Priority roadmap input on Discord</li>
+          <li>Closed-testing desktop app access</li>
+          <li>Premium roadmap features as they launch</li>
+          <li>Early-supporter pricing during early access</li>
+          <li>50% launch discount from $19.99 to $9.99</li>
+          <li>One-time unlock with no subscription</li>
+          <li>Instant premium entitlement after checkout</li>
         </ul>
         <div class="plan-actions">
-          <button class="btn btn-primary" (click)="buyPremium()">{{ premiumButtonLabel() }}</button>
+          <button class="btn btn-primary" (click)="buyPremium()">{{ premiumButtonLabel }}</button>
         </div>
       </article>
     </div>
   </section>
+
+  <footer class="site-footer section">
+    <div class="footer-top">
+      <div class="footer-brand-block reveal">
+        <div class="footer-brand" aria-label="LoL Vault brand">
+          <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault logo" class="footer-logo" />
+          <span>LoL Vault</span>
+        </div>
+        <p class="footer-copyright">© {{ currentYear }} LoL Vault. All rights reserved.</p>
+      </div>
+      <nav class="footer-links reveal" aria-label="Legal links">
+        <a href="/privacy-policy">Privacy Policy</a>
+        <span aria-hidden="true">•</span>
+        <a href="/terms-of-service">Terms of Service</a>
+      </nav>
+    </div>
+    <p class="footer-disclaimer reveal">
+      LoL Vault is an independent project and is not affiliated with, endorsed by, or sponsored by
+      Riot Games, Inc. League of Legends and Riot Games are trademarks or registered trademarks of
+      Riot Games, Inc.
+    </p>
+    <p class="footer-meta reveal">
+      Premium desktop access is currently provided through closed testing for approved testers and
+      early premium supporters.
+    </p>
+  </footer>
 </main>

@@ -242,16 +242,6 @@
             text-align: center;
           }
 
-          .folder-locked-count {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            background: color-mix(in oklch, var(--lock-accent) 20%, var(--background));
-            color: color-mix(in oklch, var(--lock-accent) 64%, var(--primary-text));
-            border: 1px solid color-mix(in oklch, var(--lock-accent) 34%, transparent);
-            white-space: nowrap;
-          }
-
           .folder-delete-btn {
             width: 20px;
             height: 20px;
@@ -534,53 +524,6 @@
     }
   }
 
-  .premium-lock-banner {
-    margin-bottom: 16px;
-    padding: 14px;
-    border-radius: 12px;
-    border: 2px solid color-mix(in oklch, var(--lock-accent) 46%, var(--border-color));
-    background:
-      linear-gradient(
-        135deg,
-        color-mix(in oklch, var(--lock-accent) 14%, transparent),
-        color-mix(in srgb, var(--card) 90%, var(--background))
-      ),
-      var(--card);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-
-    .premium-lock-copy {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .lock-kicker {
-        margin: 0;
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: color-mix(in oklch, var(--lock-accent) 72%, var(--primary-text));
-      }
-
-      h2 {
-        margin: 0;
-        font-size: 18px;
-      }
-
-      p {
-        margin: 0;
-        font-size: 13px;
-        color: var(--secondary-text);
-      }
-    }
-
-    .btn {
-      white-space: nowrap;
-    }
-  }
-
   .account-drag-wrapper {
     position: relative;
     transition:
@@ -625,15 +568,6 @@
         opacity: 1;
       }
     }
-
-    &.locked {
-      transform: none;
-      margin-right: 0;
-
-      .account-drag-handle {
-        display: none;
-      }
-    }
   }
 
   > p {
@@ -663,60 +597,6 @@
   &:hover {
     border-color: var(--outline);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  &.locked {
-    border-style: dashed;
-    border-color: color-mix(in oklch, var(--lock-accent) 42%, var(--border-color));
-    background: color-mix(in oklch, var(--lock-accent) 7%, var(--card));
-    opacity: 0.86;
-    box-shadow: none;
-
-    &:hover {
-      border-color: color-mix(in oklch, var(--lock-accent) 52%, var(--border-color));
-      box-shadow: none;
-    }
-  }
-
-  .account-lock-strip {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    max-width: min(420px, 82%);
-    padding: 4px 9px;
-    border-radius: 999px;
-    border: 1px solid color-mix(in oklch, var(--lock-accent) 38%, transparent);
-    background: color-mix(in oklch, var(--lock-accent) 18%, var(--background));
-    color: color-mix(in oklch, var(--lock-accent) 74%, var(--primary-text));
-    font-size: 11px;
-    line-height: 1.2;
-    z-index: 12;
-
-    strong {
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      color: inherit;
-      flex-shrink: 0;
-    }
-
-    span:last-of-type {
-      color: color-mix(in oklch, var(--lock-accent) 58%, var(--primary-text));
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .lock-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: color-mix(in oklch, var(--lock-accent) 82%, white);
-      box-shadow: 0 0 0 4px color-mix(in oklch, var(--lock-accent) 18%, transparent);
-      flex-shrink: 0;
-    }
   }
 
   .stats-divider {
@@ -1699,15 +1579,6 @@
 
     .btn {
       flex: 1;
-    }
-  }
-
-  .data .premium-lock-banner {
-    flex-direction: column;
-    align-items: flex-start;
-
-    .btn {
-      width: 100%;
     }
   }
 }

@@ -20,7 +20,11 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Geist', sans-serif;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 10% -8%, oklch(0.42 0 0 / 0.18), transparent 46%),
+    radial-gradient(circle at 90% 114%, oklch(0.35 0 0 / 0.2), transparent 58%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--primary-text);
 }
 

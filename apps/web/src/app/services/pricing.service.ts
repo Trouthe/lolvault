@@ -1,19 +1,17 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
-export interface RecurringPrice {
+export interface OneTimePrice {
   priceId: string;
   amount: string;
   amountMinor: number;
   currencyCode: string;
-  interval: 'month' | 'year';
-  frequency: number;
 }
 
 export interface PremiumPricingResponse {
   productId: string;
-  monthly: RecurringPrice;
-  yearly: RecurringPrice;
+  premium: OneTimePrice;
+  offerLabel?: string;
   fetchedAt: string;
 }
 

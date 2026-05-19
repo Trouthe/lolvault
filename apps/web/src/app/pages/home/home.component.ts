@@ -10,10 +10,8 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { PaddleService } from '../../services/paddle.service';
-import { PricingService, type RecurringPrice } from '../../services/pricing.service';
+import { PricingService, type OneTimePrice } from '../../services/pricing.service';
 import { AuthService } from '../../services/auth.service';
-
-type BillingCycle = 'monthly' | 'yearly';
 
 interface PlanPrice {
   priceId: string;
@@ -22,17 +20,12 @@ interface PlanPrice {
   currencyCode: string;
 }
 
-const FALLBACK_MONTHLY: PlanPrice = {
-  priceId: 'pri_01krnjteeh4nbz3kmdq8emje9e',
-  amount: '$5.99',
-  amountMinor: 599,
-  currencyCode: 'USD',
-};
+const EARLY_SUPPORTER_PRICE_ID = 'pri_01ks089v0ytt2pd49ryqcbd5xd';
 
-const FALLBACK_YEARLY: PlanPrice = {
-  priceId: 'pri_01krnjvsr30mync1qyz5998xj7',
-  amount: '$59.99',
-  amountMinor: 5999,
+const FALLBACK_EARLY_SUPPORTER: PlanPrice = {
+  priceId: EARLY_SUPPORTER_PRICE_ID,
+  amount: 'Price shown in checkout',
+  amountMinor: 0,
   currencyCode: 'USD',
 };
 
@@ -43,47 +36,19 @@ const FALLBACK_YEARLY: PlanPrice = {
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly title = 'LoL Vault';
+  readonly currentYear = new Date().getFullYear();
 
   readonly releasesUrl = 'https://github.com/Trouthe/lolvault/releases/latest';
   readonly windowsDownloadUrl = 'https://github.com/Trouthe/lolvault/releases/latest';
   readonly macDownloadUrl = 'https://github.com/Trouthe/lolvault/releases/latest';
   readonly discordUrl = 'https://discord.gg/lolvault';
 
-  readonly billingCycle = signal<BillingCycle>('monthly');
-  readonly monthlyPrice = signal<PlanPrice>(FALLBACK_MONTHLY);
-  readonly yearlyPrice = signal<PlanPrice>(FALLBACK_YEARLY);
+  readonly premiumPrice = signal<PlanPrice>(FALLBACK_EARLY_SUPPORTER);
 
-  readonly selectedPrice = computed(() =>
-    this.billingCycle() === 'monthly' ? this.monthlyPrice() : this.yearlyPrice()
-  );
+  readonly premiumButtonLabel = 'Unlock Early Supporter (one-time)';
 
-  readonly premiumPrice = computed(() => this.selectedPrice().amount);
-
-  readonly premiumPeriodLabel = computed(() =>
-    this.billingCycle() === 'monthly' ? 'monthly' : 'yearly'
-  );
-
-  readonly premiumButtonLabel = computed(() =>
-    this.billingCycle() === 'monthly'
-      ? `Go Premium Monthly - ${this.monthlyPrice().amount}`
-      : `Go Premium Yearly - ${this.yearlyPrice().amount}`
-  );
-
-  readonly premiumBillingHint = computed(() => {
-    if (this.billingCycle() === 'monthly') {
-      return 'Billed every month.';
-    }
-
-    const monthlyAnnualCost = this.monthlyPrice().amountMinor * 12;
-    const yearlyCost = this.yearlyPrice().amountMinor;
-    const savings = monthlyAnnualCost - yearlyCost;
-
-    if (savings <= 0) {
-      return 'Billed once per year.';
-    }
-
-    return `Save ${this.formatCurrencyFromMinor(savings, this.yearlyPrice().currencyCode)} per year.`;
-  });
+  readonly premiumBillingHint =
+    'Limited early access offer. One-time purchase, no subscription.';
 
   private readonly paddleService = inject(PaddleService);
   private readonly pricingService = inject(PricingService);
@@ -92,10 +57,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly currentUser = toSignal(this.authService.currentUser$, { initialValue: null });
   readonly primaryCtaHref = computed(() => (this.currentUser() ? '/dashboard' : '/auth'));
-  readonly primaryCtaLabel = computed(() => (this.currentUser() ? 'Dashboard' : 'Get Started'));
+  readonly primaryCtaLabel = computed(() =>
+    this.currentUser() ? 'Dashboard' : 'Start Free Tier'
+  );
 
   private revealObserver?: IntersectionObserver;
-  private revealFailSafeTimerId?: number;
+  private revealMutationObserver?: MutationObserver;
+  private readonly observedRevealNodes = new WeakSet<HTMLElement>();
 
   ngOnInit(): void {
     this.paddleService.init();
@@ -108,15 +76,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.revealObserver?.disconnect();
-    if (this.revealFailSafeTimerId !== undefined) {
-      window.clearTimeout(this.revealFailSafeTimerId);
-    }
+    this.revealMutationObserver?.disconnect();
   }
 
   private setupScrollReveals(): void {
-    const revealNodes = Array.from(
-      this.hostElement.nativeElement.querySelectorAll('.reveal')
-    ) as HTMLElement[];
+    const revealNodes = this.collectRevealNodes(this.hostElement.nativeElement);
 
     if (!revealNodes.length) {
       return;
@@ -142,44 +106,70 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     );
 
-    revealNodes.forEach((node) => this.revealObserver?.observe(node));
+    this.observeRevealNodes(revealNodes);
+    this.observeRevealMutations();
+  }
 
-    // Failsafe for some hosted builds where observers can miss lower sections.
-    this.revealFailSafeTimerId = window.setTimeout(() => {
-      revealNodes.forEach((node) => node.classList.add('is-visible'));
-    }, 1800);
+  private collectRevealNodes(root: ParentNode): HTMLElement[] {
+    return Array.from(root.querySelectorAll('.reveal')) as HTMLElement[];
+  }
+
+  private observeRevealNodes(nodes: HTMLElement[]): void {
+    for (const node of nodes) {
+      if (this.observedRevealNodes.has(node)) {
+        continue;
+      }
+
+      this.observedRevealNodes.add(node);
+      this.revealObserver?.observe(node);
+    }
+  }
+
+  private observeRevealMutations(): void {
+    this.revealMutationObserver = new MutationObserver((mutations) => {
+      const nextNodes: HTMLElement[] = [];
+
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((addedNode) => {
+          if (!(addedNode instanceof HTMLElement)) {
+            return;
+          }
+
+          if (addedNode.classList.contains('reveal')) {
+            nextNodes.push(addedNode);
+          }
+
+          nextNodes.push(...this.collectRevealNodes(addedNode));
+        });
+      }
+
+      if (nextNodes.length) {
+        this.observeRevealNodes(nextNodes);
+      }
+    });
+
+    this.revealMutationObserver.observe(this.hostElement.nativeElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   private async loadPricing(): Promise<void> {
     try {
       const pricing = await this.pricingService.getPremiumPricing();
-      this.monthlyPrice.set(this.toPlanPrice(pricing.monthly));
-      this.yearlyPrice.set(this.toPlanPrice(pricing.yearly));
+      this.premiumPrice.set(this.toPlanPrice(pricing.premium));
     } catch {
       // Keep fallback values when live pricing endpoints are unavailable.
     }
   }
 
-  private toPlanPrice(price: RecurringPrice): PlanPrice {
+  private toPlanPrice(price: OneTimePrice): PlanPrice {
     return {
       priceId: price.priceId,
       amount: price.amount,
       amountMinor: price.amountMinor,
       currencyCode: price.currencyCode,
     };
-  }
-
-  private formatCurrencyFromMinor(amountMinor: number, currencyCode: string): string {
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
-    });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-    return formatter.format(amountMinor / 10 ** fractionDigits);
-  }
-
-  setBillingCycle(cycle: BillingCycle): void {
-    this.billingCycle.set(cycle);
   }
 
   scrollToSection(sectionId: string, event: Event): void {
@@ -194,6 +184,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   buyPremium(): void {
-    this.paddleService.openCheckout(this.selectedPrice().priceId);
+    this.paddleService.openCheckout(this.premiumPrice().priceId);
   }
 }
