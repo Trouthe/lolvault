@@ -170,8 +170,7 @@ const DASHBOARD_ACCOUNTS: DashboardAccount[] = [
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   readonly version = [VERSION, BUILD_LABEL];
-  readonly defaultProfileImage =
-    'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/29.png';
+  readonly installDesktopAppMessage = 'Install the desktop app to launch accounts.';
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -216,7 +215,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     initialValue: null,
   });
   readonly profileImageUrl = computed(
-    () => this.currentUser()?.photoURL || this.defaultProfileImage
+    () => this.currentUser()?.photoURL || this.getLocalProfileFallback()
   );
 
   readonly displayedBoards = computed(() => this.boards());
@@ -304,9 +303,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isProfileMenuOpen.update((open) => !open);
   }
 
+  getAccountProfileIconUrl(profileIconId?: number): string {
+    return `https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/${profileIconId || 29}.png`;
+  }
+
+  getLocalProfileFallback(): string {
+    return this.theme() === 'light' ? 'LV-no-bg_dark.svg' : 'LV-no-bg_light.svg';
+  }
+
   onProfileImageError(event: Event): void {
     const target = event.target as HTMLImageElement;
-    target.src = this.defaultProfileImage;
+    const fallback = this.getLocalProfileFallback();
+
+    if (target.dataset['fallbackApplied'] === 'true' && target.src.endsWith(fallback)) {
+      return;
+    }
+
+    target.dataset['fallbackApplied'] = 'true';
+    target.src = fallback;
+  }
+
+  onAccountImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    const fallback = this.getLocalProfileFallback();
+
+    if (target.dataset['fallbackApplied'] === 'true' && target.src.endsWith(fallback)) {
+      return;
+    }
+
+    target.dataset['fallbackApplied'] = 'true';
+    target.src = fallback;
   }
 
   async signOutUser(): Promise<void> {

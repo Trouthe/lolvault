@@ -1,17 +1,22 @@
 <div class="auth-bg">
   <div class="auth-glow"></div>
 
+  @if (toast(); as activeToast) {
+    <div class="auth-toast" [class.success]="activeToast.kind === 'success'" role="status">
+      <span>{{ activeToast.message }}</span>
+      <button type="button" class="auth-toast-dismiss" (click)="dismissToast()" aria-label="Dismiss notification">
+        ×
+      </button>
+    </div>
+  }
+
   <main class="auth-card">
     <!-- Header -->
     <header class="auth-header">
       <img src="assets/branding/LV-no-bg_light.svg" alt="LoL Vault" class="auth-logo" />
       <h1 class="auth-title">LoL Vault</h1>
       <p class="auth-subtitle">
-        {{
-          isLogin()
-            ? 'Secure access to your operational data.'
-            : 'Create your account to get started.'
-        }}
+        Continue with your email. Existing accounts sign in, new ones are created automatically.
       </p>
     </header>
 
@@ -91,11 +96,9 @@
         <div class="form-field">
           <div class="field-label-row">
             <label class="field-label" for="password">Password</label>
-            @if (isLogin()) {
-              <button type="button" class="forgot-link" (click)="onForgotPassword()">
-                Forgot?
-              </button>
-            }
+            <button type="button" class="forgot-link" (click)="onForgotPassword()">
+              Forgot?
+            </button>
           </div>
           <div class="input-wrapper">
             <svg

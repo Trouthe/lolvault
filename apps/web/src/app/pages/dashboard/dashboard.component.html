@@ -251,13 +251,10 @@
                       <div class="account-details">
                         <div [class]="account.rank ? 'profile-icon' : ''">
                           <img
-                            [src]="
-                              'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/' +
-                              (account.profileIconId || 29) +
-                              '.png'
-                            "
+                            [src]="getAccountProfileIconUrl(account.profileIconId)"
                             alt="Profile Icon"
                             width="48"
+                            (error)="onAccountImageError($event)"
                           />
 
                           @if (account.rank) {
@@ -345,6 +342,24 @@
                           width="16"
                         />
                       </button>
+
+                      <div
+                        class="action-btn-tooltip"
+                        aria-label="Install the desktop app to launch accounts"
+                      >
+                        <button
+                          class="action-btn launch-btn"
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          tabindex="-1"
+                        >
+                          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+                        </button>
+                        <span class="action-btn-tooltip-popup" role="tooltip">
+                          {{ installDesktopAppMessage }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

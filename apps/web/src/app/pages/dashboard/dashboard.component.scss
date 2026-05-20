@@ -898,6 +898,54 @@
       }
     }
 
+    .action-btn-tooltip {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .action-btn-tooltip-popup {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        right: 0;
+        transform: translateY(4px);
+        opacity: 0;
+        pointer-events: auto;
+        white-space: nowrap;
+        padding: 8px 10px;
+        max-width: min(280px, calc(100vw - 32px));
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: color-mix(in oklch, var(--card) 96%, var(--background));
+        color: var(--primary-text);
+        font-size: 12px;
+        font-weight: 500;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        transition:
+          opacity 0.16s ease,
+          transform 0.16s ease;
+        z-index: 10;
+        scrollbar-width: thin;
+
+        &::-webkit-scrollbar {
+          height: 6px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: color-mix(in oklch, var(--outline) 65%, transparent);
+          border-radius: 999px;
+        }
+      }
+
+      &:hover .action-btn-tooltip-popup {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @keyframes spin {
       to {
         transform: rotate(360deg);
@@ -948,6 +996,15 @@
 
   &.refresh-btn:hover {
     background-color: var(--border-color);
+  }
+
+  &.launch-btn {
+    opacity: 0.55;
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 }
 
