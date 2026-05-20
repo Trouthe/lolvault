@@ -1,14 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Component, inject, HostListener, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { signal, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import type { User } from 'firebase/auth';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
 import { AddAccountModalComponent } from '../../components/modals/add-account-modal/add-account-modal.component';
 import { EditAccountModalComponent } from '../../components/modals/edit-account-modal/edit-account-modal.component';
 import { DeleteAccountModalComponent } from '../../components/modals/delete-account-modal/delete-account-modal.component';
 import { SettingsModalComponent } from '../../components/modals/settings-modal/settings-modal.component';
 import { UpdateBannerComponent } from '../../components/update-banner/update-banner.component';
+import { AuthService } from '../../services/auth.service';
 import { Account } from '../../models/interfaces/Account';
 import { Board } from '../../models/interfaces/Board';
 import { RiotService } from '../../services/riot.service';
@@ -51,6 +55,7 @@ export class DashboardComponent implements OnDestroy {
   private _searchQuery = signal('');
   public championId = signal<string>('');
   public isSortMenuOpen = signal(false);
+  public isProfileMenuOpen = signal(false);
   public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
 
   // Board state
@@ -79,9 +84,19 @@ export class DashboardComponent implements OnDestroy {
 
   // Services
   private riotService = inject(RiotService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
   public settingsService = inject(SettingsService);
   public boardService = inject(BoardService);
   public themeService = inject(ThemeService);
+
+  public currentUser = toSignal<User | null>(this.authService.currentUser$, {
+    initialValue: null,
+  });
+
+  public profileImageUrl = computed(
+    () => this.currentUser()?.photoURL || this.getLocalProfileFallback()
+  );
 
   // Computed properties
   public displayedBoards = computed(() =>
@@ -202,8 +217,43 @@ export class DashboardComponent implements OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('.sort-menu-container') && this.isSortMenuOpen()) {
+    const target = event.target as HTMLElement | null;
+
+    if (target && !target.closest('.sort-menu-container') && this.isSortMenuOpen()) {
       this.isSortMenuOpen.set(false);
+    }
+
+    if (target && !target.closest('.profile-menu') && this.isProfileMenuOpen()) {
+      this.isProfileMenuOpen.set(false);
+    }
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.stopPropagation();
+    this.isProfileMenuOpen.update((open) => !open);
+  }
+
+  getLocalProfileFallback(): string {
+    return `assets/branding/LV-bg_${this.themeService.getOppositeTheme()}.svg`;
+  }
+
+  onProfileImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    const fallback = this.getLocalProfileFallback();
+
+    if (target.dataset['fallbackApplied'] === 'true' && target.src.endsWith(fallback)) return;
+
+    target.dataset['fallbackApplied'] = 'true';
+    target.src = fallback;
+  }
+
+  async signOutUser(): Promise<void> {
+    try {
+      this.isProfileMenuOpen.set(false);
+      await this.authService.signOut();
+      await this.router.navigateByUrl('/auth', { replaceUrl: true });
+    } catch (error) {
+      console.error('Failed to sign out:', error);
     }
   }
 

@@ -13,17 +13,18 @@ function getAuthErrorCode(error: unknown): string | null {
 
 function getErrorMessage(e: unknown, fallback: string): string {
   switch (getAuthErrorCode(e)) {
-    case 'auth/popup-blocked':
-      return 'Popup was blocked. Enable popups and try again.';
-    case 'auth/cancelled-popup-request':
-      return 'Another sign-in attempt is already in progress.';
+    case 'auth/operation-not-supported-in-this-environment':
+      return 'Google sign-in is not supported in this environment.';
     case 'auth/network-request-failed':
       return 'Network error. Check your connection and try again.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Try again in a moment.';
-    case 'auth/popup-closed-by-user':
-      return 'Google sign-in was cancelled.';
+    case 'auth/web-storage-unsupported':
+      return 'Browser storage is unavailable. Enable storage and try again.';
     default:
+      if (e instanceof Error && e.message) {
+        return e.message;
+      }
       return fallback;
   }
 }
@@ -36,6 +37,7 @@ function getErrorMessage(e: unknown, fallback: string): string {
 export class AuthComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+
   private introTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(false);
@@ -46,22 +48,23 @@ export class AuthComponent implements OnInit, OnDestroy {
     this.introTimer = setTimeout(() => {
       this.showAuth.set(true);
       this.introTimer = undefined;
-    }, 1800);
+    }, 2100);
   }
 
   ngOnDestroy(): void {
-    if (!this.introTimer) return;
-
-    clearTimeout(this.introTimer);
-    this.introTimer = undefined;
+    if (this.introTimer) {
+      clearTimeout(this.introTimer);
+      this.introTimer = undefined;
+    }
   }
 
   async onGoogleSignIn(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
+
     try {
       await this.authService.signInWithGoogle();
-      await this.router.navigateByUrl('/dashboard');
+      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (e: unknown) {
       this.error.set(getErrorMessage(e, 'Google sign-in failed.'));
     } finally {

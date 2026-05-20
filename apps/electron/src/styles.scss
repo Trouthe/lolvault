@@ -25,6 +25,75 @@ body {
   filter: invert(1);
 }
 
+.profile-menu {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-avatar-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid var(--border-color);
+  background: var(--card);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 230px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border-color);
+  background: var(--card);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 10px;
+}
+
+.profile-email {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secondary-text);
+  word-break: break-word;
+  text-align: left;
+}
+
+.profile-signout-btn {
+  width: 100%;
+  border: 2px solid var(--border-color);
+  background: transparent;
+  color: var(--primary-text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-signout-btn:hover:not(:disabled) {
+  background: var(--muted);
+}
+
+.profile-signout-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 // Drag preview for account cards
 .drag-preview {
   border-radius: 12px !important;

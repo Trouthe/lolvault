@@ -16,6 +16,9 @@ declare global {
       loadBoards: () => Promise<Board[]>;
       saveBoards: (boards: Board[]) => Promise<{ success: boolean; error?: string }>;
       getPlatform: () => Promise<string>;
+      startGoogleSystemSignIn: (options: {
+        apiKey: string;
+      }) => Promise<{ success: boolean; idToken?: string; error?: string }>;
     };
   }
 }

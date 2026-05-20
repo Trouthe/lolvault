@@ -206,18 +206,14 @@
                 }
               </div>
 
-              <button
-                title="Add Account"
-                class="btn-icon-outlined"
-                (click)="addAccount()"
-              >
+              <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
                 <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
               </button>
             </div>
           </div>
 
           <div class="accounts-list">
-            @for (account of displayedAccounts(); track account.id; let index = $index) {
+            @for (account of displayedAccounts(); track account.id) {
               <div
                 class="account-drag-wrapper"
                 [class.hovered]="hoveredAccountId() === account.id.toString()"
@@ -229,7 +225,6 @@
                 </div>
 
                 <div class="acc-card">
-
                   @if (account.hotStreak) {
                     <div class="hot-streak-indicator" title="On a hot streak!">
                       <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
@@ -309,79 +304,70 @@
                         </div>
                       }
                     </div>
+                  </div>
 
-                    <div class="button-collection">
+                  <div class="button-collection">
+                    <button
+                      class="action-btn delete-btn"
+                      (click)="openDeleteModal(account)"
+                      title="Delete Account"
+                    >
+                      <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+                    </button>
+
+                    <button
+                      class="action-btn edit-btn"
+                      (click)="openEditModal(account)"
+                      title="Edit Account"
+                    >
+                      <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+                    </button>
+
+                    <button
+                      class="action-btn refresh-btn"
+                      (click)="refreshAccount(account)"
+                      [disabled]="isRefreshing(account.id)"
+                      [class.refreshing]="isRefreshing(account.id)"
+                      title="Refresh Account Data"
+                    >
+                      <img
+                        src="assets/icons/refresh.svg"
+                        class="icon"
+                        [class.spinning]="isRefreshing(account.id)"
+                        alt="Refresh"
+                        width="16"
+                      />
+                    </button>
+
+                    <div
+                      class="action-btn-tooltip"
+                      aria-label="Install the desktop app to launch accounts"
+                    >
                       <button
-                        class="action-btn delete-btn"
-                        (click)="openDeleteModal(account)"
-                        title="Delete Account"
+                        class="action-btn launch-btn"
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        tabindex="-1"
                       >
-                        <img src="assets/icons/trash.svg" alt="Delete" width="16" />
+                        <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
                       </button>
-
-                      <button
-                        class="action-btn edit-btn"
-                        (click)="openEditModal(account)"
-                        title="Edit Account"
-                      >
-                        <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
-                      </button>
-
-                      <button
-                        class="action-btn refresh-btn"
-                        (click)="refreshAccount(account)"
-                        [disabled]="isRefreshing(account.id)"
-                        [class.refreshing]="isRefreshing(account.id)"
-                        title="Refresh Account Data"
-                      >
-                        <img
-                          src="assets/icons/refresh.svg"
-                          class="icon"
-                          [class.spinning]="isRefreshing(account.id)"
-                          alt="Refresh"
-                          width="16"
-                        />
-                      </button>
-
-                      <div
-                        class="action-btn-tooltip"
-                        aria-label="Install the desktop app to launch accounts"
-                      >
-                        <button
-                          class="action-btn launch-btn"
-                          type="button"
-                          disabled
-                          aria-disabled="true"
-                          tabindex="-1"
-                        >
-                          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
-                        </button>
-                        <span class="action-btn-tooltip-popup" role="tooltip">
-                          {{ installDesktopAppMessage }}
-                        </span>
-                      </div>
+                      <span class="action-btn-tooltip-popup" role="tooltip">
+                        {{ installDesktopAppMessage }}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              @if (shouldShowAdAfter(index)) {
-                <aside class="account-ad-banner" aria-label="Advertisement placeholder">
-                  <p class="ad-slot-label">{{ getAdMockLabel(index) }}</p>
-                  <p class="ad-slot-copy">{{ getAdMockCopy(index) }}</p>
-                </aside>
-              }
             }
 
             @if (displayedAccounts().length === 0) {
               <div class="empty-state">
-                <h3>No accounts in this view</h3>
-                <p>Try another board, search term, or sort option.</p>
+                <h3>No accounts yet</h3>
+                <p>Add your first account to get started.</p>
               </div>
             }
           </div>
-
-          <p>League of Legends is a trademark of Riot Games, Inc.</p>
         </div>
       </div>
     </section>

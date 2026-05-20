@@ -326,6 +326,10 @@
 }
 
 .data {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+
   .mastery-bg {
     position: fixed;
     top: 0;
@@ -342,6 +346,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    flex: 1 1 auto;
   }
 
   .dash-header {
@@ -569,19 +574,12 @@
       }
     }
   }
-
-  > p {
-    color: var(--secondary-text);
-    font-size: 14px;
-    text-align: center;
-    margin-block: 32px;
-  }
 }
 
 .acc-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   border: 2px solid var(--border-color);
   border-radius: 12px;
@@ -675,21 +673,20 @@
 
   .card-top {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    align-items: stretch;
     width: 100%;
     min-width: 0;
-    gap: 12px;
   }
 
   .account-info {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
     flex: 1 1 auto;
     min-width: 0;
-    margin-right: 12px;
-    gap: 12px;
+    margin-right: 0;
+    gap: 10px;
 
     .account-details {
       display: flex;
@@ -822,6 +819,7 @@
       border-radius: 8px;
       height: 50px;
       border: 2px solid var(--border-color);
+      align-self: flex-start;
 
       .stats-group {
         display: flex;
@@ -879,6 +877,7 @@
     gap: 2px;
     flex-shrink: 0;
     height: 50px;
+    align-self: flex-start;
 
     .action-btn {
       &.refreshing {
@@ -960,6 +959,11 @@
   padding: 20px;
   text-align: center;
   background: color-mix(in oklch, var(--card) 90%, var(--background));
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 
   h3 {
     margin: 0;
@@ -1030,33 +1034,6 @@
     opacity: 0.45;
     cursor: not-allowed;
     background-color: transparent;
-  }
-}
-
-.account-ad-banner {
-  border: 2px dashed color-mix(in srgb, var(--outline) 40%, var(--border-color));
-  border-radius: 12px;
-  padding: 12px 14px;
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--outline) 10%, transparent),
-      color-mix(in srgb, var(--card) 92%, var(--background))
-    ),
-    var(--card);
-
-  .ad-slot-label {
-    margin: 0;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: color-mix(in srgb, var(--outline) 75%, var(--primary-text));
-  }
-
-  .ad-slot-copy {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: var(--secondary-text);
   }
 }
 

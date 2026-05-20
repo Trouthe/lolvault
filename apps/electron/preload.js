@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFilePicker: (options) => ipcRenderer.invoke('open-file-dialog', options),
   openExternal: (url) => ipcRenderer.send('open-external-url', url),
   getPlatform: () => ipcRenderer.invoke('get-platform'),
+  startGoogleSystemSignIn: (options) => ipcRenderer.invoke('start-google-system-sign-in', options),
 
   // Auto-update
   onUpdateAvailable: (callback) =>

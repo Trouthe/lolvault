@@ -1,5 +1,4 @@
-// ── Variables ──────────────────────────────────────────────
-$bg: #121212;
+$bg: #0d0d0f;
 $text: #ece7e2;
 $danger: #dc143c;
 
@@ -102,7 +101,6 @@ $danger: #dc143c;
   color: $text;
 }
 
-// ── Google GSI Material Button ─────────────────────────────
 .gsi-material-button {
   margin-top: 2px;
   user-select: none;
@@ -175,9 +173,8 @@ $danger: #dc143c;
     .gsi-material-button-state {
       background-color: #1f1f1f1f;
     }
-    .gsi-material-button-contents {
-      opacity: 0.38;
-    }
+
+    .gsi-material-button-contents,
     .gsi-material-button-icon {
       opacity: 0.38;
     }
@@ -203,7 +200,6 @@ $danger: #dc143c;
   }
 }
 
-// ── Error ──────────────────────────────────────────────────
 .auth-error {
   font-size: 13px;
   color: $danger;

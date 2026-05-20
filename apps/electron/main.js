@@ -1,9 +1,25 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const { dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const http = require('http');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const fs = require('fs');
+
+const GOOGLE_SYSTEM_AUTH_TIMEOUT_MS = 3 * 60 * 1000;
+const GOOGLE_SYSTEM_AUTH_CALLBACK_HOST = 'localhost';
+const GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS = '127.0.0.1';
+const DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT = 51793;
+const parsedGoogleSystemAuthCallbackPort = Number.parseInt(
+  process.env.GOOGLE_SYSTEM_AUTH_CALLBACK_PORT || `${DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}`,
+  10
+);
+const GOOGLE_SYSTEM_AUTH_CALLBACK_PORT =
+  Number.isInteger(parsedGoogleSystemAuthCallbackPort) &&
+  parsedGoogleSystemAuthCallbackPort > 0 &&
+  parsedGoogleSystemAuthCallbackPort <= 65535
+    ? parsedGoogleSystemAuthCallbackPort
+    : DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT;
 
 function encrypt(text) {
   if (!text) return text;
@@ -454,6 +470,327 @@ ipcMain.handle('open-file-dialog', async (event, options = {}) => {
 ipcMain.on('open-external-url', (event, url) => {
   console.log('Main process opening:', url);
   shell.openExternal(url);
+});
+
+function createGoogleAuthCallbackPage() {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LoL Vault Sign-In</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #111214;
+        color: #ece7e2;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .panel {
+        width: min(520px, calc(100vw - 28px));
+        border-radius: 12px;
+        border: 1px solid #3e3e42;
+        background: #1a1b1f;
+        padding: 20px;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0;
+        color: #bab7b2;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .error {
+        color: #ff8f8f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>LoL Vault</h1>
+      <p id="status">Finishing sign-in...</p>
+    </div>
+
+    <script>
+      (async function finalizeOAuth() {
+        const status = document.getElementById('status');
+
+        try {
+          const hash = window.location.hash && window.location.hash.startsWith('#')
+            ? window.location.hash.slice(1)
+            : '';
+
+          if (!hash) {
+            throw new Error('Missing sign-in token in callback URL.');
+          }
+
+          const response = await fetch('/oauth-finish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: hash,
+          });
+
+          if (!response.ok) {
+            const details = await response.text();
+            throw new Error(details || 'OAuth callback failed.');
+          }
+
+          status.textContent = 'Sign-in complete. You can close this tab and return to LoL Vault.';
+        } catch (error) {
+          status.textContent = error && error.message ? error.message : 'Sign-in failed.';
+          status.classList.add('error');
+        }
+      })();
+    </script>
+  </body>
+</html>`;
+}
+
+function readRequestBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let totalLength = 0;
+    const maxBodySize = 32 * 1024;
+
+    request.on('data', (chunk) => {
+      totalLength += chunk.length;
+      if (totalLength > maxBodySize) {
+        reject(new Error('Callback payload exceeded allowed size.'));
+        request.destroy();
+        return;
+      }
+
+      chunks.push(chunk);
+    });
+
+    request.on('end', () => {
+      resolve(Buffer.concat(chunks).toString('utf8'));
+    });
+
+    request.on('error', reject);
+    request.on('aborted', () => reject(new Error('Callback request was aborted.')));
+  });
+}
+
+async function fetchGoogleAuthUri({ apiKey, continueUri }) {
+  if (typeof fetch !== 'function') {
+    throw new Error('Network fetch API is unavailable in this environment.');
+  }
+
+  const response = await fetch(
+    `https://www.googleapis.com/identitytoolkit/v3/relyingparty/createAuthUri?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        continueUri,
+        providerId: 'google.com',
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Auth URL request failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  if (!data || typeof data.authUri !== 'string' || !data.authUri) {
+    throw new Error('Auth URL response did not include a valid URL.');
+  }
+
+  return data.authUri;
+}
+
+function createSignInResult(success, { idToken, error } = {}) {
+  return {
+    success,
+    ...(idToken ? { idToken } : {}),
+    ...(error ? { error } : {}),
+  };
+}
+
+ipcMain.handle('start-google-system-sign-in', async (_event, options = {}) => {
+  const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : '';
+
+  if (!apiKey) {
+    return createSignInResult(false, { error: 'Missing Firebase API key for Google sign-in.' });
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let expectedState = '';
+    let timeoutHandle;
+
+    const settle = (result) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = undefined;
+      }
+
+      if (result.success && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+
+      try {
+        server.close();
+      } catch {
+        // ignore close errors
+      }
+
+      resolve(result);
+    };
+
+    const server = http.createServer(async (request, response) => {
+      try {
+        const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+
+        if (request.method === 'GET' && requestUrl.pathname === '/callback') {
+          response.writeHead(200, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+          });
+          response.end(createGoogleAuthCallbackPage());
+          return;
+        }
+
+        if (request.method === 'POST' && requestUrl.pathname === '/oauth-finish') {
+          const body = await readRequestBody(request);
+          const params = new URLSearchParams(body);
+
+          const oauthError = params.get('error');
+          const oauthErrorDescription = params.get('error_description');
+          const state = params.get('state') || '';
+          const idToken = params.get('id_token');
+
+          if (oauthError) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('Google sign-in was cancelled or failed.');
+            settle(
+              createSignInResult(false, {
+                error: oauthErrorDescription || oauthError,
+              })
+            );
+            return;
+          }
+
+          if (expectedState && state !== expectedState) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('OAuth state validation failed.');
+            settle(createSignInResult(false, { error: 'OAuth state validation failed.' }));
+            return;
+          }
+
+          if (!idToken) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('Missing id_token from Google callback.');
+            settle(createSignInResult(false, { error: 'Missing id_token in Google callback.' }));
+            return;
+          }
+
+          response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+          response.end('ok');
+          settle(createSignInResult(true, { idToken }));
+          return;
+        }
+
+        if (request.method === 'GET' && requestUrl.pathname === '/favicon.ico') {
+          response.writeHead(204);
+          response.end();
+          return;
+        }
+
+        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Not Found');
+      } catch (error) {
+        response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Internal callback error.');
+        settle(
+          createSignInResult(false, {
+            error: error instanceof Error ? error.message : 'OAuth callback failed unexpectedly.',
+          })
+        );
+      }
+    });
+
+    server.on('error', (error) => {
+      const addressInUse =
+        !!error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'EADDRINUSE';
+
+      settle(
+        createSignInResult(false, {
+          error: addressInUse
+            ? `OAuth callback port ${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT} is already in use. Close the other process or set GOOGLE_SYSTEM_AUTH_CALLBACK_PORT to a free port.`
+            : error instanceof Error
+              ? error.message
+              : 'Could not start OAuth callback server.',
+        })
+      );
+    });
+
+    server.listen(GOOGLE_SYSTEM_AUTH_CALLBACK_PORT, GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS, async () => {
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') {
+          settle(createSignInResult(false, { error: 'Could not resolve callback server address.' }));
+          return;
+        }
+
+        const continueUri = `http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback`;
+        const authUri = await fetchGoogleAuthUri({ apiKey, continueUri });
+
+        try {
+          expectedState = new URL(authUri).searchParams.get('state') || '';
+        } catch {
+          expectedState = '';
+        }
+
+        timeoutHandle = setTimeout(() => {
+          settle(
+            createSignInResult(false, {
+              error: `Google sign-in timed out. Verify OAuth redirect URI http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback is allowed for the Google client.`,
+            })
+          );
+        }, GOOGLE_SYSTEM_AUTH_TIMEOUT_MS);
+
+        await shell.openExternal(authUri);
+      } catch (error) {
+        settle(
+          createSignInResult(false, {
+            error: error instanceof Error ? error.message : 'Failed to start Google sign-in.',
+          })
+        );
+      }
+    });
+  });
 });
 
 // Helper function to get the correct data path

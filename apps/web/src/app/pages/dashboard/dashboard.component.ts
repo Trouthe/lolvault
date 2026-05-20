@@ -96,71 +96,10 @@ const THEME_VARIANTS: ThemeVariantOption[] = [
 
 const SETTINGS_STORAGE_KEY = 'lolvault-web-dashboard-settings';
 const PREMIUM_STATE_STORAGE_KEY = 'lolvault-web-premium-state';
-const ADS_INSERTION_INTERVAL = 3;
-const MAX_INLINE_AD_SLOTS = 2;
 
-const DASHBOARD_BOARDS: DashboardBoard[] = [
-  { id: 'boosting', name: 'Boosting', color: 'cyan' },
-  { id: 'high-mmr', name: 'High MMR', color: 'teal' },
-  { id: 'placements', name: 'Placements', color: 'yellow' },
-];
+const DASHBOARD_BOARDS: DashboardBoard[] = [];
 
-const DASHBOARD_ACCOUNTS: DashboardAccount[] = [
-  {
-    id: 1,
-    boardId: 'boosting',
-    name: 'Astra#2123',
-    server: 'EUW',
-    rank: 'Diamond II',
-    wins: 55,
-    losses: 37,
-    leaguePoints: 74,
-    profileIconId: 29,
-    hotStreak: true,
-  },
-  {
-    id: 2,
-    boardId: 'boosting',
-    name: 'Noctis#1102',
-    server: 'NA',
-    rank: 'Emerald I',
-    wins: 61,
-    losses: 49,
-    leaguePoints: 12,
-    profileIconId: 640,
-  },
-  {
-    id: 3,
-    boardId: 'high-mmr',
-    name: 'Velis#8861',
-    server: 'KR',
-    rank: 'Master I',
-    wins: 104,
-    losses: 81,
-    leaguePoints: 221,
-    profileIconId: 5178,
-  },
-  {
-    id: 4,
-    boardId: 'placements',
-    name: 'Sparrow#0044',
-    server: 'EUNE',
-    wins: 7,
-    losses: 3,
-    profileIconId: 4572,
-  },
-  {
-    id: 5,
-    boardId: null,
-    name: 'Westfall#9871',
-    server: 'OCE',
-    rank: 'Platinum III',
-    wins: 41,
-    losses: 34,
-    leaguePoints: 66,
-    profileIconId: 5884,
-  },
-];
+const DASHBOARD_ACCOUNTS: DashboardAccount[] = [];
 
 @Component({
   selector: 'app-dashboard',
@@ -308,7 +247,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getLocalProfileFallback(): string {
-    return this.theme() === 'light' ? 'LV-no-bg_dark.svg' : 'LV-no-bg_light.svg';
+    return 'fallback.png';
   }
 
   onProfileImageError(event: Event): void {
@@ -354,40 +293,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return this.accounts().length;
     }
     return this.accounts().filter((account) => account.boardId === boardId).length;
-  }
-
-  shouldShowAdAfter(index: number): boolean {
-    if (this.isPremiumActive()) {
-      return false;
-    }
-
-    const total = this.displayedAccounts().length;
-    if (total <= ADS_INSERTION_INTERVAL || index >= total - 1) {
-      return false;
-    }
-
-    const accountPosition = index + 1;
-    if (accountPosition % ADS_INSERTION_INTERVAL !== 0) {
-      return false;
-    }
-
-    const adSlot = Math.floor(accountPosition / ADS_INSERTION_INTERVAL);
-    return adSlot <= MAX_INLINE_AD_SLOTS;
-  }
-
-  getAdMockLabel(index: number): string {
-    const adSlot = Math.floor((index + 1) / ADS_INSERTION_INTERVAL);
-    return `Ad Slot ${adSlot}`;
-  }
-
-  getAdMockCopy(index: number): string {
-    const adSlot = Math.floor((index + 1) / ADS_INSERTION_INTERVAL);
-    const copyBySlot: Record<number, string> = {
-      1: 'Ad placement mockup. Sponsored content could appear between account cards.',
-      2: 'Second ad placement mockup. Keep this space for tasteful partner banners.',
-    };
-
-    return copyBySlot[adSlot] ?? 'Ad placement mockup. Banner content would render here.';
   }
 
   getFolderColor(colorName: string): string {
