@@ -8,7 +8,7 @@ param(
     [int]$inputRetries = 5
 )
 
-# Ensure STA mode for clipboard operations
+# Ensure STA mode for UI automation and SendKeys.
 if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
     Write-Host "ERROR: Script must run in STA mode (launch PowerShell with -STA).";
     exit 1
@@ -222,11 +222,176 @@ function Verify-CorrectWindowFocused {
     return $currentFocus -eq $ExpectedHandle
 }
 
+function Get-RiotAutomationRoot {
+    param([IntPtr]$Handle)
+
+    try {
+        return [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
+    }
+    catch {
+        return $null
+    }
+}
+
+function Get-LoginFields {
+    param([System.Windows.Automation.AutomationElement]$Root)
+
+    if ($null -eq $Root) {
+        return $null
+    }
+
+    try {
+        $editCondition = New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+            [System.Windows.Automation.ControlType]::Edit
+        )
+
+        $rawFields = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $editCondition)
+        $visibleFields = @()
+
+        foreach ($field in $rawFields) {
+            if (-not $field.Current.IsEnabled) {
+                continue
+            }
+
+            if ($field.Current.IsOffscreen) {
+                continue
+            }
+
+            $visibleFields += $field
+        }
+
+        if ($visibleFields.Count -eq 0) {
+            return $null
+        }
+
+        $usernameField = $null
+        $passwordField = $null
+
+        foreach ($field in $visibleFields) {
+            $isPassword = $false
+
+            try {
+                $isPassword = [bool]$field.GetCurrentPropertyValue(
+                    [System.Windows.Automation.AutomationElement]::IsPasswordProperty
+                )
+            }
+            catch {
+                $isPassword = $false
+            }
+
+            if ($isPassword) {
+                if ($null -eq $passwordField) {
+                    $passwordField = $field
+                }
+                continue
+            }
+
+            if ($null -eq $usernameField) {
+                $usernameField = $field
+            }
+        }
+
+        if ($null -eq $usernameField -and $visibleFields.Count -gt 0) {
+            $usernameField = $visibleFields[0]
+        }
+
+        if ($null -eq $passwordField -and $visibleFields.Count -gt 1) {
+            $passwordField = $visibleFields[1]
+        }
+
+        return @{
+            Username = $usernameField
+            Password = $passwordField
+        }
+    }
+    catch {
+        return $null
+    }
+}
+
+function Wait-ForLoginFields {
+    param([IntPtr]$Handle, [int]$TimeoutMs)
+
+    $watch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    while ($watch.ElapsedMilliseconds -lt $TimeoutMs) {
+        $root = Get-RiotAutomationRoot -Handle $Handle
+        $fields = Get-LoginFields -Root $root
+
+        if ($null -ne $fields -and $null -ne $fields.Username) {
+            return $fields
+        }
+
+        Start-Sleep -Milliseconds 400
+    }
+
+    return $null
+}
+
+function Try-SetAutomationValue {
+    param([System.Windows.Automation.AutomationElement]$Element, [string]$Text)
+
+    if ($null -eq $Element) {
+        return $false
+    }
+
+    $valuePattern = $null
+
+    try {
+        if ($Element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
+            $pattern = [System.Windows.Automation.ValuePattern]$valuePattern
+
+            if (-not $pattern.Current.IsReadOnly) {
+                $pattern.SetValue($Text)
+                return $true
+            }
+        }
+    }
+    catch {
+        return $false
+    }
+
+    return $false
+}
+
+function Convert-ToSendKeysLiteral {
+    param([string]$Text)
+
+    if ($null -eq $Text) {
+        return ''
+    }
+
+    $builder = New-Object System.Text.StringBuilder
+
+    foreach ($character in $Text.ToCharArray()) {
+        switch ($character) {
+            '+' { [void]$builder.Append('{+}') }
+            '^' { [void]$builder.Append('{^}') }
+            '%' { [void]$builder.Append('{%}') }
+            '~' { [void]$builder.Append('{~}') }
+            '(' { [void]$builder.Append('{(}') }
+            ')' { [void]$builder.Append('{)}') }
+            '{' { [void]$builder.Append('{{}') }
+            '}' { [void]$builder.Append('{}}') }
+            default { [void]$builder.Append($character) }
+        }
+    }
+
+    return $builder.ToString()
+}
+
 function Safe-SendKeys {
-    param([IntPtr]$TargetHandle, [string]$Text, [int]$Retries)
+    param(
+        [IntPtr]$TargetHandle,
+        [string]$Text,
+        [int]$Retries,
+        [System.Windows.Automation.AutomationElement]$TargetElement = $null
+    )
+
+    $literalText = Convert-ToSendKeysLiteral -Text $Text
 
     for ($attempt = 0; $attempt -lt $Retries; $attempt++) {
-        # CRITICAL: Verify the correct window is focused BEFORE sending any input
         if (-not (Verify-CorrectWindowFocused -ExpectedHandle $TargetHandle)) {
             Write-Log "Wrong window focused, re-focusing target window..."
             if (-not (Force-WindowFocus -Handle $TargetHandle -Retries 3)) {
@@ -237,35 +402,33 @@ function Safe-SendKeys {
             Start-Sleep -Milliseconds 300
         }
 
-        # Double-check focus before sending
         if (-not (Verify-CorrectWindowFocused -ExpectedHandle $TargetHandle)) {
             Write-Log "Window lost focus, aborting this attempt"
             continue
         }
 
         try {
-            # Clear and set clipboard
-            [System.Windows.Forms.Clipboard]::Clear()
-            Start-Sleep -Milliseconds 50
-            [System.Windows.Forms.Clipboard]::SetText($Text)
-            Start-Sleep -Milliseconds 100
+            if ($null -ne $TargetElement) {
+                try {
+                    $TargetElement.SetFocus()
+                    Start-Sleep -Milliseconds 120
+                }
+                catch {
+                    Start-Sleep -Milliseconds 120
+                }
 
-            # Verify clipboard content
-            $clipboardContent = [System.Windows.Forms.Clipboard]::GetText()
-            if ($clipboardContent -ne $Text) {
-                Write-Log "Clipboard verification failed, retrying..."
-                continue
+                if (Try-SetAutomationValue -Element $TargetElement -Text $Text) {
+                    Write-Log "Text sent successfully (attempt $($attempt+1))"
+                    return $true
+                }
             }
 
-            # Final focus check before paste
-            if (-not (Verify-CorrectWindowFocused -ExpectedHandle $TargetHandle)) {
-                Write-Log "Lost focus right before paste, aborting"
-                continue
-            }
-
-            # Send Ctrl+V
-            [System.Windows.Forms.SendKeys]::SendWait('^v')
-            Start-Sleep -Milliseconds 200
+            [System.Windows.Forms.SendKeys]::SendWait('^a')
+            Start-Sleep -Milliseconds 80
+            [System.Windows.Forms.SendKeys]::SendWait('{BACKSPACE}')
+            Start-Sleep -Milliseconds 80
+            [System.Windows.Forms.SendKeys]::SendWait($literalText)
+            Start-Sleep -Milliseconds 180
 
             Write-Log "Text sent successfully (attempt $($attempt+1))"
             return $true
@@ -319,7 +482,7 @@ Write-Log "Found Riot Client window: '$foundTitle' (Handle: $riotHandle)"
 
 # Step 2: Wait a moment for the login form to be ready
 Write-Log "Waiting for login form to be ready..."
-Start-Sleep -Milliseconds 2000
+Start-Sleep -Milliseconds 750
 
 # Step 3: Force focus to the Riot Client window
 Write-Log "Bringing Riot Client to foreground..."
@@ -331,50 +494,55 @@ if (-not (Force-WindowFocus -Handle $riotHandle -Retries $activateRetries)) {
 # Extra delay after focus to ensure the window is ready
 Start-Sleep -Milliseconds 250
 
-# Step 4: Click on the window to ensure the username field is focused
-# First, send a click to ensure we're in the right input field
-Write-Log "Ensuring username field is focused..."
-if (Verify-CorrectWindowFocused -ExpectedHandle $riotHandle) {
-    # Send Tab then Shift+Tab to reset to first field, or just trust the focus
-    # Actually, let's send a mouse click via nircmd to the center of the window
-    & "$nircmd" win focus handle $riotHandle 2>$null
-    Start-Sleep -Milliseconds 300
+$loginFields = Wait-ForLoginFields -Handle $riotHandle -TimeoutMs $timeoutMs
+$usernameField = $null
+$passwordField = $null
+
+if ($null -ne $loginFields) {
+    $usernameField = $loginFields.Username
+    $passwordField = $loginFields.Password
 }
 
-# Step 5: Enter username
+# Step 4: Enter username
 Write-Log "Entering username..."
-if (-not (Safe-SendKeys -TargetHandle $riotHandle -Text $username -Retries $inputRetries)) {
+if (-not (Safe-SendKeys -TargetHandle $riotHandle -Text $username -Retries $inputRetries -TargetElement $usernameField)) {
     Write-Log "ERROR: Failed to enter username"
-    [System.Windows.Forms.Clipboard]::Clear()
     exit 1
 }
 
-# Step 6: Tab to password field
-Write-Log "Tabbing to password field..."
-if (-not (Safe-SendKey -TargetHandle $riotHandle -Key '{TAB}' -Retries $inputRetries)) {
-    Write-Log "ERROR: Failed to send TAB key"
-    [System.Windows.Forms.Clipboard]::Clear()
-    exit 1
+# Step 5: Move to password field when UI Automation does not expose it directly
+if ($null -eq $passwordField) {
+    Write-Log "Tabbing to password field..."
+    if (-not (Safe-SendKey -TargetHandle $riotHandle -Key '{TAB}' -Retries $inputRetries)) {
+        Write-Log "ERROR: Failed to send TAB key"
+        exit 1
+    }
+
+    Start-Sleep -Milliseconds 100
 }
 
-Start-Sleep -Milliseconds 100
-
-# Step 7: Enter password
+# Step 6: Enter password
 Write-Log "Entering password..."
-if (-not (Safe-SendKeys -TargetHandle $riotHandle -Text $password -Retries $inputRetries)) {
+if (-not (Safe-SendKeys -TargetHandle $riotHandle -Text $password -Retries $inputRetries -TargetElement $passwordField)) {
     Write-Log "ERROR: Failed to enter password"
-    [System.Windows.Forms.Clipboard]::Clear()
     exit 1
 }
 
-# Step 8: Press Enter to submit
+# Step 7: Press Enter to submit
+if ($null -ne $passwordField) {
+    try {
+        $passwordField.SetFocus()
+        Start-Sleep -Milliseconds 120
+    }
+    catch {
+        Start-Sleep -Milliseconds 120
+    }
+}
+
 Write-Log "Submitting login..."
 if (-not (Safe-SendKey -TargetHandle $riotHandle -Key '{ENTER}' -Retries $inputRetries)) {
     Write-Log "ERROR: Failed to send ENTER key"
-    [System.Windows.Forms.Clipboard]::Clear()
     exit 1
 }
 
-# Step 9: Clear clipboard for security
-[System.Windows.Forms.Clipboard]::Clear()
 Write-Log "Login automation completed successfully!"
