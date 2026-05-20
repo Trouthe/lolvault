@@ -485,12 +485,11 @@
   padding: 22px 24px;
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in oklch, var(--card) 95%, var(--background)),
-      color-mix(in oklch, var(--background) 88%, var(--card))
-    );
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklch, var(--card) 95%, var(--background)),
+    color-mix(in oklch, var(--background) 88%, var(--card))
+  );
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -678,12 +677,11 @@
 
 .premium-plan {
   border-color: color-mix(in oklch, var(--outline) 76%, var(--border-color));
-  background:
-    linear-gradient(
-      165deg,
-      color-mix(in oklch, var(--card) 96%, var(--background)),
-      color-mix(in oklch, var(--background) 86%, var(--card))
-    );
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklch, var(--card) 96%, var(--background)),
+    color-mix(in oklch, var(--background) 86%, var(--card))
+  );
 }
 
 .plan-actions {
@@ -843,6 +841,14 @@
 @media (max-width: 760px) {
   .home-page {
     padding-bottom: 76px;
+  }
+
+  /* Drop full-surface decorative overlays on phones to reduce scroll repaint cost. */
+  .home-page::before,
+  .intro-shell::before,
+  .safety-frame::before,
+  .roadmap-community::before {
+    content: none;
   }
 
   .intro-shell {
