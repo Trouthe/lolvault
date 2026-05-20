@@ -1,19 +1,10 @@
-@use 'sass:color';
-
 // ── Variables ──────────────────────────────────────────────
 $bg: #141313;
-$surface: #141313;
 $surface-card: rgba(20, 19, 19, 0.6);
-$surface-low: #0f0e0e;
-$surface-con: #201f1f;
-$surface-high: #2b2a2a;
 $border: #4c4546;
 $text: #e6e1e1;
 $text-muted: #cfc4c5;
-$outline: #988e8f;
 $primary: #c8c6c5;
-$primary-dim: #b0adac;
-$on-primary: #303030;
 $danger: #dc143c;
 
 // ── Outer wrapper ──────────────────────────────────────────
@@ -42,57 +33,6 @@ $danger: #dc143c;
   border-radius: 9999px;
   filter: blur(120px);
   pointer-events: none;
-}
-
-.auth-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 30;
-  width: min(460px, calc(100vw - 24px));
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba($outline, 0.35);
-  background: rgba($surface-con, 0.96);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
-  color: $text;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-
-  &.success {
-    border-color: rgba(#4ade80, 0.35);
-  }
-
-  span {
-    font-size: 13px;
-    line-height: 1.45;
-  }
-}
-
-.auth-toast-dismiss {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: $text-muted;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-
-  &:hover {
-    background: rgba($primary, 0.08);
-    color: $text;
-  }
 }
 
 // ── Card ───────────────────────────────────────────────────
@@ -258,107 +198,6 @@ $danger: #dc143c;
   }
 }
 
-// ── Divider ────────────────────────────────────────────────
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.divider-line {
-  flex: 1;
-  height: 1px;
-  background: $border;
-}
-
-.divider-label {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: $text-muted;
-}
-
-// ── Form ───────────────────────────────────────────────────
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: $text-muted;
-  margin-left: 4px;
-}
-
-.field-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0 4px;
-}
-
-.forgot-link {
-  font-size: 12px;
-  font-weight: 500;
-  color: $primary;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: $text;
-  }
-}
-
-.input-wrapper {
-  position: relative;
-}
-
-.input-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: $text-muted;
-  pointer-events: none;
-}
-
-.form-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: $surface-low;
-  border: 1px solid $border;
-  border-radius: 10px;
-  padding: 10px 12px 10px 36px;
-  font-size: 14px;
-  font-family: 'Geist', sans-serif;
-  color: $text;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-  outline: none;
-
-  &::placeholder {
-    color: $outline;
-  }
-
-  &:focus {
-    border-color: $outline;
-    box-shadow: 0 0 0 1px $outline;
-  }
-}
-
 // ── Error ──────────────────────────────────────────────────
 .auth-error {
   font-size: 13px;
@@ -370,30 +209,10 @@ $danger: #dc143c;
   border-radius: 8px;
 }
 
-// ── Primary button ─────────────────────────────────────────
-.btn-primary {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $primary;
-  color: $on-primary;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: 'Geist', sans-serif;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  margin-top: 4px;
-
-  &:hover:not(:disabled) {
-    background: $primary-dim;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+.auth-helper {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: $text-muted;
+  letter-spacing: 0.02em;
 }
