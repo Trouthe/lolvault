@@ -101,3 +101,81 @@ body {
   border: 2px solid var(--outline) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
+
+.sync-conflict-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.sync-conflict-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--background);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sync-conflict-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sync-conflict-modal h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--primary-text);
+}
+
+.sync-conflict-lead {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.sync-conflict-list h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+.sync-conflict-list ul {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.sync-conflict-list li {
+  margin-bottom: 4px;
+  color: var(--primary-text);
+  font-size: 13px;
+}
+
+.sync-conflict-options {
+  display: flex;
+  gap: 8px;
+}
+
+.sync-conflict-options .sync-option {
+  flex: 1;
+}
+
+.sync-conflict-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Component, inject, HostListener, ElementRef, ViewChild, OnDestroy } from '@angular/core';
-import { signal, computed } from '@angular/core';
+import { signal, computed, effect } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type { User } from 'firebase/auth';
+import { Unsubscribe, doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
 import { AddAccountModalComponent } from '../../components/modals/add-account-modal/add-account-modal.component';
 import { EditAccountModalComponent } from '../../components/modals/edit-account-modal/edit-account-modal.component';
@@ -21,6 +22,59 @@ import { BoardService } from '../../services/board.service';
 import { LOL_DATA } from '../../models/constants';
 import { VERSION, BUILD_LABEL } from '../../../environments/version';
 import { ThemeService } from '../../services/theme.service';
+import { FirebaseService } from '../../services/firebase.service';
+
+interface CloudSyncBoard {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: number;
+}
+
+interface CloudSyncAccount {
+  syncId: string;
+  boardId: string | null;
+  name: string;
+  server?: string;
+  game?: string;
+  rank?: string;
+  wins?: number;
+  losses?: number;
+  leaguePoints?: number;
+  profileIconId?: number;
+  summonerLevel?: number;
+  hotStreak?: boolean;
+  topChampionId?: string;
+  lastRefreshed?: number;
+}
+
+interface CloudSyncSettings {
+  theme: 'light' | 'dark';
+  themeVariant: string;
+  showMasteryBackground: boolean;
+}
+
+interface CloudSyncDocumentData {
+  boards?: unknown;
+  accounts?: unknown;
+  settings?: unknown;
+}
+
+interface CloudSyncPayload {
+  boards: CloudSyncBoard[];
+  accounts: CloudSyncAccount[];
+  settings: CloudSyncSettings;
+}
+
+interface PendingSyncConflictSnapshot {
+  userId: string;
+  boards: Board[];
+  accounts: CloudSyncAccount[];
+  settings: CloudSyncSettings;
+}
+
+const CLOUD_SYNC_COLLECTION = 'dashboardAccounts';
+const CLOUD_SYNC_SCHEMA_VERSION = 3;
 
 @Component({
   selector: 'app-dashboard',
@@ -57,6 +111,11 @@ export class DashboardComponent implements OnDestroy {
   public isSortMenuOpen = signal(false);
   public isProfileMenuOpen = signal(false);
   public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
+  public isSyncToggleBusy = signal(false);
+  public isSyncConflictModalOpen = signal(false);
+  public syncConflictResolution = signal<'electron' | 'web'>('electron');
+  public syncConflictLocalOnly = signal<string[]>([]);
+  public syncConflictWebOnly = signal<string[]>([]);
 
   // Board state
   public isCreatingBoard = signal(false);
@@ -77,6 +136,13 @@ export class DashboardComponent implements OnDestroy {
   private lastReorderTime = 0;
   private readonly REORDER_THROTTLE_MS = 100;
   private isConfirmingBoard = false;
+  private localDataReady = signal(false);
+  private cloudSyncUnsubscribe: Unsubscribe | null = null;
+  private cloudSyncUserId: string | null = null;
+  private cloudWriteDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private isApplyingCloudSnapshot = false;
+  private lastCloudDataHash = '';
+  private pendingSyncConflictSnapshot: PendingSyncConflictSnapshot | null = null;
 
   // Hover state
   public hoveredAccountId = signal<string | null>(null);
@@ -89,6 +155,7 @@ export class DashboardComponent implements OnDestroy {
   public settingsService = inject(SettingsService);
   public boardService = inject(BoardService);
   public themeService = inject(ThemeService);
+  private firebaseService = inject(FirebaseService);
 
   public currentUser = toSignal<User | null>(this.authService.currentUser$, {
     initialValue: null,
@@ -144,8 +211,43 @@ export class DashboardComponent implements OnDestroy {
   }
 
   constructor() {
-    this.loadBoards();
-    this.loadAccounts();
+    void this.initializeLocalData();
+
+    effect((onCleanup) => {
+      const user = this.currentUser();
+      const isLocalDataReady = this.localDataReady();
+      const syncWithWeb = this.settingsService.settings().syncWithWeb;
+
+      if (!user || !isLocalDataReady || !syncWithWeb) {
+        this.stopCloudSyncListener();
+        return;
+      }
+
+      this.startCloudSyncListener(user.uid);
+      onCleanup(() => this.stopCloudSyncListener());
+    });
+
+    effect(() => {
+      const user = this.currentUser();
+      const isLocalDataReady = this.localDataReady();
+      const accounts = this.accounts();
+      const boards = this.boardService.getBoards()();
+      const syncWithWeb = this.settingsService.settings().syncWithWeb;
+      const theme = this.themeService.theme();
+      const themeVariant = this.themeService.themeVariant();
+      const showMasteryBackground = this.settingsService.settings().showMasteryBackground;
+
+      void theme;
+      void themeVariant;
+      void showMasteryBackground;
+
+      if (!user || !isLocalDataReady || !syncWithWeb || this.isApplyingCloudSnapshot) {
+        return;
+      }
+
+      this.scheduleCloudSnapshotPublish(user.uid, boards, accounts);
+    });
+
     window.addEventListener('dragend', this.onGlobalDragEnd, true);
     document.addEventListener('dragstart', this.onGlobalDragStart, true);
   }
@@ -153,6 +255,17 @@ export class DashboardComponent implements OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('dragend', this.onGlobalDragEnd, true);
     document.removeEventListener('dragstart', this.onGlobalDragStart, true);
+    this.stopCloudSyncListener();
+
+    if (this.cloudWriteDebounceTimer !== null) {
+      clearTimeout(this.cloudWriteDebounceTimer);
+      this.cloudWriteDebounceTimer = null;
+    }
+  }
+
+  private async initializeLocalData(): Promise<void> {
+    await Promise.all([this.loadBoards(), this.loadAccounts()]);
+    this.localDataReady.set(true);
   }
 
   private getRankValue(rank: string | undefined): number {
@@ -171,7 +284,7 @@ export class DashboardComponent implements OnDestroy {
   }
 
   private async updateAccountsAndSave(updater: (accounts: Account[]) => Account[]): Promise<void> {
-    const updated = updater(this.accounts());
+    const updated = this.ensureAccountSyncIds(updater(this.accounts()));
     this.accounts.set(updated);
     await this.saveAccounts(updated);
   }
@@ -264,6 +377,166 @@ export class DashboardComponent implements OnDestroy {
   setSortOption(option: 'all' | 'highest' | 'lowest' | 'unranked'): void {
     this.currentSort.set(option);
     this.isSortMenuOpen.set(false);
+  }
+
+  async onSyncWithWebToggleRequested(enabled: boolean): Promise<void> {
+    if (this.isSyncToggleBusy()) {
+      return;
+    }
+
+    if (!enabled) {
+      this.settingsService.toggleSyncWithWeb(false);
+      this.stopCloudSyncListener();
+      this.resetSyncConflictState();
+      return;
+    }
+
+    const user = this.currentUser();
+    if (!user) {
+      console.warn('Sync with web requires an authenticated user.');
+      this.settingsService.toggleSyncWithWeb(false);
+      return;
+    }
+
+    if (!this.localDataReady()) {
+      console.warn('Local data is not ready yet; try enabling sync again in a moment.');
+      this.settingsService.toggleSyncWithWeb(false);
+      return;
+    }
+
+    this.isSyncToggleBusy.set(true);
+
+    try {
+      const localAccountsWithSyncIds = this.ensureAccountSyncIds(this.accounts());
+      if (localAccountsWithSyncIds !== this.accounts()) {
+        this.accounts.set(localAccountsWithSyncIds);
+        await this.saveAccounts(localAccountsWithSyncIds);
+      }
+
+      const snapshot = await getDoc(this.getCloudSyncDocument(user.uid));
+      if (!snapshot.exists()) {
+        this.settingsService.toggleSyncWithWeb(true);
+        return;
+      }
+
+      const cloudData = snapshot.data() as CloudSyncDocumentData;
+      const cloudBoards = this.deserializeCloudBoards(cloudData.boards);
+      const cloudAccounts = this.deserializeCloudAccounts(cloudData.accounts, cloudBoards);
+      const cloudSettings = this.deserializeCloudSettings(cloudData.settings);
+
+      const localOnly = this.getLocalOnlyAccounts(localAccountsWithSyncIds, cloudAccounts);
+      const webOnly = this.getWebOnlyAccounts(localAccountsWithSyncIds, cloudAccounts);
+
+      if (!localOnly.length && !webOnly.length) {
+        this.settingsService.toggleSyncWithWeb(true);
+        return;
+      }
+
+      this.pendingSyncConflictSnapshot = {
+        userId: user.uid,
+        boards: cloudBoards,
+        accounts: cloudAccounts,
+        settings: cloudSettings,
+      };
+      this.syncConflictResolution.set('electron');
+      this.syncConflictLocalOnly.set(localOnly);
+      this.syncConflictWebOnly.set(webOnly);
+      this.isSyncConflictModalOpen.set(true);
+    } catch (error) {
+      console.error('Failed to initialize sync-with-web toggle:', error);
+      this.settingsService.toggleSyncWithWeb(false);
+    } finally {
+      this.isSyncToggleBusy.set(false);
+    }
+  }
+
+  closeSyncConflictModal(): void {
+    this.isSyncConflictModalOpen.set(false);
+    this.settingsService.toggleSyncWithWeb(false);
+    this.resetSyncConflictState();
+  }
+
+  async applySyncConflictResolution(): Promise<void> {
+    const pendingSnapshot = this.pendingSyncConflictSnapshot;
+    if (!pendingSnapshot) {
+      this.closeSyncConflictModal();
+      return;
+    }
+
+    this.isSyncToggleBusy.set(true);
+
+    try {
+      if (this.syncConflictResolution() === 'electron') {
+        await this.publishCloudSnapshot(
+          pendingSnapshot.userId,
+          this.boardService.getBoards()(),
+          this.accounts()
+        );
+        this.settingsService.toggleSyncWithWeb(true);
+      } else {
+        this.lastCloudDataHash = this.getCloudStateHash(
+          this.serializeCloudBoards(pendingSnapshot.boards),
+          pendingSnapshot.accounts,
+          pendingSnapshot.settings
+        );
+        this.isApplyingCloudSnapshot = true;
+        const mergedAccounts = this.materializeElectronAccounts(pendingSnapshot.accounts);
+        await this.applyCloudSnapshot(
+          pendingSnapshot.boards,
+          mergedAccounts,
+          pendingSnapshot.settings
+        );
+        this.settingsService.toggleSyncWithWeb(true);
+      }
+
+      this.isSyncConflictModalOpen.set(false);
+      this.resetSyncConflictState();
+    } catch (error) {
+      console.error('Failed to apply sync conflict resolution:', error);
+      this.settingsService.toggleSyncWithWeb(false);
+    } finally {
+      this.isSyncToggleBusy.set(false);
+    }
+  }
+
+  private resetSyncConflictState(): void {
+    this.pendingSyncConflictSnapshot = null;
+    this.syncConflictLocalOnly.set([]);
+    this.syncConflictWebOnly.set([]);
+    this.syncConflictResolution.set('electron');
+  }
+
+  private getLocalOnlyAccounts(
+    localAccounts: Account[],
+    cloudAccounts: CloudSyncAccount[]
+  ): string[] {
+    const cloudSyncIds = new Set(cloudAccounts.map((account) => account.syncId));
+
+    return localAccounts
+      .filter((account) => {
+        const syncId = account.syncId || this.buildLegacySyncId(account.name, account.server);
+        return !cloudSyncIds.has(syncId);
+      })
+      .map((account) => this.buildAccountLabel(account.name, account.server));
+  }
+
+  private getWebOnlyAccounts(
+    localAccounts: Account[],
+    cloudAccounts: CloudSyncAccount[]
+  ): string[] {
+    const localSyncIds = new Set(
+      localAccounts.map(
+        (account) => account.syncId || this.buildLegacySyncId(account.name, account.server)
+      )
+    );
+
+    return cloudAccounts
+      .filter((account) => !localSyncIds.has(account.syncId))
+      .map((account) => this.buildAccountLabel(account.name, account.server));
+  }
+
+  private buildAccountLabel(name: string, server?: string): string {
+    return server ? `${name} (${server})` : name;
   }
 
   onSearchChange(query: string): void {
@@ -439,6 +712,7 @@ export class DashboardComponent implements OnDestroy {
       const copiedAccount: Account = {
         ...account,
         id: newId,
+        syncId: this.createSyncId(),
         boardId: boardId === null ? undefined : boardId,
       };
 
@@ -529,11 +803,388 @@ export class DashboardComponent implements OnDestroy {
   async loadAccounts(): Promise<void> {
     try {
       const loaded = await window.electronAPI.loadAccounts();
-      this.accounts.set(loaded);
+      const withSyncIds = this.ensureAccountSyncIds(loaded);
+      this.accounts.set(withSyncIds);
+
+      if (withSyncIds !== loaded) {
+        await this.saveAccounts(withSyncIds);
+      }
+
       this.updateMasteryBackground();
     } catch (error) {
       console.error('Error loading accounts:', error);
     }
+  }
+
+  private startCloudSyncListener(userId: string): void {
+    if (this.cloudSyncUserId === userId && this.cloudSyncUnsubscribe) {
+      return;
+    }
+
+    this.stopCloudSyncListener();
+    this.cloudSyncUserId = userId;
+    this.cloudSyncUnsubscribe = onSnapshot(
+      this.getCloudSyncDocument(userId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          this.lastCloudDataHash = '';
+
+          if (
+            this.localDataReady() &&
+            (this.accounts().length || this.boardService.getBoards()().length)
+          ) {
+            void this.publishCloudSnapshot(
+              userId,
+              this.boardService.getBoards()(),
+              this.accounts()
+            );
+          }
+
+          return;
+        }
+
+        const data = snapshot.data() as CloudSyncDocumentData;
+        const cloudBoards = this.deserializeCloudBoards(data.boards);
+        const cloudAccounts = this.deserializeCloudAccounts(data.accounts, cloudBoards);
+        const cloudSettings = this.deserializeCloudSettings(data.settings);
+
+        this.lastCloudDataHash = this.getCloudStateHash(
+          this.serializeCloudBoards(cloudBoards),
+          cloudAccounts,
+          cloudSettings
+        );
+        this.isApplyingCloudSnapshot = true;
+
+        const mergedAccounts = this.materializeElectronAccounts(cloudAccounts);
+        void this.applyCloudSnapshot(cloudBoards, mergedAccounts, cloudSettings);
+      },
+      (error) => {
+        console.error('Electron realtime cloud sync listener failed:', error);
+      }
+    );
+  }
+
+  private stopCloudSyncListener(): void {
+    if (this.cloudSyncUnsubscribe) {
+      this.cloudSyncUnsubscribe();
+      this.cloudSyncUnsubscribe = null;
+    }
+
+    this.cloudSyncUserId = null;
+  }
+
+  private scheduleCloudSnapshotPublish(userId: string, boards: Board[], accounts: Account[]): void {
+    const normalizedAccounts = this.ensureAccountSyncIds(accounts);
+    const payload = this.buildCloudSyncPayload(boards, normalizedAccounts);
+    const hash = this.getCloudStateHash(payload.boards, payload.accounts, payload.settings);
+
+    if (hash === this.lastCloudDataHash) {
+      return;
+    }
+
+    if (this.cloudWriteDebounceTimer !== null) {
+      clearTimeout(this.cloudWriteDebounceTimer);
+    }
+
+    this.cloudWriteDebounceTimer = setTimeout(() => {
+      this.cloudWriteDebounceTimer = null;
+      void this.publishCloudSnapshot(userId, this.boardService.getBoards()(), this.accounts());
+    }, 350);
+  }
+
+  private async publishCloudSnapshot(
+    userId: string,
+    boards: Board[],
+    accounts: Account[]
+  ): Promise<void> {
+    const normalizedAccounts = this.ensureAccountSyncIds(accounts);
+    const payload = this.buildCloudSyncPayload(boards, normalizedAccounts);
+    const hash = this.getCloudStateHash(payload.boards, payload.accounts, payload.settings);
+
+    if (hash === this.lastCloudDataHash) {
+      return;
+    }
+
+    await setDoc(
+      this.getCloudSyncDocument(userId),
+      {
+        userId,
+        schemaVersion: CLOUD_SYNC_SCHEMA_VERSION,
+        boards: payload.boards,
+        accounts: payload.accounts,
+        settings: payload.settings,
+        updatedAt: serverTimestamp(),
+        updatedFrom: 'electron',
+      },
+      { merge: true }
+    );
+
+    this.lastCloudDataHash = hash;
+  }
+
+  private async applyCloudSnapshot(
+    cloudBoards: Board[],
+    mergedAccounts: Account[],
+    cloudSettings: CloudSyncSettings
+  ): Promise<void> {
+    try {
+      this.boardService.selectBoard(
+        this.boardService.getSelectedBoardId()() &&
+          !cloudBoards.some((board) => board.id === this.boardService.getSelectedBoardId()())
+          ? null
+          : this.boardService.getSelectedBoardId()()
+      );
+
+      this.applyCloudSettings(cloudSettings);
+      await this.boardService.setBoards(cloudBoards);
+      this.accounts.set(mergedAccounts);
+      await this.saveAccounts(mergedAccounts);
+      await this.updateMasteryBackground();
+    } catch (error) {
+      console.error('Failed to apply cloud snapshot locally:', error);
+    } finally {
+      this.isApplyingCloudSnapshot = false;
+    }
+  }
+
+  private getCloudSyncDocument(userId: string) {
+    return doc(this.firebaseService.db, CLOUD_SYNC_COLLECTION, userId);
+  }
+
+  private buildCloudSyncPayload(boards: Board[], accounts: Account[]): CloudSyncPayload {
+    return {
+      boards: this.serializeCloudBoards(boards),
+      accounts: this.serializeCloudAccounts(accounts),
+      settings: this.serializeCloudSettings(),
+    };
+  }
+
+  private serializeCloudBoards(boards: Board[]): CloudSyncBoard[] {
+    return boards.map((board) => ({
+      id: board.id,
+      name: board.name,
+      color: board.color,
+      createdAt: board.createdAt,
+    }));
+  }
+
+  private serializeCloudAccounts(accounts: Account[]): CloudSyncAccount[] {
+    return accounts.map((account) => ({
+      syncId: account.syncId || this.buildLegacySyncId(account.name, account.server),
+      boardId: account.boardId || null,
+      name: account.name,
+      server: account.server,
+      game: account.game,
+      rank: account.rank,
+      wins: account.wins,
+      losses: account.losses,
+      leaguePoints: account.leaguePoints,
+      profileIconId: account.profileIconId,
+      summonerLevel: account.summonerLevel,
+      hotStreak: account.hotStreak,
+      topChampionId: account.topChampionId,
+      lastRefreshed: account.lastRefreshed,
+    }));
+  }
+
+  private serializeCloudSettings(): CloudSyncSettings {
+    return {
+      theme: this.themeService.getTheme(),
+      themeVariant: this.themeService.themeVariant(),
+      showMasteryBackground: this.settingsService.getShowMasteryBackground(),
+    };
+  }
+
+  private deserializeCloudSettings(rawSettings: unknown): CloudSyncSettings {
+    const parsed = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+    const candidate = parsed as Partial<CloudSyncSettings>;
+
+    return {
+      theme:
+        candidate.theme === 'light' || candidate.theme === 'dark'
+          ? candidate.theme
+          : this.themeService.getTheme(),
+      themeVariant:
+        typeof candidate.themeVariant === 'string' && candidate.themeVariant.trim()
+          ? candidate.themeVariant
+          : this.themeService.themeVariant(),
+      showMasteryBackground:
+        typeof candidate.showMasteryBackground === 'boolean'
+          ? candidate.showMasteryBackground
+          : this.settingsService.getShowMasteryBackground(),
+    };
+  }
+
+  private applyCloudSettings(settings: CloudSyncSettings): void {
+    if (this.themeService.getTheme() !== settings.theme) {
+      this.themeService.setTheme(settings.theme);
+    }
+
+    if (this.themeService.themeVariant() !== settings.themeVariant) {
+      this.themeService.setThemeVariant(settings.themeVariant);
+    }
+
+    if (this.settingsService.getShowMasteryBackground() !== settings.showMasteryBackground) {
+      this.settingsService.toggleMasteryBackground(settings.showMasteryBackground);
+    }
+  }
+
+  private deserializeCloudBoards(rawBoards: unknown): Board[] {
+    if (!Array.isArray(rawBoards)) {
+      return [];
+    }
+
+    const parsedBoards: Board[] = [];
+
+    for (const rawBoard of rawBoards) {
+      if (!rawBoard || typeof rawBoard !== 'object') {
+        continue;
+      }
+
+      const board = rawBoard as Partial<CloudSyncBoard>;
+      if (typeof board.id !== 'string' || !board.id.trim()) {
+        continue;
+      }
+
+      if (typeof board.name !== 'string' || !board.name.trim()) {
+        continue;
+      }
+
+      parsedBoards.push({
+        id: board.id,
+        name: board.name,
+        color: typeof board.color === 'string' && board.color.trim() ? board.color : 'default',
+        createdAt: typeof board.createdAt === 'number' ? board.createdAt : Date.now(),
+      });
+    }
+
+    return parsedBoards;
+  }
+
+  private deserializeCloudAccounts(rawAccounts: unknown, boards: Board[]): CloudSyncAccount[] {
+    if (!Array.isArray(rawAccounts)) {
+      return [];
+    }
+
+    const validBoardIds = new Set(boards.map((board) => board.id));
+    const parsedAccounts: CloudSyncAccount[] = [];
+
+    for (const rawAccount of rawAccounts) {
+      if (!rawAccount || typeof rawAccount !== 'object') {
+        continue;
+      }
+
+      const account = rawAccount as Partial<CloudSyncAccount>;
+      const syncId =
+        typeof account.syncId === 'string' && account.syncId.trim()
+          ? account.syncId
+          : this.buildLegacySyncId(account.name || '', account.server);
+
+      if (!syncId || typeof account.name !== 'string' || !account.name.trim()) {
+        continue;
+      }
+
+      const boardId =
+        typeof account.boardId === 'string' && validBoardIds.has(account.boardId)
+          ? account.boardId
+          : null;
+
+      parsedAccounts.push({
+        syncId,
+        boardId,
+        name: account.name,
+        server: typeof account.server === 'string' ? account.server : undefined,
+        game: typeof account.game === 'string' ? account.game : 'League of Legends',
+        rank: typeof account.rank === 'string' ? account.rank : undefined,
+        wins: typeof account.wins === 'number' ? account.wins : undefined,
+        losses: typeof account.losses === 'number' ? account.losses : undefined,
+        leaguePoints: typeof account.leaguePoints === 'number' ? account.leaguePoints : undefined,
+        profileIconId:
+          typeof account.profileIconId === 'number' ? account.profileIconId : undefined,
+        summonerLevel:
+          typeof account.summonerLevel === 'number' ? account.summonerLevel : undefined,
+        hotStreak: typeof account.hotStreak === 'boolean' ? account.hotStreak : undefined,
+        topChampionId:
+          typeof account.topChampionId === 'string' ? account.topChampionId : undefined,
+        lastRefreshed:
+          typeof account.lastRefreshed === 'number' ? account.lastRefreshed : undefined,
+      });
+    }
+
+    return parsedAccounts;
+  }
+
+  private materializeElectronAccounts(cloudAccounts: CloudSyncAccount[]): Account[] {
+    const localBySyncId = new Map<string, Account>();
+
+    for (const account of this.accounts()) {
+      const syncId = account.syncId || this.buildLegacySyncId(account.name, account.server);
+      localBySyncId.set(syncId, account);
+    }
+
+    return cloudAccounts.map((cloudAccount) => {
+      const existing = localBySyncId.get(cloudAccount.syncId);
+
+      return {
+        id: existing?.id ?? cloudAccount.syncId,
+        syncId: cloudAccount.syncId,
+        name: cloudAccount.name,
+        username: existing?.username,
+        password: existing?.password,
+        game: cloudAccount.game || 'League of Legends',
+        server: cloudAccount.server,
+        rank: cloudAccount.rank,
+        profileIconId: cloudAccount.profileIconId,
+        summonerLevel: cloudAccount.summonerLevel,
+        leaguePoints: cloudAccount.leaguePoints,
+        wins: cloudAccount.wins,
+        losses: cloudAccount.losses,
+        hotStreak: cloudAccount.hotStreak,
+        topChampionId: cloudAccount.topChampionId,
+        boardId: cloudAccount.boardId || undefined,
+        lastRefreshed: cloudAccount.lastRefreshed,
+      };
+    });
+  }
+
+  private ensureAccountSyncIds(accounts: Account[]): Account[] {
+    let changed = false;
+
+    const normalized = accounts.map((account) => {
+      if (account.syncId && account.syncId.trim()) {
+        return account;
+      }
+
+      changed = true;
+      return {
+        ...account,
+        syncId: this.createSyncId(),
+      };
+    });
+
+    return changed ? normalized : accounts;
+  }
+
+  private getCloudStateHash(
+    boards: CloudSyncBoard[],
+    accounts: CloudSyncAccount[],
+    settings: CloudSyncSettings
+  ): string {
+    return JSON.stringify({ boards, accounts, settings });
+  }
+
+  private buildLegacySyncId(name: string, server?: string): string {
+    const safeName = name.toLowerCase().trim() || 'unknown';
+    const safeServer = server?.toLowerCase().trim() || 'unknown';
+    return `${safeName}::${safeServer}`;
+  }
+
+  private createSyncId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+
+    return `sync-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   private async enrichAccountsWithRiotData(accounts: Account[]): Promise<Account[]> {

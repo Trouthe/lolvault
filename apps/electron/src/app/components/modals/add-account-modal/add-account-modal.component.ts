@@ -28,13 +28,22 @@ export class AddAccountModalComponent {
   singleAccount = signal({
     username: '',
     password: '',
-    displayName: '',
-    tag: '',
+    riotId: '',
     server: '',
   });
 
   setActiveTab(tab: 'single' | 'bulk') {
     this.activeTab.set(tab);
+  }
+
+  hasSingleFormCredentialWarning(): boolean {
+    const account = this.singleAccount();
+    return !account.username.trim() || !account.password.trim();
+  }
+
+  isRiotIdInvalid(): boolean {
+    const riotId = this.singleAccount().riotId.trim();
+    return riotId.length > 0 && !this.parseRiotId(riotId);
   }
 
   close() {
@@ -44,12 +53,16 @@ export class AddAccountModalComponent {
 
   async addSingleAccount() {
     const acc = this.singleAccount();
-    if (!acc.username || !acc.password || !acc.displayName || !acc.tag || !acc.server) {
+    const parsedRiotId = this.parseRiotId(acc.riotId);
+
+    if (!parsedRiotId || !acc.server) {
       return;
     }
 
-    // Combine displayName and tag with #
-    const fullName = `${acc.displayName}#${acc.tag}`;
+    const username = acc.username.trim();
+    const password = acc.password.trim();
+
+    const fullName = `${parsedRiotId.displayName}#${parsedRiotId.tag}`;
 
     // Fetch PUUID and ranked info
     let puuid: string | undefined;
@@ -62,7 +75,11 @@ export class AddAccountModalComponent {
     let hotStreak: boolean | undefined;
 
     try {
-      puuid = await this.riotService.getPUUID(acc.displayName, acc.tag, acc.server);
+      puuid = await this.riotService.getPUUID(
+        parsedRiotId.displayName,
+        parsedRiotId.tag,
+        acc.server
+      );
       console.log('Fetched PUUID:', puuid);
 
       // Fetch basic account info (profile icon and level)
@@ -95,8 +112,8 @@ export class AddAccountModalComponent {
     const account: Account = {
       id: puuid || Date.now(),
       name: fullName,
-      username: acc.username,
-      password: acc.password,
+      username: username || undefined,
+      password: password || undefined,
       game: 'League of Legends',
       server: acc.server,
       rank: fetchedRank,
@@ -118,25 +135,49 @@ export class AddAccountModalComponent {
     if (!bulkText) {
       return;
     }
-    const lines = bulkText.split('\n');
+
+    const lines = bulkText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
     const accounts: Account[] = [];
     lines.forEach((line) => {
       const parts = line.split(':').map((p) => p.trim());
-      if (parts.length >= 2) {
-        const [username, password, name, server] = parts;
-        if (username && password) {
-          const account: Account = {
-            id: Date.now() + Math.random(),
-            name: name || username,
-            username: username,
-            password: password,
-            game: 'League of Legends',
-            server: server || undefined,
-          };
-          accounts.push(account);
-        }
+
+      if (!parts.length) {
+        return;
       }
+
+      let username = '';
+      let password = '';
+      let name = '';
+      let server = '';
+      let rank = '';
+
+      if (parts[0].includes('#')) {
+        [name, server, rank] = parts;
+      } else {
+        [username, password, name, server, rank] = parts;
+      }
+
+      if (!name) {
+        return;
+      }
+
+      const account: Account = {
+        id: Date.now() + Math.random(),
+        name,
+        username: username || undefined,
+        password: password || undefined,
+        game: 'League of Legends',
+        server: server || undefined,
+        rank: rank || undefined,
+      };
+
+      accounts.push(account);
     });
+
     if (accounts.length > 0) {
       this.accountsAdded.emit(accounts);
       this.resetForm();
@@ -148,10 +189,25 @@ export class AddAccountModalComponent {
     this.singleAccount.set({
       username: '',
       password: '',
-      displayName: '',
-      tag: '',
+      riotId: '',
       server: '',
     });
     this.bulkAccountsText.set('');
+  }
+
+  private parseRiotId(input: string): { displayName: string; tag: string } | null {
+    const trimmed = input.trim();
+    const separatorIndex = trimmed.lastIndexOf('#');
+    if (separatorIndex <= 0 || separatorIndex >= trimmed.length - 1) {
+      return null;
+    }
+
+    const displayName = trimmed.slice(0, separatorIndex).trim();
+    const tag = trimmed.slice(separatorIndex + 1).trim();
+    if (!displayName || !tag) {
+      return null;
+    }
+
+    return { displayName, tag };
   }
 }

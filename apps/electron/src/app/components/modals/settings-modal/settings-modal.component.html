@@ -105,6 +105,26 @@
           <h3>Data</h3>
         </div>
 
+        <div class="toggle-setting">
+          <label for="sync-web-toggle" class="toggle-label">
+            <span>Sync with Web</span>
+            <small>
+              Syncs only required account/folder/settings data. Username and password stay encrypted
+              on this computer.
+            </small>
+          </label>
+          <div class="toggle-switch">
+            <input
+              type="checkbox"
+              id="sync-web-toggle"
+              [checked]="settingsService.getSyncWithWeb()"
+              [disabled]="isSyncToggleBusy()"
+              (change)="onSyncWithWebToggle($event)"
+            />
+            <span class="slider"></span>
+          </div>
+        </div>
+
         <div class="export-buttons">
           <button class="btn btn-secondary export-btn" (click)="exportAccounts()">
             <img src="assets/icons/file-down.svg" class="icon" width="29" alt="Download" />

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, OnDestroy, input, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Account } from '../../models/interfaces/Account';
 import { Board } from '../../models/interfaces/Board';
@@ -31,7 +31,7 @@ const REFRESH_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
   templateUrl: './acc-card.component.html',
   styleUrl: './acc-card.component.scss',
 })
-export class AccCardComponent {
+export class AccCardComponent implements OnDestroy {
   account = input<Account>();
   showRemoveFromFolder = input<boolean>(false);
   editRequested = output<Account>();
@@ -44,11 +44,21 @@ export class AccCardComponent {
 
   isLaunching = signal(false);
   isRefreshing = signal(false);
+  launchCredentialError = signal(false);
+  showLaunchCredentialToast = signal(false);
+  private launchCredentialToastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Windows-only paths (unused on macOS)
   private psFilePath = 'src/app/data/core-actions/login-action.ps1';
   private nircmdPath = 'src/app/data/core-actions/nircmdc.exe';
   private windowTitle = 'Riot Client';
+
+  ngOnDestroy(): void {
+    if (this.launchCredentialToastTimeout !== null) {
+      clearTimeout(this.launchCredentialToastTimeout);
+      this.launchCredentialToastTimeout = null;
+    }
+  }
 
   async launchAccount(): Promise<void> {
     const acc = this.account();
@@ -56,6 +66,14 @@ export class AccCardComponent {
       console.warn('No account data provided or already launching');
       return;
     }
+
+    if (!this.hasLaunchCredentials(acc)) {
+      this.showMissingCredentialFeedback();
+      return;
+    }
+
+    this.launchCredentialError.set(false);
+    this.showLaunchCredentialToast.set(false);
 
     this.isLaunching.set(true);
 
@@ -87,6 +105,25 @@ export class AccCardComponent {
         this.isLaunching.set(false);
       }, 2000);
     }
+  }
+
+  private hasLaunchCredentials(account: Account): boolean {
+    return Boolean(account.username?.trim() && account.password?.trim());
+  }
+
+  private showMissingCredentialFeedback(): void {
+    this.launchCredentialError.set(true);
+    this.showLaunchCredentialToast.set(true);
+
+    if (this.launchCredentialToastTimeout !== null) {
+      clearTimeout(this.launchCredentialToastTimeout);
+    }
+
+    this.launchCredentialToastTimeout = setTimeout(() => {
+      this.launchCredentialError.set(false);
+      this.showLaunchCredentialToast.set(false);
+      this.launchCredentialToastTimeout = null;
+    }, 3000);
   }
 
   requestEdit() {
@@ -226,6 +263,16 @@ export class AccCardComponent {
   getTotalGames(): number {
     const acc = this.account();
     return (acc?.wins || 0) + (acc?.losses || 0);
+  }
+
+  getSubtitleLabel(): string {
+    const acc = this.account();
+    if (!acc) return '';
+
+    const username = acc.username?.trim();
+    if (username) return username;
+
+    return acc.name?.split('#')[0]?.trim() || 'Unknown';
   }
 
   getOpGGLink(): string {

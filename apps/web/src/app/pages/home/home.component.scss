@@ -19,7 +19,7 @@
   overflow: clip;
   isolation: isolate;
   min-height: 100vh;
-  padding: clamp(12px, 2vw, 24px) clamp(12px, 2vw, 24px) 96px;
+  padding: clamp(12px, 2vw, 24px);
   background: var(--background);
 }
 

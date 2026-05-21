@@ -24,53 +24,8 @@ $danger: #dc143c;
   position: relative;
   z-index: 2;
   width: min(680px, calc(100vw - 40px));
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-}
-
-.brand-sequence {
-  height: min(75vh, calc(100dvh - 190px));
-  max-height: 620px;
-  width: auto;
-  transition:
-    height 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.36s ease;
-
-  &.compact {
-    height: clamp(84px, 12vh, 106px);
-    transform: translateY(-6px);
-  }
-}
-
-.brand-mark {
-  height: 100%;
-  width: auto;
-  display: block;
-  filter: drop-shadow(0 20px 42px rgba(0, 0, 0, 0.4));
-}
-
-.brand-path {
-  fill: transparent;
-  stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 30;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 4400;
-  stroke-dashoffset: 4400;
-  animation:
-    draw-stroke 1.6s cubic-bezier(0.65, 0.05, 0.36, 1) forwards,
-    fill-mark 0.42s ease-out forwards 1.65s;
-
-  &.inner {
-    stroke-dasharray: 2600;
-    stroke-dashoffset: 2600;
-    animation-delay: 0.22s, 1.8s;
-  }
+  display: grid;
+  place-items: center;
 }
 
 .auth-panel {
@@ -80,18 +35,16 @@ $danger: #dc143c;
   align-items: center;
   text-align: center;
   gap: 14px;
-  opacity: 0;
-  transform: translateY(14px) scale(0.98);
-  transition:
-    opacity 0.42s ease,
-    transform 0.42s ease;
-  pointer-events: none;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
 
-  &.visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-  }
+.brand-logo {
+  width: clamp(76px, 16vw, 112px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.35));
 }
 
 .auth-title {
@@ -215,34 +168,8 @@ $danger: #dc143c;
   box-sizing: border-box;
 }
 
-@keyframes draw-stroke {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes fill-mark {
-  to {
-    fill: rgba(255, 255, 255, 0.95);
-    stroke: rgba(255, 255, 255, 0.95);
-  }
-}
-
 @media (max-width: 700px) {
   .auth-stage {
     width: min(420px, calc(100vw - 24px));
-    gap: 14px;
-  }
-
-  .brand-sequence {
-    max-height: 54vh;
-
-    &.compact {
-      height: 84px;
-    }
-  }
-
-  .brand-path {
-    stroke-width: 34;
   }
 }

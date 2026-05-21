@@ -309,9 +309,98 @@
       <!-- Settings Modal -->
       <app-settings-modal
         [isOpen]="isSettingsOpen()"
+        [isSyncToggleBusy]="isSyncToggleBusy()"
         [accounts]="accounts()"
+        (syncWithWebToggleRequested)="onSyncWithWebToggleRequested($event)"
         (closeModal)="closeSettings()"
       />
+
+      @if (isSyncConflictModalOpen()) {
+        <div
+          class="modal-overlay sync-conflict-overlay"
+          (click)="closeSyncConflictModal()"
+          tabindex="0"
+        >
+          <div
+            class="modal-content sync-conflict-modal"
+            (click)="$event.stopPropagation()"
+            tabindex="0"
+          >
+            <header>
+              <h2>Choose Sync Source</h2>
+              <img
+                src="assets/icons/plus.svg"
+                class="close-btn"
+                (click)="closeSyncConflictModal()"
+                alt="Close"
+                tabindex="0"
+                role="button"
+              />
+            </header>
+
+            <p class="sync-conflict-lead">
+              Turning on web sync will replace data on one side. Choose which data source to keep.
+            </p>
+
+            @if (syncConflictLocalOnly().length) {
+              <div class="sync-conflict-list">
+                <h4>Only in Electron (removed if you keep Web data)</h4>
+                <ul>
+                  @for (name of syncConflictLocalOnly(); track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (syncConflictWebOnly().length) {
+              <div class="sync-conflict-list">
+                <h4>Only in Web (removed if you keep Electron data)</h4>
+                <ul>
+                  @for (name of syncConflictWebOnly(); track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <div class="sync-conflict-options">
+              <button
+                type="button"
+                class="btn sync-option"
+                [class.btn-primary]="syncConflictResolution() === 'electron'"
+                [class.btn-secondary]="syncConflictResolution() !== 'electron'"
+                (click)="syncConflictResolution.set('electron')"
+              >
+                Keep Electron Data
+              </button>
+              <button
+                type="button"
+                class="btn sync-option"
+                [class.btn-primary]="syncConflictResolution() === 'web'"
+                [class.btn-secondary]="syncConflictResolution() !== 'web'"
+                (click)="syncConflictResolution.set('web')"
+              >
+                Keep Web Data
+              </button>
+            </div>
+
+            <footer>
+              <button type="button" class="btn btn-secondary" (click)="closeSyncConflictModal()">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="applySyncConflictResolution()"
+                [disabled]="isSyncToggleBusy()"
+              >
+                {{ isSyncToggleBusy() ? 'Applying...' : 'Continue' }}
+              </button>
+            </footer>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </section>

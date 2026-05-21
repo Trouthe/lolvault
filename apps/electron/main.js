@@ -284,6 +284,14 @@ ipcMain.handle('launch-account', async (event, accountData) => {
     }
   }
 
+  const username = account?.username?.trim?.() || '';
+  const password = account?.password?.trim?.() || '';
+  if (!username || !password) {
+    const error = 'Launch failed: username or password is missing for this account.';
+    console.error(error);
+    return { success: false, error };
+  }
+
   if (isMac) return launchAccountMac(account, riotClientPath, windowTitle);
   else return launchAccountWindows(account, accountData, riotClientPath, windowTitle);
 });
@@ -740,10 +748,7 @@ ipcMain.handle('start-google-system-sign-in', async (_event, options = {}) => {
 
     server.on('error', (error) => {
       const addressInUse =
-        !!error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === 'EADDRINUSE';
+        !!error && typeof error === 'object' && 'code' in error && error.code === 'EADDRINUSE';
 
       settle(
         createSignInResult(false, {
@@ -756,40 +761,46 @@ ipcMain.handle('start-google-system-sign-in', async (_event, options = {}) => {
       );
     });
 
-    server.listen(GOOGLE_SYSTEM_AUTH_CALLBACK_PORT, GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS, async () => {
-      try {
-        const address = server.address();
-        if (!address || typeof address === 'string') {
-          settle(createSignInResult(false, { error: 'Could not resolve callback server address.' }));
-          return;
-        }
-
-        const continueUri = `http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback`;
-        const authUri = await fetchGoogleAuthUri({ apiKey, continueUri });
-
+    server.listen(
+      GOOGLE_SYSTEM_AUTH_CALLBACK_PORT,
+      GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS,
+      async () => {
         try {
-          expectedState = new URL(authUri).searchParams.get('state') || '';
-        } catch {
-          expectedState = '';
-        }
+          const address = server.address();
+          if (!address || typeof address === 'string') {
+            settle(
+              createSignInResult(false, { error: 'Could not resolve callback server address.' })
+            );
+            return;
+          }
 
-        timeoutHandle = setTimeout(() => {
+          const continueUri = `http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback`;
+          const authUri = await fetchGoogleAuthUri({ apiKey, continueUri });
+
+          try {
+            expectedState = new URL(authUri).searchParams.get('state') || '';
+          } catch {
+            expectedState = '';
+          }
+
+          timeoutHandle = setTimeout(() => {
+            settle(
+              createSignInResult(false, {
+                error: `Google sign-in timed out. Verify OAuth redirect URI http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback is allowed for the Google client.`,
+              })
+            );
+          }, GOOGLE_SYSTEM_AUTH_TIMEOUT_MS);
+
+          await shell.openExternal(authUri);
+        } catch (error) {
           settle(
             createSignInResult(false, {
-              error: `Google sign-in timed out. Verify OAuth redirect URI http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback is allowed for the Google client.`,
+              error: error instanceof Error ? error.message : 'Failed to start Google sign-in.',
             })
           );
-        }, GOOGLE_SYSTEM_AUTH_TIMEOUT_MS);
-
-        await shell.openExternal(authUri);
-      } catch (error) {
-        settle(
-          createSignInResult(false, {
-            error: error instanceof Error ? error.message : 'Failed to start Google sign-in.',
-          })
-        );
+        }
       }
-    });
+    );
   });
 });
 

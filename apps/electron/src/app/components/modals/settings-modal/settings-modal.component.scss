@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   z-index: 1000;
 
   .modal-content {
@@ -18,7 +19,9 @@
     border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 24px;
-    width: 420px;
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     color: var(--primary-text);
 
     .section-header {
@@ -120,14 +123,16 @@
 
       .toggle-setting {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
+        gap: 12px;
 
         .toggle-label {
           display: flex;
           flex-direction: column;
           gap: 4px;
           flex: 1;
+          min-width: 0;
 
           span {
             font-size: 14px;
@@ -151,6 +156,11 @@
             opacity: 0;
             width: 0;
             height: 0;
+
+            &:disabled + .slider {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
 
             &:checked + .slider {
               background-color: var(--outline);
@@ -226,9 +236,11 @@
           display: flex;
           align-items: center;
           gap: 12px;
+          min-width: 0;
 
           code {
             flex: 1;
+            min-width: 0;
             padding: 11px 12px;
             background: var(--card);
             border: 1px solid var(--border-color);
@@ -252,6 +264,19 @@
     hr {
       width: 100%;
       border: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 560px) {
+      .settings-section {
+        .theme-options {
+          flex-direction: column;
+        }
+
+        .path-setting .path-display {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
     }
   }
 }

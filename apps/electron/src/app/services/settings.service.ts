@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export interface AppSettings {
   riotClientPath: string;
   showMasteryBackground: boolean;
+  syncWithWeb: boolean;
 }
 
 function getDefaultRiotClientPath(): string {
@@ -13,6 +14,7 @@ function getDefaultRiotClientPath(): string {
 const DEFAULT_SETTINGS: AppSettings = {
   riotClientPath: getDefaultRiotClientPath(),
   showMasteryBackground: false,
+  syncWithWeb: false,
 };
 
 @Injectable({
@@ -61,6 +63,16 @@ export class SettingsService {
     const newSettings = { ...this.settings(), showMasteryBackground: show };
     this.settings.set(newSettings);
     this.saveSettings(newSettings);
+  }
+
+  toggleSyncWithWeb(enabled: boolean): void {
+    const newSettings = { ...this.settings(), syncWithWeb: enabled };
+    this.settings.set(newSettings);
+    this.saveSettings(newSettings);
+  }
+
+  getSyncWithWeb(): boolean {
+    return this.settings().syncWithWeb;
   }
 
   getShowMasteryBackground(): boolean {

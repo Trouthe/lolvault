@@ -23,8 +23,12 @@
             tabindex="0"
             role="button"
             [class.active]="selectedBoardId() === null"
+            [class.drag-over]="dragOverBoardId() === 'all'"
             (click)="selectBoard(null)"
             (keydown.enter)="selectBoard(null)"
+            (dragover)="onDragOver($event, null)"
+            (dragleave)="onDragLeave()"
+            (drop)="onDrop($event, null)"
           >
             <span
               class="folder-color-dot"
@@ -36,19 +40,28 @@
             </div>
           </div>
 
-          @for (board of displayedBoards(); track board.id) {
+          @for (board of displayedBoards(); track board.id; let i = $index) {
             <div
               class="folder-item draggable"
               tabindex="0"
               role="button"
               [class.active]="selectedBoardId() === board.id"
+              [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
+              [class.dragging]="draggingFolderId() === board.id"
               [class.hovered]="hoveredFolderId() === board.id"
               (click)="selectBoard(board.id)"
               (keydown.enter)="selectBoard(board.id)"
               (mouseenter)="onFolderMouseEnter(board.id)"
               (mouseleave)="onFolderMouseLeave()"
+              (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event, board.id)"
             >
-              <div class="folder-drag-handle">
+              <div
+                class="folder-drag-handle"
+                draggable="true"
+                (dragstart)="onFolderDragStart($event, board)"
+              >
                 <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
               </div>
               <span
@@ -212,15 +225,27 @@
             </div>
           </div>
 
-          <div class="accounts-list">
-            @for (account of displayedAccounts(); track account.id) {
+          <div
+            class="accounts-list"
+            (dragover)="onAccountsListDragOver($event)"
+            (drop)="onAccountsListDrop($event)"
+          >
+            @for (account of displayedAccounts(); track account.id; let i = $index) {
               <div
                 class="account-drag-wrapper"
+                [class.dragging]="draggingAccountId() === account.id.toString()"
                 [class.hovered]="hoveredAccountId() === account.id.toString()"
                 (mouseenter)="onAccountMouseEnter(account.id.toString())"
                 (mouseleave)="onAccountMouseLeave()"
+                (dragover)="onAccountDragOver($event, i)"
+                (drop)="onAccountDrop($event)"
               >
-                <div class="account-drag-handle">
+                <div
+                  class="account-drag-handle"
+                  draggable="true"
+                  [attr.data-account-id]="account.id"
+                  [attr.data-account-index]="i"
+                >
                   <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
                 </div>
 
@@ -304,57 +329,57 @@
                         </div>
                       }
                     </div>
-                  </div>
 
-                  <div class="button-collection">
-                    <button
-                      class="action-btn delete-btn"
-                      (click)="openDeleteModal(account)"
-                      title="Delete Account"
-                    >
-                      <img src="assets/icons/trash.svg" alt="Delete" width="16" />
-                    </button>
-
-                    <button
-                      class="action-btn edit-btn"
-                      (click)="openEditModal(account)"
-                      title="Edit Account"
-                    >
-                      <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
-                    </button>
-
-                    <button
-                      class="action-btn refresh-btn"
-                      (click)="refreshAccount(account)"
-                      [disabled]="isRefreshing(account.id)"
-                      [class.refreshing]="isRefreshing(account.id)"
-                      title="Refresh Account Data"
-                    >
-                      <img
-                        src="assets/icons/refresh.svg"
-                        class="icon"
-                        [class.spinning]="isRefreshing(account.id)"
-                        alt="Refresh"
-                        width="16"
-                      />
-                    </button>
-
-                    <div
-                      class="action-btn-tooltip"
-                      aria-label="Install the desktop app to launch accounts"
-                    >
+                    <div class="button-collection">
                       <button
-                        class="action-btn launch-btn"
-                        type="button"
-                        disabled
-                        aria-disabled="true"
-                        tabindex="-1"
+                        class="action-btn delete-btn"
+                        (click)="openDeleteModal(account)"
+                        title="Delete Account"
                       >
-                        <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+                        <img src="assets/icons/trash.svg" alt="Delete" width="16" />
                       </button>
-                      <span class="action-btn-tooltip-popup" role="tooltip">
-                        {{ installDesktopAppMessage }}
-                      </span>
+
+                      <button
+                        class="action-btn edit-btn"
+                        (click)="openEditModal(account)"
+                        title="Edit Account"
+                      >
+                        <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+                      </button>
+
+                      <button
+                        class="action-btn refresh-btn"
+                        (click)="refreshAccount(account)"
+                        [disabled]="isRefreshing(account.id)"
+                        [class.refreshing]="isRefreshing(account.id)"
+                        title="Refresh Account Data"
+                      >
+                        <img
+                          src="assets/icons/refresh.svg"
+                          class="icon"
+                          [class.spinning]="isRefreshing(account.id)"
+                          alt="Refresh"
+                          width="16"
+                        />
+                      </button>
+
+                      <div
+                        class="action-btn-tooltip"
+                        aria-label="Install the desktop app to launch accounts"
+                      >
+                        <button
+                          class="action-btn launch-btn"
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          tabindex="-1"
+                        >
+                          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+                        </button>
+                        <span class="action-btn-tooltip-popup" role="tooltip">
+                          {{ installDesktopAppMessage }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

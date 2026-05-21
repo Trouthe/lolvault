@@ -1,103 +1,91 @@
 @if (isOpen()) {
-<div class="modal-overlay" (click)="close()" tabindex="0">
-  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
-    <div class="modal-header">
-      <h2>Edit Account</h2>
-      <img
-        src="assets/icons/plus.svg"
-        class="close-btn"
-        (click)="close()"
-        alt="Close"
-        tabindex="0"
-      />
-    </div>
+  <div class="modal-overlay" (click)="close()" tabindex="0">
+    <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+      <div class="modal-header">
+        <h2>Edit Account</h2>
+        <img
+          src="assets/icons/plus.svg"
+          class="close-btn"
+          (click)="close()"
+          alt="Close"
+          tabindex="0"
+        />
+      </div>
 
-    <form class="edit-form" (ngSubmit)="saveChanges()">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="edit-username">Username *</label>
-          <input
-            type="text"
-            id="edit-username"
-            [(ngModel)]="editForm().username"
-            name="username"
-            placeholder="Enter username"
-            required
-          />
-        </div>
-
-        <div class="form-group password-group">
-          <label for="edit-password">Password *</label>
-          <div class="input-with-icon">
+      <form class="edit-form" (ngSubmit)="saveChanges()">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-username">Username</label>
             <input
-              [type]="showPassword() ? 'text' : 'password'"
-              id="edit-password"
-              [(ngModel)]="editForm().password"
-              name="password"
-              placeholder="Enter password"
-              required
-            />
-            <img
-              [src]="showPassword() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'"
-              class="eye-icon icon"
-              [class.active]="showPassword()"
-              (click)="togglePasswordVisibility()"
-              alt="Show/Hide Password"
-              tabindex="0"
+              type="text"
+              id="edit-username"
+              [(ngModel)]="editForm().username"
+              name="username"
+              placeholder="Enter username"
             />
           </div>
-        </div>
-      </div>
 
-      <div class="form-row display-tag-row">
-        <div class="form-group display-name-group">
-          <label for="edit-displayName">Display Name *</label>
+          <div class="form-group password-group">
+            <label for="edit-password">Password</label>
+            <div class="input-with-icon">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                id="edit-password"
+                [(ngModel)]="editForm().password"
+                name="password"
+                placeholder="Enter password"
+              />
+              <img
+                [src]="showPassword() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'"
+                class="eye-icon icon"
+                [class.active]="showPassword()"
+                (click)="togglePasswordVisibility()"
+                alt="Show/Hide Password"
+                tabindex="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-riot-id">Riot ID (displayName#tag) *</label>
           <input
             type="text"
-            id="edit-displayName"
-            [(ngModel)]="editForm().displayName"
-            name="displayName"
-            placeholder="Summoner name"
+            id="edit-riot-id"
+            [(ngModel)]="editForm().riotId"
+            name="riotId"
+            placeholder="spice#2123"
+            [class.input-invalid]="isRiotIdInvalid()"
             required
           />
+          @if (isRiotIdInvalid()) {
+            <small class="field-error">Use displayName#tag format.</small>
+          }
         </div>
 
-        <div class="form-group tag-group">
-          <label for="edit-tag">Tag *</label>
-          <input
-            type="text"
-            id="edit-tag"
-            [(ngModel)]="editForm().tag"
-            name="tag"
-            placeholder="Tag"
-            required
-          />
+        <div class="form-group">
+          <label for="edit-server">Server *</label>
+          <div class="select-wrapper">
+            <select
+              id="edit-server"
+              class="form-select"
+              [(ngModel)]="editForm().server"
+              name="server"
+              required
+            >
+              <option value="">Select Server</option>
+              @for (server of servers; track server) {
+                <option [value]="server">{{ server }}</option>
+              }
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="edit-server">Server *</label>
-        <div class="select-wrapper">
-          <select
-            id="edit-server"
-            class="form-select"
-            [(ngModel)]="editForm().server"
-            name="server"
-            required
-          >
-            <option value="">Select Server</option>
-            @for (server of servers; track server) {
-            <option [value]="server">{{ server }}</option>
-            }
-          </select>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
-</div>
 }

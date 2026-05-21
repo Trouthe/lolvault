@@ -173,6 +173,15 @@
           }
         }
 
+        &.dragging {
+          opacity: 0.4;
+        }
+
+        &.drag-over:not(.dragging) {
+          border-color: var(--outline);
+          background-color: color-mix(in srgb, var(--outline) 20%, transparent);
+        }
+
         &.draggable.hovered {
           background-color: var(--card);
           transform: translateX(24px);
@@ -342,7 +351,7 @@
   }
 
   .accounts-list {
-    min-height: 100px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -565,7 +574,11 @@
       }
     }
 
-    &.hovered {
+    &.dragging {
+      opacity: 0.4;
+    }
+
+    &.hovered:not(.dragging) {
       transform: translateX(24px);
       margin-right: 24px;
 
@@ -578,8 +591,8 @@
 
 .acc-card {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   border: 2px solid var(--border-color);
   border-radius: 12px;
@@ -635,28 +648,34 @@
 
   .remove-from-folder-btn {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 24px;
-    height: 24px;
+    top: -10px;
+    right: -10px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background-color: var(--card);
-    border: 2px solid var(--border-color);
+    background: color-mix(in srgb, var(--danger-hover) 28%, var(--card));
+    border: 2px solid color-mix(in srgb, var(--danger) 65%, var(--border-color));
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     z-index: 10;
+    transition:
+      transform 0.16s ease,
+      opacity 0.16s ease,
+      background-color 0.16s ease,
+      border-color 0.16s ease;
 
     img {
       transform: rotate(45deg);
-      opacity: 0.7;
+      opacity: 0.95;
     }
 
     &:hover {
-      background-color: var(--border-color);
-      border-color: var(--outline);
+      transform: scale(1.18);
+      background: var(--danger-hover);
+      border-color: var(--danger);
     }
 
     &:disabled {
@@ -673,20 +692,21 @@
 
   .card-top {
     display: flex;
-    align-items: stretch;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
     min-width: 0;
+    gap: 12px;
   }
 
   .account-info {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: space-between;
     flex: 1 1 auto;
     min-width: 0;
-    margin-right: 0;
-    gap: 10px;
+    margin-right: 12px;
+    gap: 12px;
 
     .account-details {
       display: flex;
@@ -817,9 +837,8 @@
       padding: 8px 12px;
       background-color: var(--background);
       border-radius: 8px;
-      height: 50px;
+      height: 30px;
       border: 2px solid var(--border-color);
-      align-self: flex-start;
 
       .stats-group {
         display: flex;
@@ -876,8 +895,7 @@
     padding: 4px;
     gap: 2px;
     flex-shrink: 0;
-    height: 50px;
-    align-self: flex-start;
+    height: 38px;
 
     .action-btn {
       &.refreshing {
@@ -960,6 +978,8 @@
   text-align: center;
   background: color-mix(in oklch, var(--card) 90%, var(--background));
   min-height: 100%;
+  height: 100%;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1587,6 +1607,15 @@
     .stats-container {
       width: fit-content;
     }
+  }
+
+  .acc-card .card-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acc-card .button-collection {
+    align-self: flex-start;
   }
 }
 

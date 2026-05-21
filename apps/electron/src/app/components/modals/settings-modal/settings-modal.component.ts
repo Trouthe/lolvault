@@ -13,8 +13,10 @@ import { Account } from '../../../models/interfaces/Account';
 })
 export class SettingsModalComponent {
   isOpen = input<boolean>(false);
+  isSyncToggleBusy = input<boolean>(false);
   accounts = input<Account[]>([]);
   closeModal = output<void>();
+  syncWithWebToggleRequested = output<boolean>();
   themeService = inject(ThemeService);
   settingsService = inject(SettingsService);
 
@@ -40,6 +42,11 @@ export class SettingsModalComponent {
   onMasteryBackgroundToggle(event: Event) {
     const checkbox = event.target as HTMLInputElement;
     this.settingsService.toggleMasteryBackground(checkbox.checked);
+  }
+
+  onSyncWithWebToggle(event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    this.syncWithWebToggleRequested.emit(checkbox.checked);
   }
 
   resetToDefault() {

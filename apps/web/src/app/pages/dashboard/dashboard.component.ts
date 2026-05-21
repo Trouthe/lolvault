@@ -4,6 +4,7 @@ import {
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -11,8 +12,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import type { User } from 'firebase/auth';
+import { Unsubscribe, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { BUILD_LABEL, VERSION } from '../../../environments/version';
 import { AuthService } from '../../services/auth.service';
+import { FirebaseService } from '../../services/firebase.service';
 
 type SortOption = 'all' | 'highest' | 'lowest' | 'unranked';
 type BoardColor =
@@ -48,10 +51,12 @@ interface DashboardBoard {
   id: string;
   name: string;
   color: BoardColor;
+  createdAt?: number;
 }
 
 interface DashboardAccount {
   id: number;
+  syncId?: string;
   boardId: string | null;
   name: string;
   server: string;
@@ -62,6 +67,45 @@ interface DashboardAccount {
   leaguePoints?: number;
   profileIconId?: number;
   hotStreak?: boolean;
+}
+
+interface CloudSyncBoard {
+  id: string;
+  name: string;
+  color: BoardColor;
+  createdAt: number;
+}
+
+interface CloudSyncAccount {
+  syncId: string;
+  boardId: string | null;
+  name: string;
+  server: string;
+  game?: string;
+  rank?: string;
+  wins?: number;
+  losses?: number;
+  leaguePoints?: number;
+  profileIconId?: number;
+  hotStreak?: boolean;
+}
+
+interface CloudSyncSettings {
+  theme: ThemeMode;
+  themeVariant: string;
+  showMasteryBackground: boolean;
+}
+
+interface CloudSyncDocumentData {
+  boards?: unknown;
+  accounts?: unknown;
+  settings?: unknown;
+}
+
+interface CloudSyncPayload {
+  boards: CloudSyncBoard[];
+  accounts: CloudSyncAccount[];
+  settings: CloudSyncSettings;
 }
 
 const BOARD_COLORS: BoardColor[] = [
@@ -96,6 +140,8 @@ const THEME_VARIANTS: ThemeVariantOption[] = [
 
 const SETTINGS_STORAGE_KEY = 'lolvault-web-dashboard-settings';
 const PREMIUM_STATE_STORAGE_KEY = 'lolvault-web-premium-state';
+const CLOUD_SYNC_COLLECTION = 'dashboardAccounts';
+const CLOUD_SYNC_SCHEMA_VERSION = 3;
 
 const DASHBOARD_BOARDS: DashboardBoard[] = [];
 
@@ -112,6 +158,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly installDesktopAppMessage = 'Install the desktop app to launch accounts.';
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly firebaseService = inject(FirebaseService);
 
   readonly boards = signal<DashboardBoard[]>(DASHBOARD_BOARDS);
   readonly accounts = signal<DashboardAccount[]>(DASHBOARD_ACCOUNTS);
@@ -157,12 +204,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     () => this.currentUser()?.photoURL || this.getLocalProfileFallback()
   );
 
-  readonly displayedBoards = computed(() => this.boards());
+  readonly draggingAccountId = signal<string | null>(null);
+  readonly draggingFolderId = signal<string | null>(null);
+  readonly dragOverBoardId = signal<string | null>(null);
+  private readonly tempBoards = signal<DashboardBoard[]>([]);
+  private readonly tempAccounts = signal<DashboardAccount[]>([]);
+  private readonly isDraggingFolder = signal(false);
+  private readonly isDraggingAccount = signal(false);
+
+  readonly displayedBoards = computed(() =>
+    this.isDraggingFolder() ? this.tempBoards() : this.boards()
+  );
   readonly totalAccountCount = computed(() => this.accounts().length);
 
   readonly currentBoardTitle = computed(() => this.getCurrentBoardName());
 
-  readonly displayedAccounts = computed(() => {
+  readonly filteredAccounts = computed(() => {
     const selectedBoardId = this.selectedBoardId();
     const query = this._searchQuery().toLowerCase().trim();
 
@@ -193,6 +250,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return filtered;
   });
 
+  readonly displayedAccounts = computed(() =>
+    this.isDraggingAccount() ? this.tempAccounts() : this.filteredAccounts()
+  );
+
   searchQuery = '';
   bulkAccountsText = '';
 
@@ -204,10 +265,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private _searchQuery = signal('');
   private previousBodyOverflow = '';
+  private cloudSyncUnsubscribe: Unsubscribe | null = null;
+  private cloudSyncUserId: string | null = null;
+  private cloudWriteDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private isApplyingCloudSnapshot = false;
+  private lastCloudDataHash = '';
+  private wasDragging = false;
+  private lastReorderTime = 0;
+  private readonly REORDER_THROTTLE_MS = 100;
 
   constructor() {
     this.initializeAppearance();
     this.initializeSettings();
+
+    effect((onCleanup) => {
+      const user = this.currentUser();
+
+      if (!user) {
+        this.stopCloudSyncListener();
+        return;
+      }
+
+      this.startCloudSyncListener(user.uid);
+      onCleanup(() => this.stopCloudSyncListener());
+    });
+
+    effect(() => {
+      const user = this.currentUser();
+      const boards = this.boards();
+      const accounts = this.accounts();
+      const theme = this.theme();
+      const themeVariant = this.themeVariant();
+      const showMasteryBackground = this.showMasteryBackground();
+
+      void theme;
+      void themeVariant;
+      void showMasteryBackground;
+
+      if (!user || this.isApplyingCloudSnapshot) {
+        return;
+      }
+
+      this.scheduleCloudSnapshotPublish(user.uid, boards, accounts);
+    });
+
+    window.addEventListener('dragend', this.onGlobalDragEnd, true);
+    document.addEventListener('dragstart', this.onGlobalDragStart, true);
   }
 
   ngOnInit(): void {
@@ -216,7 +319,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('dragend', this.onGlobalDragEnd, true);
+    document.removeEventListener('dragstart', this.onGlobalDragStart, true);
     document.body.style.overflow = this.previousBodyOverflow;
+    this.stopCloudSyncListener();
+
+    if (this.cloudWriteDebounceTimer !== null) {
+      clearTimeout(this.cloudWriteDebounceTimer);
+      this.cloudWriteDebounceTimer = null;
+    }
   }
 
   @HostListener('document:click', ['$event'])
@@ -285,6 +396,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   selectBoard(boardId: string | null): void {
+    if (this.wasDragging) {
+      return;
+    }
+
     this.selectedBoardId.set(boardId);
   }
 
@@ -319,6 +434,207 @@ export class DashboardComponent implements OnInit, OnDestroy {
   setSortOption(option: SortOption): void {
     this.currentSort.set(option);
     this.isSortMenuOpen.set(false);
+  }
+
+  private resetDragState(): void {
+    this.dragOverBoardId.set(null);
+    this.draggingAccountId.set(null);
+    this.draggingFolderId.set(null);
+    this.isDraggingFolder.set(false);
+    this.isDraggingAccount.set(false);
+  }
+
+  private onGlobalDragEnd = (): void => {
+    if (this.isDraggingFolder() && this.draggingFolderId()) {
+      this.boards.set(this.tempBoards());
+    }
+
+    if (this.isDraggingAccount() && this.draggingAccountId()) {
+      this.commitAccountReorder();
+    }
+
+    this.resetDragState();
+    this.wasDragging = true;
+    setTimeout(() => {
+      this.wasDragging = false;
+    }, 100);
+  };
+
+  private onGlobalDragStart = (event: DragEvent): void => {
+    const handle = (event.target as HTMLElement).closest('.account-drag-handle');
+    if (!handle || !event.dataTransfer) {
+      return;
+    }
+
+    const accountId = handle.getAttribute('data-account-id');
+    if (!accountId) {
+      return;
+    }
+
+    event.dataTransfer.setData('text/plain', accountId);
+    event.dataTransfer.effectAllowed = 'move';
+
+    this.draggingAccountId.set(accountId);
+    this.wasDragging = true;
+    this.tempAccounts.set([...this.filteredAccounts()]);
+    this.isDraggingAccount.set(true);
+  };
+
+  private commitAccountReorder(): void {
+    const reorderedFiltered = this.tempAccounts();
+    const allAccounts = this.accounts();
+    const selectedBoardId = this.selectedBoardId();
+
+    const reorderedIds = new Set(reorderedFiltered.map((account) => account.id));
+    const otherAccounts = allAccounts.filter((account) => !reorderedIds.has(account.id));
+
+    let reorderedAll: DashboardAccount[];
+    if (selectedBoardId !== null) {
+      const firstBoardAccountIndex = allAccounts.findIndex(
+        (account) => account.boardId === selectedBoardId
+      );
+
+      if (firstBoardAccountIndex === -1) {
+        reorderedAll = [...otherAccounts, ...reorderedFiltered];
+      } else {
+        const before = otherAccounts.filter((_, index) => {
+          const originalIndex = allAccounts.findIndex(
+            (account) => account.id === otherAccounts[index]?.id
+          );
+          return originalIndex < firstBoardAccountIndex;
+        });
+        const after = otherAccounts.filter((account) => !before.includes(account));
+        reorderedAll = [...before, ...reorderedFiltered, ...after];
+      }
+    } else {
+      reorderedAll = reorderedFiltered;
+    }
+
+    this.accounts.set(reorderedAll);
+  }
+
+  onFolderDragStart(event: DragEvent, board: DashboardBoard): void {
+    if (!event.dataTransfer) {
+      return;
+    }
+
+    this.wasDragging = true;
+    event.dataTransfer.setData('application/x-folder-id', board.id);
+    event.dataTransfer.effectAllowed = 'move';
+    this.draggingFolderId.set(board.id);
+    this.tempBoards.set([...this.boards()]);
+    this.isDraggingFolder.set(true);
+  }
+
+  onFolderDragOver(event: DragEvent, hoverIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.draggingFolderId()) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastReorderTime < this.REORDER_THROTTLE_MS) {
+      return;
+    }
+
+    const boards = this.tempBoards();
+    const draggedId = this.draggingFolderId();
+    const currentIndex = boards.findIndex((board) => board.id === draggedId);
+    if (currentIndex === -1 || currentIndex === hoverIndex) {
+      return;
+    }
+
+    this.lastReorderTime = now;
+    const reordered = [...boards];
+    const [removed] = reordered.splice(currentIndex, 1);
+    reordered.splice(hoverIndex, 0, removed);
+    this.tempBoards.set(reordered);
+  }
+
+  onAccountDragOver(event: DragEvent, hoverIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.draggingAccountId()) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastReorderTime < this.REORDER_THROTTLE_MS) {
+      return;
+    }
+
+    const accounts = this.tempAccounts();
+    const draggedId = this.draggingAccountId();
+    const currentIndex = accounts.findIndex((account) => account.id.toString() === draggedId);
+    if (currentIndex === -1 || currentIndex === hoverIndex) {
+      return;
+    }
+
+    this.lastReorderTime = now;
+    const reordered = [...accounts];
+    const [removed] = reordered.splice(currentIndex, 1);
+    reordered.splice(hoverIndex, 0, removed);
+    this.tempAccounts.set(reordered);
+  }
+
+  onAccountDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onAccountsListDragOver(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  onAccountsListDrop(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  onDragOver(event: DragEvent, boardId: string | null): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+
+    this.dragOverBoardId.set(boardId === null ? 'all' : boardId);
+  }
+
+  onDragLeave(): void {
+    this.dragOverBoardId.set(null);
+  }
+
+  onDrop(event: DragEvent, boardId: string | null): void {
+    event.preventDefault();
+    this.dragOverBoardId.set(null);
+
+    if (event.dataTransfer?.types.includes('application/x-folder-id')) {
+      return;
+    }
+
+    const accountId = event.dataTransfer?.getData('text/plain');
+    if (!accountId) {
+      return;
+    }
+
+    const account = this.accounts().find((item) => item.id.toString() === accountId);
+    if (!account) {
+      return;
+    }
+
+    const currentBoardId = account.boardId ?? null;
+    if (currentBoardId === boardId) {
+      return;
+    }
+
+    this.isDraggingAccount.set(false);
+    this.draggingAccountId.set(null);
+
+    this.accounts.update((accounts) =>
+      accounts.map((item) => (item.id === account.id ? { ...item, boardId } : item))
+    );
   }
 
   startCreatingBoard(): void {
@@ -359,6 +675,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         id,
         name: trimmedName,
         color: this.newBoardColor(),
+        createdAt: Date.now(),
       },
     ]);
 
@@ -433,6 +750,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const nextId = Math.max(0, ...this.accounts().map((account) => account.id)) + 1;
     const nextAccount: DashboardAccount = {
       id: nextId,
+      syncId: this.createSyncId(),
       boardId: this.selectedBoardId(),
       name: `${parsedRiotId.displayName}#${parsedRiotId.tag}`,
       server,
@@ -474,6 +792,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       imported.push({
         id: nextId,
+        syncId: this.createSyncId(),
         boardId: this.selectedBoardId(),
         name: `${parsedRiotId.displayName}#${parsedRiotId.tag}`,
         server: resolvedServer,
@@ -767,6 +1086,358 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private randomBetween(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  private startCloudSyncListener(userId: string): void {
+    if (this.cloudSyncUserId === userId && this.cloudSyncUnsubscribe) {
+      return;
+    }
+
+    this.stopCloudSyncListener();
+    this.cloudSyncUserId = userId;
+    this.cloudSyncUnsubscribe = onSnapshot(
+      this.getCloudSyncDocument(userId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          this.lastCloudDataHash = '';
+
+          if (this.boards().length || this.accounts().length) {
+            void this.publishCloudSnapshot(userId, this.boards(), this.accounts());
+          }
+
+          return;
+        }
+
+        const data = snapshot.data() as CloudSyncDocumentData;
+        const cloudBoards = this.deserializeCloudBoards(data.boards);
+        const cloudAccounts = this.deserializeCloudAccounts(data.accounts, cloudBoards);
+        const cloudSettings = this.deserializeCloudSettings(data.settings);
+
+        this.lastCloudDataHash = this.getCloudStateHash(cloudBoards, cloudAccounts, cloudSettings);
+        this.isApplyingCloudSnapshot = true;
+
+        try {
+          this.boards.set(cloudBoards);
+          this.accounts.set(this.materializeWebAccounts(cloudAccounts));
+          this.applyCloudSettings(cloudSettings);
+
+          const selectedBoard = this.selectedBoardId();
+          if (selectedBoard && !cloudBoards.some((board) => board.id === selectedBoard)) {
+            this.selectedBoardId.set(null);
+          }
+        } finally {
+          this.isApplyingCloudSnapshot = false;
+        }
+      },
+      (error) => {
+        console.error('Realtime cloud sync listener failed:', error);
+      }
+    );
+  }
+
+  private stopCloudSyncListener(): void {
+    if (this.cloudSyncUnsubscribe) {
+      this.cloudSyncUnsubscribe();
+      this.cloudSyncUnsubscribe = null;
+    }
+
+    this.cloudSyncUserId = null;
+  }
+
+  private scheduleCloudSnapshotPublish(
+    userId: string,
+    boards: DashboardBoard[],
+    accounts: DashboardAccount[]
+  ): void {
+    const payload = this.buildCloudSyncPayload(boards, accounts);
+    const hash = this.getCloudStateHash(payload.boards, payload.accounts, payload.settings);
+
+    if (hash === this.lastCloudDataHash) {
+      return;
+    }
+
+    if (this.cloudWriteDebounceTimer !== null) {
+      clearTimeout(this.cloudWriteDebounceTimer);
+    }
+
+    this.cloudWriteDebounceTimer = setTimeout(() => {
+      this.cloudWriteDebounceTimer = null;
+      void this.publishCloudSnapshot(userId, this.boards(), this.accounts());
+    }, 350);
+  }
+
+  private async publishCloudSnapshot(
+    userId: string,
+    boards: DashboardBoard[],
+    accounts: DashboardAccount[]
+  ): Promise<void> {
+    const payload = this.buildCloudSyncPayload(boards, accounts);
+    const hash = this.getCloudStateHash(payload.boards, payload.accounts, payload.settings);
+
+    if (hash === this.lastCloudDataHash) {
+      return;
+    }
+
+    await setDoc(
+      this.getCloudSyncDocument(userId),
+      {
+        userId,
+        schemaVersion: CLOUD_SYNC_SCHEMA_VERSION,
+        boards: payload.boards,
+        accounts: payload.accounts,
+        settings: payload.settings,
+        updatedAt: serverTimestamp(),
+        updatedFrom: 'web',
+      },
+      { merge: true }
+    );
+
+    this.lastCloudDataHash = hash;
+  }
+
+  private getCloudSyncDocument(userId: string) {
+    return doc(this.firebaseService.db, CLOUD_SYNC_COLLECTION, userId);
+  }
+
+  private buildCloudSyncPayload(
+    boards: DashboardBoard[],
+    accounts: DashboardAccount[]
+  ): CloudSyncPayload {
+    return {
+      boards: this.serializeCloudBoards(boards),
+      accounts: this.serializeCloudAccounts(accounts),
+      settings: this.serializeCloudSettings(),
+    };
+  }
+
+  private serializeCloudBoards(boards: DashboardBoard[]): CloudSyncBoard[] {
+    return boards.map((board) => ({
+      id: board.id,
+      name: board.name,
+      color: board.color,
+      createdAt: board.createdAt ?? 0,
+    }));
+  }
+
+  private serializeCloudAccounts(accounts: DashboardAccount[]): CloudSyncAccount[] {
+    return accounts.map((account) => ({
+      syncId: account.syncId || this.buildLegacySyncId(account.name, account.server),
+      boardId: account.boardId ?? null,
+      name: account.name,
+      server: account.server,
+      game: account.game,
+      rank: account.rank,
+      wins: account.wins,
+      losses: account.losses,
+      leaguePoints: account.leaguePoints,
+      profileIconId: account.profileIconId,
+      hotStreak: account.hotStreak,
+    }));
+  }
+
+  private serializeCloudSettings(): CloudSyncSettings {
+    return {
+      theme: this.theme(),
+      themeVariant: this.themeVariant(),
+      showMasteryBackground: this.showMasteryBackground(),
+    };
+  }
+
+  private deserializeCloudSettings(rawSettings: unknown): CloudSyncSettings {
+    const parsed = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+    const candidate = parsed as Partial<CloudSyncSettings>;
+
+    const resolvedTheme: ThemeMode =
+      candidate.theme === 'light' || candidate.theme === 'dark' ? candidate.theme : this.theme();
+
+    const resolvedThemeVariant =
+      typeof candidate.themeVariant === 'string' &&
+      this.themeVariants.some((variant) => variant.id === candidate.themeVariant)
+        ? candidate.themeVariant
+        : this.themeVariant();
+
+    return {
+      theme: resolvedTheme,
+      themeVariant: resolvedThemeVariant,
+      showMasteryBackground:
+        typeof candidate.showMasteryBackground === 'boolean'
+          ? candidate.showMasteryBackground
+          : this.showMasteryBackground(),
+    };
+  }
+
+  private applyCloudSettings(settings: CloudSyncSettings): void {
+    this.theme.set(settings.theme);
+    this.themeVariant.set(settings.themeVariant);
+    this.showMasteryBackground.set(settings.showMasteryBackground);
+    this.applyAppearance();
+    this.persistAppearance();
+    this.persistSettings();
+  }
+
+  private deserializeCloudBoards(rawBoards: unknown): CloudSyncBoard[] {
+    if (!Array.isArray(rawBoards)) {
+      return [];
+    }
+
+    const parsedBoards: CloudSyncBoard[] = [];
+
+    for (const rawBoard of rawBoards) {
+      if (!rawBoard || typeof rawBoard !== 'object') {
+        continue;
+      }
+
+      const board = rawBoard as Partial<CloudSyncBoard>;
+      if (typeof board.id !== 'string' || !board.id.trim()) {
+        continue;
+      }
+
+      if (typeof board.name !== 'string' || !board.name.trim()) {
+        continue;
+      }
+
+      parsedBoards.push({
+        id: board.id,
+        name: board.name,
+        color: this.ensureBoardColor(board.color),
+        createdAt: typeof board.createdAt === 'number' ? board.createdAt : Date.now(),
+      });
+    }
+
+    return parsedBoards;
+  }
+
+  private deserializeCloudAccounts(
+    rawAccounts: unknown,
+    boards: DashboardBoard[]
+  ): CloudSyncAccount[] {
+    if (!Array.isArray(rawAccounts)) {
+      return [];
+    }
+
+    const validBoardIds = new Set(boards.map((board) => board.id));
+    const parsedAccounts: CloudSyncAccount[] = [];
+
+    for (const rawAccount of rawAccounts) {
+      if (!rawAccount || typeof rawAccount !== 'object') {
+        continue;
+      }
+
+      const account = rawAccount as Partial<CloudSyncAccount>;
+      const syncId =
+        typeof account.syncId === 'string' && account.syncId.trim()
+          ? account.syncId
+          : this.buildLegacySyncId(account.name || '', account.server || '');
+
+      if (
+        !syncId ||
+        typeof account.name !== 'string' ||
+        !account.name.trim() ||
+        typeof account.server !== 'string' ||
+        !account.server.trim()
+      ) {
+        continue;
+      }
+
+      const boardId =
+        typeof account.boardId === 'string' && validBoardIds.has(account.boardId)
+          ? account.boardId
+          : null;
+
+      parsedAccounts.push({
+        syncId,
+        boardId,
+        name: account.name,
+        server: account.server,
+        game: typeof account.game === 'string' ? account.game : undefined,
+        rank: typeof account.rank === 'string' ? account.rank : undefined,
+        wins: typeof account.wins === 'number' ? account.wins : undefined,
+        losses: typeof account.losses === 'number' ? account.losses : undefined,
+        leaguePoints: typeof account.leaguePoints === 'number' ? account.leaguePoints : undefined,
+        profileIconId:
+          typeof account.profileIconId === 'number' ? account.profileIconId : undefined,
+        hotStreak: typeof account.hotStreak === 'boolean' ? account.hotStreak : undefined,
+      });
+    }
+
+    return parsedAccounts;
+  }
+
+  private materializeWebAccounts(cloudAccounts: CloudSyncAccount[]): DashboardAccount[] {
+    const existingBySyncId = new Map<string, DashboardAccount>();
+
+    for (const account of this.accounts()) {
+      const syncId = account.syncId || this.buildLegacySyncId(account.name, account.server);
+      existingBySyncId.set(syncId, account);
+    }
+
+    const usedIds = new Set<number>(this.accounts().map((account) => account.id));
+    let nextId = Math.max(0, ...this.accounts().map((account) => account.id)) + 1;
+
+    const getNextId = (): number => {
+      while (usedIds.has(nextId)) {
+        nextId += 1;
+      }
+
+      const id = nextId;
+      usedIds.add(id);
+      nextId += 1;
+      return id;
+    };
+
+    return cloudAccounts.map((cloudAccount) => {
+      const existing = existingBySyncId.get(cloudAccount.syncId);
+
+      return {
+        id: existing?.id ?? getNextId(),
+        syncId: cloudAccount.syncId,
+        boardId: cloudAccount.boardId,
+        name: cloudAccount.name,
+        server: cloudAccount.server,
+        game: cloudAccount.game,
+        rank: cloudAccount.rank,
+        wins: cloudAccount.wins,
+        losses: cloudAccount.losses,
+        leaguePoints: cloudAccount.leaguePoints,
+        profileIconId: cloudAccount.profileIconId,
+        hotStreak: cloudAccount.hotStreak,
+      };
+    });
+  }
+
+  private ensureBoardColor(value: unknown): BoardColor {
+    if (typeof value !== 'string') {
+      return 'default';
+    }
+
+    const normalized = value as BoardColor;
+    if (normalized === 'default' || BOARD_COLORS.includes(normalized)) {
+      return normalized;
+    }
+
+    return 'default';
+  }
+
+  private getCloudStateHash(
+    boards: CloudSyncBoard[],
+    accounts: CloudSyncAccount[],
+    settings: CloudSyncSettings
+  ): string {
+    return JSON.stringify({ boards, accounts, settings });
+  }
+
+  private buildLegacySyncId(name: string, server: string): string {
+    const safeName = name.toLowerCase().trim() || 'unknown';
+    const safeServer = server.toLowerCase().trim() || 'unknown';
+    return `${safeName}::${safeServer}`;
+  }
+
+  private createSyncId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+
+    return `sync-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   private normalizeRank(rawRank: string | undefined): string | undefined {
