@@ -1220,19 +1220,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private serializeCloudAccounts(accounts: DashboardAccount[]): CloudSyncAccount[] {
-    return accounts.map((account) => ({
-      syncId: account.syncId || this.buildLegacySyncId(account.name, account.server),
-      boardId: account.boardId ?? null,
-      name: account.name,
-      server: account.server,
-      game: account.game,
-      rank: account.rank,
-      wins: account.wins,
-      losses: account.losses,
-      leaguePoints: account.leaguePoints,
-      profileIconId: account.profileIconId,
-      hotStreak: account.hotStreak,
-    }));
+    return accounts.map((account) =>
+      this.omitUndefinedFields<CloudSyncAccount>({
+        syncId: account.syncId || this.buildLegacySyncId(account.name, account.server),
+        boardId: account.boardId ?? null,
+        name: account.name,
+        server: account.server,
+        game: account.game,
+        rank: account.rank,
+        wins: account.wins,
+        losses: account.losses,
+        leaguePoints: account.leaguePoints,
+        profileIconId: account.profileIconId,
+        hotStreak: account.hotStreak,
+      })
+    );
+  }
+
+  private omitUndefinedFields<T extends object>(value: T): T {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined)
+    ) as T;
   }
 
   private serializeCloudSettings(): CloudSyncSettings {
