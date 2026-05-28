@@ -68,7 +68,7 @@
             <input
               type="checkbox"
               id="mastery-bg-toggle"
-              [checked]="settingsService.getShowMasteryBackground()"
+              [checked]="settingsService.settings().showMasteryBackground"
               (change)="onMasteryBackgroundToggle($event)"
             />
             <span class="slider"></span>
@@ -117,7 +117,7 @@
             <input
               type="checkbox"
               id="sync-web-toggle"
-              [checked]="settingsService.getSyncWithWeb()"
+              [checked]="settingsService.settings().syncWithWeb"
               [disabled]="isSyncToggleBusy()"
               (change)="onSyncWithWebToggle($event)"
             />

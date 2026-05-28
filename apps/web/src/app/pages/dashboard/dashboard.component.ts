@@ -155,7 +155,6 @@ const DASHBOARD_ACCOUNTS: DashboardAccount[] = [];
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   readonly version = [VERSION, BUILD_LABEL];
-  readonly installDesktopAppMessage = 'Install the desktop app to launch accounts.';
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly firebaseService = inject(FirebaseService);

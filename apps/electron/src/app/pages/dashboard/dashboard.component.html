@@ -141,7 +141,7 @@
   <div>
     <!-- Actual Data -->
     <div class="data">
-      @if (settingsService.getShowMasteryBackground() && championId()) {
+      @if (settingsService.settings().showMasteryBackground && championId()) {
         <img
           [src]="
             'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
