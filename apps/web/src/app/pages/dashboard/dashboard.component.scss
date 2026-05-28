@@ -837,7 +837,7 @@
       padding: 8px 12px;
       background-color: var(--background);
       border-radius: 8px;
-      height: 30px;
+      height: 50px;
       border: 2px solid var(--border-color);
 
       .stats-group {
@@ -895,7 +895,7 @@
     padding: 4px;
     gap: 2px;
     flex-shrink: 0;
-    height: 38px;
+    height: 50px;
 
     .action-btn {
       &.refreshing {

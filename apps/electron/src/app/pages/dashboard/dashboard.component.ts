@@ -289,6 +289,17 @@ export class DashboardComponent implements OnDestroy {
     await this.saveAccounts(updated);
   }
 
+  private isSameAccount(a: Account, b: Account): boolean {
+    const aSyncId = a.syncId?.trim();
+    const bSyncId = b.syncId?.trim();
+
+    if (aSyncId && bSyncId) {
+      return aSyncId === bSyncId;
+    }
+
+    return String(a.id) === String(b.id);
+  }
+
   private resetDragState(): void {
     this.dragOverBoardId.set(null);
     this.draggingAccountId.set(null);
@@ -1203,7 +1214,7 @@ export class DashboardComponent implements OnDestroy {
         try {
           const [summonerId, tagline] = account.name.split('#');
 
-          if (typeof account.id !== 'string' || account.id.length <= 20) {
+          if (!this.riotService.isLikelyPuuid(account.id)) {
             account.id = await this.riotService.getPUUID(summonerId, tagline, account.server);
           }
 
@@ -1287,25 +1298,27 @@ export class DashboardComponent implements OnDestroy {
 
   async onAccountUpdated(updatedAccount: Account): Promise<void> {
     await this.updateAccountsAndSave((accounts) =>
-      accounts.map((acc) => (acc.id === updatedAccount.id ? updatedAccount : acc))
+      accounts.map((acc) => (this.isSameAccount(acc, updatedAccount) ? updatedAccount : acc))
     );
   }
 
   async onAccountDeleted(deletedAccount: Account): Promise<void> {
     await this.updateAccountsAndSave((accounts) =>
-      accounts.filter((acc) => acc.id !== deletedAccount.id)
+      accounts.filter((acc) => !this.isSameAccount(acc, deletedAccount))
     );
   }
 
   async onRemoveFromFolder(account: Account): Promise<void> {
     await this.updateAccountsAndSave((accounts) =>
-      accounts.map((acc) => (acc.id === account.id ? { ...acc, boardId: undefined } : acc))
+      accounts.map((acc) =>
+        this.isSameAccount(acc, account) ? { ...acc, boardId: undefined } : acc
+      )
     );
   }
 
   async onAccountRefreshed(updatedAccount: Account): Promise<void> {
     await this.updateAccountsAndSave((accounts) =>
-      accounts.map((acc) => (acc.id === updatedAccount.id ? updatedAccount : acc))
+      accounts.map((acc) => (this.isSameAccount(acc, updatedAccount) ? updatedAccount : acc))
     );
     this.updateMasteryBackground();
   }

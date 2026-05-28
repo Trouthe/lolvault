@@ -8,6 +8,21 @@ import { BasicAccountInfo, MasteryInfoItem, PUUIDResponse } from '../models/inte
 export class RiotService {
   private riotApi = environment.RIOT_API;
 
+  // Riot PUUIDs are long opaque tokens; UUID-like values (e.g. sync ids)
+  // should not be treated as valid PUUIDs for by-puuid endpoints.
+  isLikelyPuuid(value: unknown): value is string {
+    if (typeof value !== 'string') {
+      return false;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length < 60) {
+      return false;
+    }
+
+    return /^[A-Za-z0-9_-]+$/.test(trimmed);
+  }
+
   private mapToRegionLong(server: string): string {
     const mapping: Record<string, string> = {
       EUW: 'europe',
