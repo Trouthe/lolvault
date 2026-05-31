@@ -235,6 +235,14 @@
               </div>
             }
           </div>
+          <button
+            title="Open Clean Riot Login (Test)"
+            class="btn-icon-outlined"
+            (click)="openCleanRiotClientTest()"
+            [disabled]="isOpeningCleanRiotClient()"
+          >
+            <img src="assets/icons/database.svg" class="icon" alt="Clean Add Test" width="16" />
+          </button>
           <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
             <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
           </button>

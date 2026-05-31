@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LOL_DATA } from '../../../models/constants';
 import { Account } from '../../../models/interfaces/Account';
 import { RiotService } from '../../../services/riot.service';
+import { SettingsService } from '../../../services/settings.service';
 
 @Component({
   selector: 'app-add-account-modal',
@@ -12,8 +13,9 @@ import { RiotService } from '../../../services/riot.service';
   templateUrl: './add-account-modal.component.html',
   styleUrl: './add-account-modal.component.scss',
 })
-export class AddAccountModalComponent {
+export class AddAccountModalComponent implements OnDestroy {
   private riotService = inject(RiotService);
+  private settingsService = inject(SettingsService);
 
   isOpen = input<boolean>(false);
   closeModal = output<void>();
@@ -31,6 +33,17 @@ export class AddAccountModalComponent {
     riotId: '',
     server: '',
   });
+  isOpeningCleanClient = signal(false);
+  cleanClientNotice = signal('');
+  cleanClientNoticeError = signal(false);
+  private cleanClientNoticeTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  ngOnDestroy(): void {
+    if (this.cleanClientNoticeTimeout !== null) {
+      clearTimeout(this.cleanClientNoticeTimeout);
+      this.cleanClientNoticeTimeout = null;
+    }
+  }
 
   setActiveTab(tab: 'single' | 'bulk') {
     this.activeTab.set(tab);
@@ -49,6 +62,34 @@ export class AddAccountModalComponent {
   close() {
     this.resetForm();
     this.closeModal.emit();
+  }
+
+  async openCleanRiotClient(): Promise<void> {
+    if (this.isOpeningCleanClient()) {
+      return;
+    }
+
+    this.isOpeningCleanClient.set(true);
+
+    try {
+      const result = await window.electronAPI.openCleanRiotClient({
+        riotClientPath: this.settingsService.getRiotClientPath(),
+      });
+
+      if (result.success) {
+        this.showCleanClientNotice(
+          'Opened Riot Client with a clean profile. Log in to the next account, then click Save Session on its card.',
+          false
+        );
+      } else {
+        this.showCleanClientNotice(result.error || 'Unable to open clean Riot Client.', true);
+      }
+    } catch (error) {
+      console.error('Failed to open clean Riot Client:', error);
+      this.showCleanClientNotice('Unable to open clean Riot Client right now.', true);
+    } finally {
+      this.isOpeningCleanClient.set(false);
+    }
   }
 
   async addSingleAccount() {
@@ -193,6 +234,21 @@ export class AddAccountModalComponent {
       server: '',
     });
     this.bulkAccountsText.set('');
+  }
+
+  private showCleanClientNotice(message: string, isError: boolean): void {
+    this.cleanClientNotice.set(message);
+    this.cleanClientNoticeError.set(isError);
+
+    if (this.cleanClientNoticeTimeout !== null) {
+      clearTimeout(this.cleanClientNoticeTimeout);
+    }
+
+    this.cleanClientNoticeTimeout = setTimeout(() => {
+      this.cleanClientNotice.set('');
+      this.cleanClientNoticeError.set(false);
+      this.cleanClientNoticeTimeout = null;
+    }, isError ? 5200 : 4500);
   }
 
   private parseRiotId(input: string): { displayName: string; tag: string } | null {

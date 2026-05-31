@@ -76,8 +76,12 @@
       </div>
 
       <div class="button-collection">
-        @if (showLaunchCredentialToast()) {
-          <div class="launch-error-toast">Username or password is missing.</div>
+        @if (showLaunchToast()) {
+          <div class="launch-error-toast">{{ launchToastMessage() }}</div>
+        }
+
+        @if (showSessionToast()) {
+          <div class="session-toast" [class.error]="sessionToastError()">{{ sessionToastMessage() }}</div>
         }
 
         <button class="action-btn delete-btn" (click)="requestDelete()" title="Delete Account">
@@ -85,6 +89,19 @@
         </button>
         <button class="action-btn edit-btn" (click)="requestEdit()" title="Edit Account">
           <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+        </button>
+        <button
+          class="action-btn save-session-btn"
+          (click)="saveSession()"
+          [disabled]="isSavingSession()"
+          [class.saving]="isSavingSession()"
+          title="Save Current Riot Session"
+        >
+          @if (isSavingSession()) {
+            <div class="spinner"></div>
+          } @else {
+            <img src="assets/icons/database.svg" class="icon" alt="Save Session" width="16" />
+          }
         </button>
         <hr />
         <button
@@ -110,7 +127,7 @@
           (click)="launchAccount()"
           [disabled]="isLaunching()"
           [class.launching]="isLaunching()"
-          [class.error]="launchCredentialError()"
+          [class.error]="launchErrorState()"
           title="Launch Account"
         >
           @if (isLaunching()) {
@@ -127,7 +144,7 @@
       (click)="launchAccount()"
       [disabled]="isLaunching()"
       [class.launching]="isLaunching()"
-      [class.error]="launchCredentialError()"
+      [class.error]="launchErrorState()"
       title="Launch Account"
     >
       @if (isLaunching()) {

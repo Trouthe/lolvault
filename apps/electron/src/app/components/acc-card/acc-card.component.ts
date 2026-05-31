@@ -2,26 +2,8 @@
 import { Component, OnDestroy, input, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Account } from '../../models/interfaces/Account';
-import { Board } from '../../models/interfaces/Board';
 import { SettingsService } from '../../services/settings.service';
 import { RiotService } from '../../services/riot.service';
-
-// Declare the electronAPI that will be available via preload script
-declare global {
-  interface Window {
-    electronAPI: {
-      launchAccount: (accountData: any) => Promise<any>;
-      loadAccounts: () => Promise<any[]>;
-      saveAccounts: (accounts: any[]) => Promise<{ success: boolean; error?: string }>;
-      loadBoards: () => Promise<Board[]>;
-      saveBoards: (boards: Board[]) => Promise<{ success: boolean; error?: string }>;
-      getPlatform: () => Promise<string>;
-      startGoogleSystemSignIn: (options: {
-        apiKey: string;
-      }) => Promise<{ success: boolean; idToken?: string; error?: string }>;
-    };
-  }
-}
 
 const REFRESH_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
 
@@ -43,10 +25,16 @@ export class AccCardComponent implements OnDestroy {
   private riotService = inject(RiotService);
 
   isLaunching = signal(false);
+  isSavingSession = signal(false);
   isRefreshing = signal(false);
-  launchCredentialError = signal(false);
-  showLaunchCredentialToast = signal(false);
-  private launchCredentialToastTimeout: ReturnType<typeof setTimeout> | null = null;
+  launchErrorState = signal(false);
+  showLaunchToast = signal(false);
+  launchToastMessage = signal('');
+  showSessionToast = signal(false);
+  sessionToastMessage = signal('');
+  sessionToastError = signal(false);
+  private launchToastTimeout: ReturnType<typeof setTimeout> | null = null;
+  private sessionToastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Windows-only paths (unused on macOS)
   private psFilePath = 'src/app/data/core-actions/login-action.ps1';
@@ -54,9 +42,14 @@ export class AccCardComponent implements OnDestroy {
   private windowTitle = 'Riot Client';
 
   ngOnDestroy(): void {
-    if (this.launchCredentialToastTimeout !== null) {
-      clearTimeout(this.launchCredentialToastTimeout);
-      this.launchCredentialToastTimeout = null;
+    if (this.launchToastTimeout !== null) {
+      clearTimeout(this.launchToastTimeout);
+      this.launchToastTimeout = null;
+    }
+
+    if (this.sessionToastTimeout !== null) {
+      clearTimeout(this.sessionToastTimeout);
+      this.sessionToastTimeout = null;
     }
   }
 
@@ -67,13 +60,8 @@ export class AccCardComponent implements OnDestroy {
       return;
     }
 
-    if (!this.hasLaunchCredentials(acc)) {
-      this.showMissingCredentialFeedback();
-      return;
-    }
-
-    this.launchCredentialError.set(false);
-    this.showLaunchCredentialToast.set(false);
+    this.launchErrorState.set(false);
+    this.showLaunchToast.set(false);
 
     this.isLaunching.set(true);
 
@@ -95,11 +83,15 @@ export class AccCardComponent implements OnDestroy {
 
       if (result.success) {
         console.log('Account launched successfully');
+        this.launchErrorState.set(false);
+        this.showLaunchToast.set(false);
       } else {
         console.error('Launch failed:', result.error);
+        this.showLaunchError(result.error || 'Launch failed.');
       }
     } catch (error) {
       console.error(`Error launching account: ${error}`);
+      this.showLaunchError('Launch failed due to an unexpected error.');
     } finally {
       setTimeout(() => {
         this.isLaunching.set(false);
@@ -107,23 +99,71 @@ export class AccCardComponent implements OnDestroy {
     }
   }
 
-  private hasLaunchCredentials(account: Account): boolean {
-    return Boolean(account.username?.trim() && account.password?.trim());
-  }
-
-  private showMissingCredentialFeedback(): void {
-    this.launchCredentialError.set(true);
-    this.showLaunchCredentialToast.set(true);
-
-    if (this.launchCredentialToastTimeout !== null) {
-      clearTimeout(this.launchCredentialToastTimeout);
+  async saveSession(): Promise<void> {
+    const acc = this.account();
+    if (!acc || this.isSavingSession()) {
+      return;
     }
 
-    this.launchCredentialToastTimeout = setTimeout(() => {
-      this.launchCredentialError.set(false);
-      this.showLaunchCredentialToast.set(false);
-      this.launchCredentialToastTimeout = null;
-    }, 3000);
+    this.showSessionToast.set(false);
+    this.sessionToastError.set(false);
+    this.isSavingSession.set(true);
+
+    try {
+      const result = await window.electronAPI.captureAccountSession({
+        account: acc,
+        riotClientPath: this.settingsService.getRiotClientPath(),
+        relaunch: true,
+      });
+
+      if (result.success) {
+        this.showSessionFeedback(
+          'Session saved. Riot Client was restarted and should remain signed in for this account.',
+          false
+        );
+      } else {
+        this.showSessionFeedback(
+          result.error || 'Unable to save session. Make sure Riot Client is logged in first.',
+          true
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save session snapshot:', error);
+      this.showSessionFeedback('Unable to save session. Try again after Riot Client fully opens.', true);
+    } finally {
+      this.isSavingSession.set(false);
+    }
+  }
+
+  private showLaunchError(message: string): void {
+    this.launchErrorState.set(true);
+    this.launchToastMessage.set(message);
+    this.showLaunchToast.set(true);
+
+    if (this.launchToastTimeout !== null) {
+      clearTimeout(this.launchToastTimeout);
+    }
+
+    this.launchToastTimeout = setTimeout(() => {
+      this.launchErrorState.set(false);
+      this.showLaunchToast.set(false);
+      this.launchToastTimeout = null;
+    }, 4200);
+  }
+
+  private showSessionFeedback(message: string, isError: boolean): void {
+    this.sessionToastMessage.set(message);
+    this.sessionToastError.set(isError);
+    this.showSessionToast.set(true);
+
+    if (this.sessionToastTimeout !== null) {
+      clearTimeout(this.sessionToastTimeout);
+    }
+
+    this.sessionToastTimeout = setTimeout(() => {
+      this.showSessionToast.set(false);
+      this.sessionToastTimeout = null;
+    }, isError ? 5200 : 4200);
   }
 
   requestEdit() {
@@ -304,6 +344,6 @@ export class AccCardComponent implements OnDestroy {
   openOpGG(event: Event): void {
     event.stopPropagation();
     const link = this.getOpGGLink();
-    (window as any).electronAPI.openExternal(link);
+    window.electronAPI.openExternal(link);
   }
 }

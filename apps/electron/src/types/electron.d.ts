@@ -1,4 +1,4 @@
-import { Account } from '../app/components/modals/add-account-modal/add-account-modal.component';
+import { Account } from '../app/models/interfaces/Account';
 import { Board } from '../app/models/interfaces/Board';
 
 export interface LaunchAccountData {
@@ -15,6 +15,23 @@ export interface LaunchResult {
   warning?: string;
 }
 
+export interface CaptureAccountSessionPayload {
+  account: Account;
+  riotClientPath?: string;
+  relaunch?: boolean;
+}
+
+export interface CaptureAccountSessionResult {
+  success: boolean;
+  error?: string;
+  capturedAt?: number;
+  relaunched?: boolean;
+}
+
+export interface OpenCleanRiotClientPayload {
+  riotClientPath: string;
+}
+
 export interface GoogleSystemSignInOptions {
   apiKey: string;
 }
@@ -27,6 +44,10 @@ export interface GoogleSystemSignInResult {
 
 export interface ElectronAPI {
   launchAccount: (accountData: LaunchAccountData) => Promise<LaunchResult>;
+  captureAccountSession: (
+    payload: CaptureAccountSessionPayload
+  ) => Promise<CaptureAccountSessionResult>;
+  openCleanRiotClient: (payload: OpenCleanRiotClientPayload) => Promise<LaunchResult>;
   loadAccounts: () => Promise<Account[]>;
   saveAccounts: (accounts: Account[]) => Promise<{ success: boolean; error?: string }>;
   loadBoards: () => Promise<Board[]>;
@@ -35,6 +56,7 @@ export interface ElectronAPI {
     title?: string;
     defaultPath?: string;
   }) => Promise<{ canceled: boolean; filePaths: string[] }>;
+  openExternal: (url: string) => void;
   getPlatform: () => Promise<string>;
   startGoogleSystemSignIn: (
     options: GoogleSystemSignInOptions

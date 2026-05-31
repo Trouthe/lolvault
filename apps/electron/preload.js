@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   launchAccount: (accountData) => ipcRenderer.invoke('launch-account', accountData),
+  captureAccountSession: (payload) => ipcRenderer.invoke('capture-account-session', payload),
+  openCleanRiotClient: (payload) => ipcRenderer.invoke('open-clean-riot-client', payload),
   loadAccounts: () => ipcRenderer.invoke('load-accounts'),
   saveAccounts: (accounts) => ipcRenderer.invoke('save-accounts', accounts),
   loadBoards: () => ipcRenderer.invoke('load-boards'),

@@ -111,6 +111,7 @@ export class DashboardComponent implements OnDestroy {
   public isSortMenuOpen = signal(false);
   public isProfileMenuOpen = signal(false);
   public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
+  public isOpeningCleanRiotClient = signal(false);
   public isSyncToggleBusy = signal(false);
   public isSyncConflictModalOpen = signal(false);
   public syncConflictResolution = signal<'electron' | 'web'>('electron');
@@ -1258,6 +1259,31 @@ export class DashboardComponent implements OnDestroy {
   addAccount(): void {
     this.isModalOpen.set(true);
   }
+
+  async openCleanRiotClientTest(): Promise<void> {
+    if (this.isOpeningCleanRiotClient()) {
+      return;
+    }
+
+    this.isOpeningCleanRiotClient.set(true);
+
+    try {
+      const result = await window.electronAPI.openCleanRiotClient({
+        riotClientPath: this.settingsService.getRiotClientPath(),
+      });
+
+      if (result.success) {
+        console.log('Opened clean Riot login window.');
+      } else {
+        console.error(result.error || 'Failed to open clean Riot login.');
+      }
+    } catch (error) {
+      console.error('Failed to open clean Riot login window:', error);
+    } finally {
+      this.isOpeningCleanRiotClient.set(false);
+    }
+  }
+
   closeModal(): void {
     this.isModalOpen.set(false);
   }

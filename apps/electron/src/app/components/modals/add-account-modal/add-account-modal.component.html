@@ -59,9 +59,27 @@
 
             @if (hasSingleFormCredentialWarning()) {
               <p class="credential-warning">
-                Username/password are optional, but Play will not work until both are filled in.
+                Username/password are optional. Preferred flow: log in manually with Stay signed in,
+                then use Save Session on the account card.
               </p>
             }
+
+            <div class="session-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="openCleanRiotClient()"
+                [disabled]="isOpeningCleanClient()"
+              >
+                {{ isOpeningCleanClient() ? 'Opening...' : 'Open Clean Riot Login' }}
+              </button>
+
+              @if (cleanClientNotice()) {
+                <p class="clean-client-notice" [class.error]="cleanClientNoticeError()">
+                  {{ cleanClientNotice() }}
+                </p>
+              }
+            </div>
           </div>
 
           <div class="form-group">
