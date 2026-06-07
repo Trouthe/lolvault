@@ -247,6 +247,26 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20)
           participant.item6,
         ];
 
+        const rawData = {
+          ...participant,
+          _allParticipants: match.info.participants.map((p) => ({
+            puuid: p.puuid,
+            riotIdGameName: p.riotIdGameName || p.summonerName || '',
+            championName: p.championName || '',
+            teamId: p.teamId,
+            kills: p.kills ?? 0,
+            deaths: p.deaths ?? 0,
+            assists: p.assists ?? 0,
+            cs: (p.totalMinionsKilled || 0) + (p.neutralMinionsKilled || 0),
+            totalDamageDealtToChampions: p.totalDamageDealtToChampions ?? 0,
+            goldEarned: p.goldEarned ?? 0,
+            items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
+            win: p.win,
+            teamPosition: p.teamPosition || '',
+            visionScore: p.visionScore ?? 0,
+          })),
+        };
+
         db.saveMatchCache(
           matchId,
           accountId,
@@ -272,7 +292,7 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20)
             queueType: 'RANKED_SOLO_5x5',
             timestamp: match.info.gameStartTimestamp || Date.now(),
           },
-          participant
+          rawData
         );
       } catch (matchErr) {
         console.warn('[RiotAPI] Failed to fetch match', matchId, matchErr?.message);

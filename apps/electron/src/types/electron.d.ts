@@ -201,8 +201,24 @@ export interface MatchCacheRow {
   match_id: string;
   account_id: string;
   timestamp: number;
+  puuid: string | null;
+  champion: string | null;
+  position: string | null;
+  win: 0 | 1 | null;
+  kills: number | null;
+  deaths: number | null;
+  assists: number | null;
+  cs: number | null;
   cs_per_min: number | null;
+  damage_dealt: number | null;
   damage_share: number | null;
+  gold: number | null;
+  vision_score: number | null;
+  duration_seconds: number | null;
+  items: string | null;
+  lp_before: number | null;
+  lp_after: number | null;
   lp_delta: number | null;
+  queue_type: string | null;
   raw_json: unknown;
 }

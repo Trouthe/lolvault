@@ -1,0 +1,413 @@
+<div class="analytics-page">
+
+  <!-- Top bar -->
+  <header class="analytics-header">
+    <button class="back-btn" (click)="goBack()">
+      <span class="back-arrow">&#8592;</span>
+      <span>Dashboard</span>
+    </button>
+    @if (account()) {
+      <div class="header-title">
+        @if (account()!.profileIconId) {
+          <img [src]="profileIconUrl()" class="header-champion-icon" alt="" />
+        }
+        <span class="header-name">{{ account()!.name }}</span>
+        @if (account()!.server) {
+          <span class="header-server">{{ account()!.server }}</span>
+        }
+      </div>
+    }
+    <div class="header-spacer"></div>
+  </header>
+
+  <!-- Loading skeleton -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner-large"></div>
+      <p>Loading analytics…</p>
+    </div>
+  }
+
+  <!-- No API key -->
+  @else if (noApiKey()) {
+    <div class="empty-state">
+      <p>No Riot API key configured. Add your key in Settings to view analytics.</p>
+    </div>
+  }
+
+  <!-- Error -->
+  @else if (error()) {
+    <div class="empty-state error">
+      <p>{{ error() }}</p>
+      <button class="back-btn" (click)="goBack()">Go back</button>
+    </div>
+  }
+
+  <!-- Content -->
+  @else {
+    <div class="analytics-content">
+
+      <!-- ── Section A: Rank Header ──────────────────────────────────────────── -->
+      <section class="section rank-header">
+        <div class="rank-emblem-col">
+          @if (rankEmblemUrl()) {
+            <img [src]="rankEmblemUrl()!" class="rank-emblem" alt="Rank emblem" />
+          }
+        </div>
+        <div class="rank-info-col">
+          <h2 class="rank-label">{{ getTierLabel(soloQ()) }}</h2>
+          @if (soloQ()) {
+            <div class="rank-stats-row">
+              <span class="stat-pill wins">{{ soloQ()!.wins }}W</span>
+              <span class="stat-pill losses">{{ soloQ()!.losses }}L</span>
+              <span class="stat-pill wr">{{ winRate() }}% WR</span>
+              @if (soloQ()!.hotStreak) {
+                <span class="stat-pill hot">&#128293; Hot streak</span>
+              }
+            </div>
+            <div class="streak-row">
+              @if (winStreak() >= 2) {
+                <span class="streak-badge win-streak">{{ winStreak() }}-win streak</span>
+              }
+              @if (lossStreak() >= 2) {
+                <span class="streak-badge loss-streak">{{ lossStreak() }}-loss streak</span>
+              }
+            </div>
+          } @else {
+            <p class="unranked-note">Unranked this season</p>
+          }
+        </div>
+        @if (flexQ()) {
+          <div class="flex-info-col">
+            <p class="flex-label">Flex</p>
+            <p class="flex-rank">{{ flexQ()!.tier }} {{ flexQ()!.rank }} — {{ flexQ()!.leaguePoints }} LP</p>
+            <p class="flex-record">{{ flexQ()!.wins }}W / {{ flexQ()!.losses }}L</p>
+          </div>
+        }
+      </section>
+
+      <!-- ── Section B: LP Climb Chart ──────────────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">LP Climb</h3>
+        @if (hasLpData()) {
+          <apx-chart
+            [series]="climbSeries()"
+            [chart]="climbChartOptions().chart"
+            [stroke]="climbChartOptions().stroke"
+            [fill]="climbChartOptions().fill"
+            [colors]="climbChartOptions().colors"
+            [xaxis]="climbChartOptions().xaxis"
+            [yaxis]="climbChartOptions().yaxis"
+            [tooltip]="climbChartOptions().tooltip"
+            [grid]="climbChartOptions().grid"
+            [theme]="climbChartOptions().theme"
+            [annotations]="climbChartOptions().annotations"
+          ></apx-chart>
+        } @else {
+          <div class="empty-section">No LP history yet — play some ranked games to see your climb.</div>
+        }
+      </section>
+
+      <!-- ── Section C: LP Heatmap ──────────────────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">LP Heatmap <span class="section-subtitle">last 12 weeks</span></h3>
+        <div class="heatmap-wrapper">
+          <div class="heatmap-day-labels">
+            @for (day of dayNames; track day) {
+              <span class="day-label">{{ day }}</span>
+            }
+          </div>
+          <div class="heatmap-grid">
+            @for (col of heatmapGrid(); track $index) {
+              <div class="heatmap-col">
+                @for (cell of col; track $index) {
+                  <div
+                    class="heatmap-cell"
+                    [style.background]="getCellColor(cell.netLP, cell.isEmpty)"
+                    [title]="getCellTooltip(cell)"
+                  ></div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+        <div class="heatmap-legend">
+          <span class="legend-label">Loss</span>
+          <div class="legend-gradient"></div>
+          <span class="legend-label">Win</span>
+        </div>
+      </section>
+
+      <!-- ── Section D: Match History ───────────────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">Match History</h3>
+        @if (matchHistory().length === 0) {
+          <div class="empty-section">No cached matches. Refresh an account to fetch match data.</div>
+        } @else {
+          <div class="match-list">
+            @for (match of displayedMatches(); track match.match_id) {
+              <div class="match-row" [class.win]="match.win === 1" [class.loss]="match.win === 0">
+                <div class="match-summary" (click)="toggleMatch(match.match_id)" (keydown.enter)="toggleMatch(match.match_id)" tabindex="0" role="button">
+                  <!-- Champion icon + outcome -->
+                  <div class="match-outcome-col">
+                    <img [src]="getChampIconUrl(match.champion)" class="match-champ-icon" [alt]="match.champion ?? ''" />
+                    <span class="match-outcome-label" [class.win-text]="match.win === 1" [class.loss-text]="match.win === 0">
+                      {{ match.win === 1 ? 'W' : match.win === 0 ? 'L' : '-' }}
+                    </span>
+                  </div>
+                  <!-- KDA -->
+                  <div class="match-kda-col">
+                    <span class="match-kda">{{ match.kills }}/{{ match.deaths }}/{{ match.assists }}</span>
+                    <span class="match-kda-ratio">{{ getKda(match.kills, match.deaths, match.assists) }} KDA</span>
+                  </div>
+                  <!-- CS / Duration -->
+                  <div class="match-cs-col">
+                    <span>{{ match.cs ?? '-' }} CS</span>
+                    <span class="match-cspm">{{ match.cs_per_min ?? '-' }}/min</span>
+                  </div>
+                  <!-- Damage -->
+                  <div class="match-dmg-col">
+                    <span>{{ (match.damage_dealt ?? 0) | number }}</span>
+                    <span class="match-dmg-label">dmg</span>
+                  </div>
+                  <!-- LP Delta -->
+                  <div class="match-lp-col">
+                    @if (match.lp_delta !== null) {
+                      <span [class.lp-gain]="match.lp_delta >= 0" [class.lp-loss]="match.lp_delta < 0">
+                        {{ match.lp_delta >= 0 ? '+' : '' }}{{ match.lp_delta }}LP
+                      </span>
+                    }
+                  </div>
+                  <!-- Items -->
+                  <div class="match-items-col">
+                    @for (itemId of parseItems(match.items); track itemId) {
+                      <img [src]="getItemUrl(itemId)" class="item-icon" [alt]="itemId.toString()" />
+                    }
+                  </div>
+                  <!-- Duration -->
+                  <div class="match-duration-col">
+                    <span class="match-duration">{{ formatDuration(match.duration_seconds) }}</span>
+                    <span class="match-position">{{ match.position || '' }}</span>
+                  </div>
+                  <!-- Expand arrow -->
+                  <div class="match-expand-col">
+                    <span class="expand-arrow" [class.expanded]="expandedMatchId() === match.match_id">&#9660;</span>
+                  </div>
+                </div>
+
+                <!-- Expanded scoreboard -->
+                @if (expandedMatchId() === match.match_id) {
+                  <div class="match-scoreboard">
+                    @if (getAllParticipants(match).length > 0) {
+                      <div class="scoreboard-team">
+                        <div class="scoreboard-team-label win-text">Victory</div>
+                        @for (p of getTeam(match, true); track p.puuid) {
+                          <div class="scoreboard-row" [class.is-me]="p.puuid === match.puuid">
+                            <img [src]="getChampIconUrl(p.championName)" class="sb-champ-icon" [alt]="p.championName" />
+                            <span class="sb-name">{{ p.riotIdGameName }}</span>
+                            <span class="sb-role">{{ p.teamPosition }}</span>
+                            <span class="sb-kda">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+                            <span class="sb-cs">{{ p.cs }} CS</span>
+                            <span class="sb-dmg">{{ p.totalDamageDealtToChampions | number }}</span>
+                            <div class="sb-items">
+                              @for (itemId of p.items; track itemId) {
+                                @if (itemId > 0) {
+                                  <img [src]="getItemUrl(itemId)" class="sb-item" [alt]="itemId.toString()" />
+                                }
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                      <div class="scoreboard-team">
+                        <div class="scoreboard-team-label loss-text">Defeat</div>
+                        @for (p of getTeam(match, false); track p.puuid) {
+                          <div class="scoreboard-row" [class.is-me]="p.puuid === match.puuid">
+                            <img [src]="getChampIconUrl(p.championName)" class="sb-champ-icon" [alt]="p.championName" />
+                            <span class="sb-name">{{ p.riotIdGameName }}</span>
+                            <span class="sb-role">{{ p.teamPosition }}</span>
+                            <span class="sb-kda">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+                            <span class="sb-cs">{{ p.cs }} CS</span>
+                            <span class="sb-dmg">{{ p.totalDamageDealtToChampions | number }}</span>
+                            <div class="sb-items">
+                              @for (itemId of p.items; track itemId) {
+                                @if (itemId > 0) {
+                                  <img [src]="getItemUrl(itemId)" class="sb-item" [alt]="itemId.toString()" />
+                                }
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="no-scoreboard">Full scoreboard not available for this match.</p>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          @if (matchLimit() < matchHistory().length) {
+            <button class="load-more-btn" (click)="loadMoreMatches()">Load more</button>
+          }
+        }
+      </section>
+
+      <!-- ── Section E: Champion Stats ─────────────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">Champion Stats</h3>
+        @if (champStats().length === 0) {
+          <div class="empty-section">No match data available.</div>
+        } @else {
+          <table class="champ-table">
+            <thead>
+              <tr>
+                <th class="champ-th sortable" (click)="setSortCol('champion')">Champion</th>
+                <th class="champ-th sortable" (click)="setSortCol('games')">Games</th>
+                <th class="champ-th sortable" (click)="setSortCol('wins')">WR%</th>
+                <th class="champ-th sortable" (click)="setSortCol('kills')">Avg KDA</th>
+                <th class="champ-th sortable" (click)="setSortCol('csPerMin')">CS/min</th>
+                <th class="champ-th sortable" (click)="setSortCol('damage')">Avg DMG</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stat of sortedChampStats(); track stat.champion) {
+                <tr class="champ-row">
+                  <td class="champ-name-cell">
+                    <img [src]="getChampIconUrl(stat.champion)" class="champ-table-icon" [alt]="stat.champion" />
+                    <span>{{ stat.champion }}</span>
+                  </td>
+                  <td>{{ stat.games }}</td>
+                  <td>
+                    <span [class.above-50]="stat.wins / stat.games >= 0.5">
+                      {{ (stat.wins / stat.games * 100).toFixed(0) }}%
+                    </span>
+                  </td>
+                  <td>{{ getKda(stat.kills / stat.games, stat.deaths / stat.games, stat.assists / stat.games) }}</td>
+                  <td>{{ stat.csPerMin }}</td>
+                  <td>{{ (stat.damage / stat.games) | number: '1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <!-- ── Section F: Performance vs Baseline ────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">Performance <span class="section-subtitle">vs {{ soloQ()?.tier || 'GOLD' }} baseline</span></h3>
+        @if (avgStats()) {
+          <div class="perf-grid">
+            <div class="perf-card" [class]="getAvgComparison(avgStats()!.kda, tierBaseline().kda)">
+              <span class="perf-label">Avg KDA</span>
+              <span class="perf-value">{{ avgStats()!.kda.toFixed(2) }}</span>
+              <span class="perf-baseline">Baseline {{ tierBaseline().kda }}</span>
+            </div>
+            <div class="perf-card" [class]="getAvgComparison(avgStats()!.cspm, tierBaseline().cspm)">
+              <span class="perf-label">CS/min</span>
+              <span class="perf-value">{{ avgStats()!.cspm.toFixed(1) }}</span>
+              <span class="perf-baseline">Baseline {{ tierBaseline().cspm }}</span>
+            </div>
+            <div class="perf-card" [class]="getAvgComparison(avgStats()!.dmg, tierBaseline().dmg)">
+              <span class="perf-label">Avg Damage</span>
+              <span class="perf-value">{{ avgStats()!.dmg | number: '1.0-0' }}</span>
+              <span class="perf-baseline">Baseline {{ tierBaseline().dmg | number: '1.0-0' }}</span>
+            </div>
+            <div class="perf-card neutral">
+              <span class="perf-label">Vision Score</span>
+              <span class="perf-value">{{ avgStats()!.visionScore.toFixed(1) }}</span>
+              <span class="perf-baseline">avg per game</span>
+            </div>
+            <div class="perf-card" [class]="getAvgComparison(avgStats()!.wr, 50)">
+              <span class="perf-label">Win Rate</span>
+              <span class="perf-value">{{ avgStats()!.wr.toFixed(1) }}%</span>
+              <span class="perf-baseline">Baseline 50%</span>
+            </div>
+          </div>
+        } @else {
+          <div class="empty-section">No match data available.</div>
+        }
+      </section>
+
+      <!-- ── Section G: Behavioral Forecast ────────────────────────────────── -->
+      <section class="section">
+        <h3 class="section-title">Behavioral Forecast</h3>
+        <div class="behavioral-grid">
+
+          <!-- G.1 Win rate by day -->
+          <div class="behav-card">
+            <h4 class="behav-card-title">Win Rate by Day</h4>
+            <div class="wr-bar-chart">
+              @for (entry of wrByDay(); track entry.label) {
+                <div class="wr-bar-row">
+                  <span class="wr-bar-label">{{ entry.label }}</span>
+                  <div class="wr-bar-track">
+                    <div
+                      class="wr-bar-fill"
+                      [style.width.%]="entry.wr ?? 0"
+                      [style.background]="getWrBarColor(entry.wr)"
+                    ></div>
+                  </div>
+                  <span class="wr-bar-value">{{ entry.wr !== null ? entry.wr + '%' : '—' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- G.2 Win rate by hour -->
+          <div class="behav-card">
+            <h4 class="behav-card-title">Win Rate by Hour</h4>
+            <div class="hour-heatmap">
+              @for (entry of wrByHour(); track entry.label) {
+                <div
+                  class="hour-cell"
+                  [style.background]="getCellColor(entry.wr !== null ? (entry.wr - 50) : null, entry.wr === null)"
+                  [title]="entry.label + ': ' + (entry.wr !== null ? entry.wr + '%' : 'no data') + ' (' + entry.games + ' games)'"
+                ></div>
+              }
+            </div>
+            <div class="hour-labels-row">
+              <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
+            </div>
+          </div>
+
+          <!-- G.3 Tilt detector -->
+          <div class="behav-card tilt-card" [class]="tiltDetector().level">
+            <h4 class="behav-card-title">Tilt Detector</h4>
+            <div class="tilt-indicator">
+              <span class="tilt-icon">
+                @if (tiltDetector().level === 'critical') { &#128308; }
+                @else if (tiltDetector().level === 'warning') { &#128993; }
+                @else { &#128994; }
+              </span>
+              <span class="tilt-message">{{ tiltDetector().message }}</span>
+            </div>
+          </div>
+
+          <!-- G.4 Top 3 champions last 30 days -->
+          <div class="behav-card">
+            <h4 class="behav-card-title">Top Champions (30d)</h4>
+            @if (topChampsLast30().length === 0) {
+              <p class="behav-empty">No games in the last 30 days.</p>
+            } @else {
+              <div class="top-champs-list">
+                @for (entry of topChampsLast30(); track entry.champ; let i = $index) {
+                  <div class="top-champ-row">
+                    <span class="top-champ-rank">#{{ i + 1 }}</span>
+                    <img [src]="getChampIconUrl(entry.champ)" class="top-champ-icon" [alt]="entry.champ" />
+                    <span class="top-champ-name">{{ entry.champ }}</span>
+                    <span class="top-champ-games">{{ entry.games }}G</span>
+                    <span class="top-champ-wr" [class.above-50]="entry.wr >= 50">{{ entry.wr }}% WR</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  }
+
+</div>

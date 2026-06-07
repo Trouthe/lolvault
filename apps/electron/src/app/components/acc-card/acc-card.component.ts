@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { Account } from '../../models/interfaces/Account';
 import { SettingsService } from '../../services/settings.service';
@@ -36,6 +37,7 @@ export class AccCardComponent implements OnDestroy {
   settingsService = inject(SettingsService);
   private riotApiService = inject(RiotApiService);
   private lcuService = inject(LcuService);
+  private router = inject(Router);
 
   isLaunching = signal(false);
   isSavingSession = signal(false);
@@ -343,6 +345,13 @@ export class AccCardComponent implements OnDestroy {
     } finally {
       this.isRefreshing.set(false);
     }
+  }
+
+  navigateToAnalytics(): void {
+    const acc = this.account();
+    if (!acc) return;
+    const vaultId = acc.syncId || String(acc.id);
+    this.router.navigate(['/analytics', vaultId]);
   }
 
   getProfileIconUrl(): string {
