@@ -98,6 +98,67 @@ export interface ElectronAPI {
     rawJson: unknown;
   }) => Promise<{ success: boolean; error?: string }>;
 
+  // Riot API
+  riotGetSummonerByRiotId: (args: {
+    gameName: string;
+    tagLine: string;
+    platform: string;
+  }) => Promise<{
+    puuid: string;
+    summonerId: string;
+    accountId: string;
+    profileIconId: number;
+    summonerLevel: number;
+    gameName: string;
+    tagLine: string;
+  } | { error: string } | null>;
+
+  riotGetSummonerByPuuid: (args: { puuid: string; platform: string }) => Promise<{
+    id: string;
+    accountId: string;
+    puuid: string;
+    profileIconId: number;
+    summonerLevel: number;
+  } | { error: string } | null>;
+
+  riotGetRankedByPuuid: (args: { puuid: string; platform: string }) => Promise<
+    Array<{
+      queueType: string;
+      tier: string;
+      rank: string;
+      leaguePoints: number;
+      wins: number;
+      losses: number;
+      hotStreak: boolean;
+    }> | { error: string }
+  >;
+
+  riotGetTopMastery: (args: { puuid: string; platform: string }) => Promise<
+    Array<{
+      puuid: string;
+      championId: number;
+      championLevel: number;
+      championPoints: number;
+    }> | { error: string }
+  >;
+
+  riotGetMatchHistory: (args: {
+    accountId: string;
+    puuid: string;
+    platform: string;
+    count?: number;
+  }) => Promise<MatchCacheRow[] | { error: string }>;
+
+  riotGetCachedMatches: (args: { accountId: string; limit?: number }) => Promise<MatchCacheRow[]>;
+
+  riotValidateKey: (args: { key: string }) => Promise<
+    { valid: true; reason?: string } | { valid: false; reason: string } | { error: string }
+  >;
+
+  riotSaveKey: (args: { key: string | null }) => Promise<{ success: boolean; error?: string }>;
+
+  riotGetDDragonVersion: () => Promise<string>;
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
     activeVaultId: string | null;

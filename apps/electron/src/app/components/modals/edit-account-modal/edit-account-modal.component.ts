@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Account } from '../../../models/interfaces/Account';
 import { LOL_DATA } from '../../../models/constants';
-import { RiotService } from '../../../services/riot.service';
+import { RiotApiService } from '../../../services/riot-api.service';
 
 @Component({
   selector: 'app-edit-account-modal',
@@ -13,7 +13,7 @@ import { RiotService } from '../../../services/riot.service';
   styleUrl: './edit-account-modal.component.scss',
 })
 export class EditAccountModalComponent {
-  private riotService = inject(RiotService);
+  private riotApiService = inject(RiotApiService);
 
   isOpen = input<boolean>(false);
   account = input<Account | undefined>(undefined);
@@ -93,7 +93,7 @@ export class EditAccountModalComponent {
     let fetchedRank: string | undefined;
 
     try {
-      puuid = await this.riotService.getPUUID(
+      puuid = await this.riotApiService.getPUUID(
         parsedRiotId.displayName,
         parsedRiotId.tag,
         form.server
@@ -101,7 +101,7 @@ export class EditAccountModalComponent {
       console.log('Fetched PUUID:', puuid);
 
       // Fetch ranked info
-      const rankedInfo = await this.riotService.getRankedInfo(puuid, form.server);
+      const rankedInfo = await this.riotApiService.getRankedInfo(puuid, form.server);
       if (rankedInfo && rankedInfo.length > 0) {
         // Find RANKED_SOLO_5x5 queue
         const soloQueue = rankedInfo.find(

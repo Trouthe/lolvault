@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { Account } from '../../models/interfaces/Account';
 import { SettingsService } from '../../services/settings.service';
-import { RiotService } from '../../services/riot.service';
+import { RiotApiService } from '../../services/riot-api.service';
 import { LcuService } from '../../services/lcu.service';
 
 const REFRESH_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
@@ -34,7 +34,7 @@ export class AccCardComponent implements OnDestroy {
   refreshRequested = output<Account>();
 
   settingsService = inject(SettingsService);
-  private riotService = inject(RiotService);
+  private riotApiService = inject(RiotApiService);
   private lcuService = inject(LcuService);
 
   isLaunching = signal(false);
@@ -302,24 +302,19 @@ export class AccCardComponent implements OnDestroy {
 
     try {
       const [summonerId, tagline] = acc.name.split('#');
-      let puuid = acc.id as string;
 
-      // Fetch PUUID if needed
-      if (typeof acc.id !== 'string' || acc.id.length <= 20) {
-        puuid = await this.riotService.getPUUID(summonerId, tagline, acc.server);
-      }
-
-      // Fetch basic account info
-      const basicInfo = await this.riotService.getBasicAccountInfo(puuid, acc.server);
+      // Always resolve via Riot ID — avoids Summoner v4 by-PUUID (restricted on dev keys)
+      const summoner = await this.riotApiService.getSummonerByRiotId(summonerId, tagline, acc.server);
+      const puuid = summoner.puuid;
 
       // Fetch ranked info
-      const rankedInfo = await this.riotService.getRankedInfo(puuid, acc.server);
+      const rankedInfo = await this.riotApiService.getRankedInfo(puuid, acc.server);
       const soloQueue = rankedInfo?.find(
         (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
       );
 
       // Fetch top mastery champions
-      const masteryData = await this.riotService.getTopMasteryChampions(puuid, acc.server);
+      const masteryData = await this.riotApiService.getTopMasteryChampions(puuid, acc.server);
       let topChampionId: string | undefined;
       if (masteryData?.length) {
         const top = masteryData.reduce((a, b) => (b.championLevel > a.championLevel ? b : a));
@@ -330,8 +325,8 @@ export class AccCardComponent implements OnDestroy {
       const updatedAccount: Account = {
         ...acc,
         id: puuid,
-        profileIconId: basicInfo?.profileIconId,
-        summonerLevel: basicInfo?.summonerLevel,
+        profileIconId: summoner.profileIconId,
+        summonerLevel: summoner.summonerLevel,
         rank: soloQueue ? `${soloQueue.tier} ${soloQueue.rank}` : undefined,
         leaguePoints: soloQueue?.leaguePoints,
         wins: soloQueue?.wins,
@@ -348,6 +343,10 @@ export class AccCardComponent implements OnDestroy {
     } finally {
       this.isRefreshing.set(false);
     }
+  }
+
+  getProfileIconUrl(): string {
+    return this.riotApiService.getProfileIconUrl(this.account()?.profileIconId);
   }
 
   getRankName(rank: string | undefined): string {

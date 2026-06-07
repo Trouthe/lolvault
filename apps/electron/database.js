@@ -68,7 +68,40 @@ function initDatabase(dataPath) {
     );
   `);
 
+  runMigrations();
+
   return db;
+}
+
+/**
+ * Adds any columns that were introduced after the initial schema.
+ * SQLite only supports ADD COLUMN, so each migration is idempotent.
+ */
+function runMigrations() {
+  const existingCols = db.pragma('table_info(match_cache)').map((r) => r.name);
+  const columnsToAdd = [
+    ['puuid', 'TEXT'],
+    ['champion', 'TEXT'],
+    ['position', 'TEXT'],
+    ['win', 'INTEGER'],
+    ['kills', 'INTEGER'],
+    ['deaths', 'INTEGER'],
+    ['assists', 'INTEGER'],
+    ['cs', 'INTEGER'],
+    ['damage_dealt', 'INTEGER'],
+    ['gold', 'INTEGER'],
+    ['vision_score', 'INTEGER'],
+    ['duration_seconds', 'INTEGER'],
+    ['items', 'TEXT'],
+    ['lp_before', 'REAL'],
+    ['lp_after', 'REAL'],
+    ['queue_type', 'TEXT'],
+  ];
+  for (const [col, type] of columnsToAdd) {
+    if (!existingCols.includes(col)) {
+      db.exec(`ALTER TABLE match_cache ADD COLUMN ${col} ${type}`);
+    }
+  }
 }
 
 function getDb() {
@@ -102,20 +135,62 @@ function getLatestLpSnapshot(accountId) {
 
 // ── Match Cache ───────────────────────────────────────────────────────────────
 
-function saveMatchCache(matchId, accountId, { csPerMin, damageShare, lpDelta }, rawJson) {
+function saveMatchCache(matchId, accountId, computed = {}, rawJson) {
+  const {
+    puuid = null,
+    champion = null,
+    position = null,
+    win = null,
+    kills = null,
+    deaths = null,
+    assists = null,
+    cs = null,
+    csPerMin = null,
+    damageDealt = null,
+    damageShare = null,
+    gold = null,
+    visionScore = null,
+    durationSeconds = null,
+    items = null,
+    lpBefore = null,
+    lpAfter = null,
+    lpDelta = null,
+    queueType = null,
+    timestamp = null,
+  } = computed;
+
   return getDb()
     .prepare(
       `INSERT OR REPLACE INTO match_cache
-         (match_id, account_id, timestamp, cs_per_min, damage_share, lp_delta, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+         (match_id, account_id, timestamp, puuid, champion, position, win,
+          kills, deaths, assists, cs, cs_per_min, damage_dealt, damage_share,
+          gold, vision_score, duration_seconds, items,
+          lp_before, lp_after, lp_delta, queue_type, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       matchId,
       accountId,
-      Date.now(),
+      timestamp || Date.now(),
+      puuid,
+      champion,
+      position,
+      win !== null && win !== undefined ? (win ? 1 : 0) : null,
+      kills,
+      deaths,
+      assists,
+      cs,
       csPerMin ?? null,
+      damageDealt ?? null,
       damageShare ?? null,
+      gold,
+      visionScore,
+      durationSeconds,
+      Array.isArray(items) ? JSON.stringify(items) : items,
+      lpBefore ?? null,
+      lpAfter ?? null,
       lpDelta ?? null,
+      queueType,
       typeof rawJson === 'string' ? rawJson : JSON.stringify(rawJson)
     );
 }

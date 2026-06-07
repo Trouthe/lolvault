@@ -38,6 +38,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getMatchCache: (accountId, limit) => ipcRenderer.invoke('db-get-match-cache', accountId, limit),
   saveMatch: (data) => ipcRenderer.invoke('db-save-match', data),
 
+  // Riot API
+  riotGetSummonerByRiotId: (args) => ipcRenderer.invoke('riot:get-summoner-by-riot-id', args),
+  riotGetSummonerByPuuid: (args) => ipcRenderer.invoke('riot:get-summoner-by-puuid', args),
+  riotGetRankedByPuuid: (args) => ipcRenderer.invoke('riot:get-ranked-by-puuid', args),
+  riotGetTopMastery: (args) => ipcRenderer.invoke('riot:get-top-mastery', args),
+  riotGetMatchHistory: (args) => ipcRenderer.invoke('riot:get-match-history', args),
+  riotGetCachedMatches: (args) => ipcRenderer.invoke('riot:get-cached-matches', args),
+  riotValidateKey: (args) => ipcRenderer.invoke('riot:validate-key', args),
+  riotSaveKey: (args) => ipcRenderer.invoke('riot:save-key', args),
+  riotGetDDragonVersion: () => ipcRenderer.invoke('riot:get-ddragon-version'),
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => ipcRenderer.invoke('lcu:get-state'),
 

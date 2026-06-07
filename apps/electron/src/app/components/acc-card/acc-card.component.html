@@ -30,13 +30,7 @@
       <div class="account-info">
         <div class="account-details">
           <div [class]="account()!.rank ? 'profile-icon' : ''">
-            <img
-              src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
-                account()!.profileIconId || 29
-              }}.png"
-              alt="profile icon"
-              width="48"
-            />
+            <img [src]="getProfileIconUrl()" alt="profile icon" width="48" />
             @if (account()!.rank) {
               <img
                 src="assets/emblems/Wings/{{ getRankName(account()!.rank) }}.webp"

@@ -16,7 +16,7 @@ import { UpdateBannerComponent } from '../../components/update-banner/update-ban
 import { AuthService } from '../../services/auth.service';
 import { Account } from '../../models/interfaces/Account';
 import { Board } from '../../models/interfaces/Board';
-import { RiotService } from '../../services/riot.service';
+import { RiotApiService } from '../../services/riot-api.service';
 import { SettingsService } from '../../services/settings.service';
 import { BoardService } from '../../services/board.service';
 import { LOL_DATA } from '../../models/constants';
@@ -151,7 +151,7 @@ export class DashboardComponent implements OnDestroy {
   public hoveredFolderId = signal<string | null>(null);
 
   // Services
-  private riotService = inject(RiotService);
+  private riotApiService = inject(RiotApiService);
   private authService = inject(AuthService);
   private router = inject(Router);
   public settingsService = inject(SettingsService);
@@ -1233,22 +1233,25 @@ export class DashboardComponent implements OnDestroy {
         try {
           const [summonerId, tagline] = account.name.split('#');
 
-          if (!this.riotService.isLikelyPuuid(account.id)) {
-            account.id = await this.riotService.getPUUID(summonerId, tagline, account.server);
+          if (!this.riotApiService.isLikelyPuuid(account.id)) {
+            account.id = await this.riotApiService.getPUUID(summonerId, tagline, account.server);
           }
 
           const puuid = account.id as string;
 
-          const basicInfo = await this.riotService.getBasicAccountInfo(puuid, account.server);
+          const basicInfo = await this.riotApiService.getBasicAccountInfo(puuid, account.server);
           account.profileIconId = basicInfo.profileIconId;
 
-          const masteryData = await this.riotService.getTopMasteryChampions(puuid, account.server);
+          const masteryData = await this.riotApiService.getTopMasteryChampions(
+            puuid,
+            account.server
+          );
           if (masteryData?.length) {
             const top = masteryData.reduce((a, b) => (b.championLevel > a.championLevel ? b : a));
             account.topChampionId = top.championId.toString();
           }
 
-          const rankedInfo = await this.riotService.getRankedInfo(puuid, account.server);
+          const rankedInfo = await this.riotApiService.getRankedInfo(puuid, account.server);
           const soloQueue = rankedInfo?.find(
             (q: { queueType: string }) => q.queueType === 'RANKED_SOLO_5x5'
           );

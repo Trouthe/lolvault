@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LOL_DATA } from '../../../models/constants';
 import { Account } from '../../../models/interfaces/Account';
-import { RiotService } from '../../../services/riot.service';
+import { RiotApiService } from '../../../services/riot-api.service';
 import { SettingsService } from '../../../services/settings.service';
 
 @Component({
@@ -14,7 +14,7 @@ import { SettingsService } from '../../../services/settings.service';
   styleUrl: './add-account-modal.component.scss',
 })
 export class AddAccountModalComponent implements OnDestroy {
-  private riotService = inject(RiotService);
+  private riotApiService = inject(RiotApiService);
   private settingsService = inject(SettingsService);
 
   isOpen = input<boolean>(false);
@@ -116,7 +116,7 @@ export class AddAccountModalComponent implements OnDestroy {
     let hotStreak: boolean | undefined;
 
     try {
-      puuid = await this.riotService.getPUUID(
+      puuid = await this.riotApiService.getPUUID(
         parsedRiotId.displayName,
         parsedRiotId.tag,
         acc.server
@@ -124,7 +124,7 @@ export class AddAccountModalComponent implements OnDestroy {
       console.log('Fetched PUUID:', puuid);
 
       // Fetch basic account info (profile icon and level)
-      const basicInfo = await this.riotService.getBasicAccountInfo(puuid, acc.server);
+      const basicInfo = await this.riotApiService.getBasicAccountInfo(puuid, acc.server);
       if (basicInfo) {
         profileIconId = basicInfo.profileIconId;
         summonerLevel = basicInfo.summonerLevel;
@@ -132,7 +132,7 @@ export class AddAccountModalComponent implements OnDestroy {
       }
 
       // Fetch ranked info
-      const rankedInfo = await this.riotService.getRankedInfo(puuid, acc.server);
+      const rankedInfo = await this.riotApiService.getRankedInfo(puuid, acc.server);
       if (rankedInfo && rankedInfo.length > 0) {
         // Find RANKED_SOLO_5x5 queue
         const soloQueue = rankedInfo.find(
@@ -244,11 +244,14 @@ export class AddAccountModalComponent implements OnDestroy {
       clearTimeout(this.cleanClientNoticeTimeout);
     }
 
-    this.cleanClientNoticeTimeout = setTimeout(() => {
-      this.cleanClientNotice.set('');
-      this.cleanClientNoticeError.set(false);
-      this.cleanClientNoticeTimeout = null;
-    }, isError ? 5200 : 4500);
+    this.cleanClientNoticeTimeout = setTimeout(
+      () => {
+        this.cleanClientNotice.set('');
+        this.cleanClientNoticeError.set(false);
+        this.cleanClientNoticeTimeout = null;
+      },
+      isError ? 5200 : 4500
+    );
   }
 
   private parseRiotId(input: string): { displayName: string; tag: string } | null {

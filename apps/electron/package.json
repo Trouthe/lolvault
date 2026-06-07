@@ -38,6 +38,7 @@
     "league-connect": "^6.0.0-rc13",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "twisted": "^1.73.0",
     "zone.js": "^0.16.0"
   },
   "devDependencies": {
@@ -84,6 +85,7 @@
       "preload.js",
       "database.js",
       "lcu-monitor.js",
+      "riot-api.service.js",
       "src/app/data/**/*",
       {
         "from": "../../node_modules",
@@ -108,7 +110,10 @@
           "better-sqlite3/**",
           "bindings/**",
           "file-uri-to-path/**",
-          "league-connect/**"
+          "league-connect/**",
+          "twisted/**",
+          "axios/**",
+          "tslib/**"
         ]
       }
     ],

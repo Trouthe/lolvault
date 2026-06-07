@@ -7,6 +7,7 @@ const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const db = require('./database');
 const { startLcuMonitor, stopLcuMonitor, getLcuState } = require('./lcu-monitor');
+const riotApi = require('./riot-api.service');
 
 const GOOGLE_SYSTEM_AUTH_TIMEOUT_MS = 3 * 60 * 1000;
 const GOOGLE_SYSTEM_AUTH_CALLBACK_HOST = 'localhost';
@@ -1499,5 +1500,89 @@ ipcMain.handle('db-save-match', (_event, { matchId, accountId, computed, rawJson
   } catch (error) {
     console.error('db-save-match error:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// ── Riot API ──────────────────────────────────────────────────────────────────
+
+ipcMain.handle('riot:get-summoner-by-riot-id', async (_event, { gameName, tagLine, platform }) => {
+  try {
+    return await riotApi.getSummonerByRiotId(gameName, tagLine, platform);
+  } catch (err) {
+    console.error('riot:get-summoner-by-riot-id error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-summoner-by-puuid', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getSummonerByPuuid(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-summoner-by-puuid error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-ranked-by-puuid', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getRankedByPuuid(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-ranked-by-puuid error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-top-mastery', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getTopMasteryChampions(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-top-mastery error:', err?.message);
+    return [];
+  }
+});
+
+ipcMain.handle('riot:get-match-history', async (_event, { accountId, puuid, platform, count }) => {
+  try {
+    return await riotApi.fetchAndCacheMatchHistory(accountId, puuid, platform, count);
+  } catch (err) {
+    console.error('riot:get-match-history error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-cached-matches', (_event, { accountId, limit }) => {
+  try {
+    return db.getMatchCache(accountId, limit);
+  } catch (err) {
+    console.error('riot:get-cached-matches error:', err?.message);
+    return [];
+  }
+});
+
+ipcMain.handle('riot:validate-key', async (_event, { key }) => {
+  try {
+    return await riotApi.validateApiKey(key);
+  } catch (err) {
+    console.error('riot:validate-key error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:save-key', (_event, { key }) => {
+  try {
+    riotApi.saveApiKey(key);
+    return { success: true };
+  } catch (err) {
+    console.error('riot:save-key error:', err?.message);
+    return { success: false, error: err?.message };
+  }
+});
+
+ipcMain.handle('riot:get-ddragon-version', async () => {
+  try {
+    return await riotApi.getDDragonVersion();
+  } catch (err) {
+    console.error('riot:get-ddragon-version error:', err?.message);
+    return '15.21.1';
   }
 });
