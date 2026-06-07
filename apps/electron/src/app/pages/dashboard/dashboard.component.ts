@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Component, inject, HostListener, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { signal, computed, effect } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,6 +23,7 @@ import { LOL_DATA } from '../../models/constants';
 import { VERSION, BUILD_LABEL } from '../../../environments/version';
 import { ThemeService } from '../../services/theme.service';
 import { FirebaseService } from '../../services/firebase.service';
+import { LcuService } from '../../services/lcu.service';
 
 interface CloudSyncBoard {
   id: string;
@@ -157,6 +158,7 @@ export class DashboardComponent implements OnDestroy {
   public boardService = inject(BoardService);
   public themeService = inject(ThemeService);
   private firebaseService = inject(FirebaseService);
+  private lcuService = inject(LcuService);
 
   public currentUser = toSignal<User | null>(this.authService.currentUser$, {
     initialValue: null,
@@ -251,6 +253,22 @@ export class DashboardComponent implements OnDestroy {
 
     window.addEventListener('dragend', this.onGlobalDragEnd, true);
     document.addEventListener('dragstart', this.onGlobalDragStart, true);
+
+    // When a game ends, update the account's displayed rank in memory.
+    // Do NOT persist — the user can refresh manually to sync back to Riot API.
+    this.lcuService.gameEnded$.pipe(takeUntilDestroyed()).subscribe((event) => {
+      this.accounts.update((accs) =>
+        accs.map((acc) => {
+          const vaultId = acc.syncId || String(acc.id);
+          if (vaultId !== event.vaultId) return acc;
+          return {
+            ...acc,
+            rank: `${event.newTier} ${event.newDivision}`,
+            leaguePoints: event.newLP,
+          };
+        })
+      );
+    });
   }
 
   ngOnDestroy(): void {

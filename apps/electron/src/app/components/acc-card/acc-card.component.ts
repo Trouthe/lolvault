@@ -1,9 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, OnDestroy, input, output, signal, inject } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs';
 import { Account } from '../../models/interfaces/Account';
 import { SettingsService } from '../../services/settings.service';
 import { RiotService } from '../../services/riot.service';
+import { LcuService } from '../../services/lcu.service';
 
 const REFRESH_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
 
@@ -23,6 +35,7 @@ export class AccCardComponent implements OnDestroy {
 
   settingsService = inject(SettingsService);
   private riotService = inject(RiotService);
+  private lcuService = inject(LcuService);
 
   isLaunching = signal(false);
   isSavingSession = signal(false);
@@ -36,20 +49,94 @@ export class AccCardComponent implements OnDestroy {
   private launchToastTimeout: ReturnType<typeof setTimeout> | null = null;
   private sessionToastTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  // ── LCU live state ───────────────────────────────────────────────────────────
+
+  /** True when this card's account is the one currently active in the LCU. */
+  isLive = computed(() => {
+    const state = this.lcuService.liveState();
+    const acc = this.account();
+    if (!acc || !state.activeVaultId) return false;
+    // Match using the same vaultId formula as lcu-monitor.js
+    const vaultId = acc.syncId || String(acc.id);
+    return !!vaultId && vaultId === state.activeVaultId;
+  });
+
+  /** mm:ss game timer — non-empty only while a live game is in progress. */
+  gameTimerDisplay = signal('');
+
+  /** LP delta from the last completed game (+18 / -15), or null when hidden. */
+  lpDeltaValue = signal<number | null>(null);
+  lpDeltaWin = signal(false);
+  private lpDeltaTimeout: ReturnType<typeof setTimeout> | null = null;
+
   // Windows-only paths (unused on macOS)
   private psFilePath = 'src/app/data/core-actions/login-action.ps1';
   private nircmdPath = 'src/app/data/core-actions/nircmdc.exe';
   private windowTitle = 'Riot Client';
+
+  constructor() {
+    // ── Game timer via effect ────────────────────────────────────────────────
+    // The effect re-runs whenever isLive or gameStartedAt change.
+    // onCleanup clears the previous interval before starting a new one.
+    effect((onCleanup) => {
+      const live = this.isLive();
+      const startedAt = this.lcuService.liveState().gameStartedAt;
+
+      if (!live || !startedAt) {
+        this.gameTimerDisplay.set('');
+        return;
+      }
+
+      const tick = () => {
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const m = Math.floor(elapsed / 60)
+          .toString()
+          .padStart(2, '0');
+        const s = (elapsed % 60).toString().padStart(2, '0');
+        this.gameTimerDisplay.set(`${m}:${s}`);
+      };
+      tick(); // render immediately, then tick every second
+      const intervalId = setInterval(tick, 1000);
+      onCleanup(() => {
+        clearInterval(intervalId);
+        this.gameTimerDisplay.set('');
+      });
+    });
+
+    // ── LP delta overlay on game end ─────────────────────────────────────────
+    this.lcuService.gameEnded$
+      .pipe(
+        filter((event) => {
+          const acc = this.account();
+          if (!acc) return false;
+          return event.vaultId === (acc.syncId || String(acc.id));
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe((event) => {
+        if (event.lpDelta === null) return;
+        this.lpDeltaValue.set(event.lpDelta);
+        this.lpDeltaWin.set(event.win === true);
+        if (this.lpDeltaTimeout !== null) clearTimeout(this.lpDeltaTimeout);
+        this.lpDeltaTimeout = setTimeout(() => {
+          this.lpDeltaValue.set(null);
+          this.lpDeltaTimeout = null;
+        }, 4000);
+      });
+  }
 
   ngOnDestroy(): void {
     if (this.launchToastTimeout !== null) {
       clearTimeout(this.launchToastTimeout);
       this.launchToastTimeout = null;
     }
-
     if (this.sessionToastTimeout !== null) {
       clearTimeout(this.sessionToastTimeout);
       this.sessionToastTimeout = null;
+    }
+    if (this.lpDeltaTimeout !== null) {
+      clearTimeout(this.lpDeltaTimeout);
+      this.lpDeltaTimeout = null;
     }
   }
 
@@ -129,7 +216,10 @@ export class AccCardComponent implements OnDestroy {
       }
     } catch (error) {
       console.error('Failed to save session snapshot:', error);
-      this.showSessionFeedback('Unable to save session. Try again after Riot Client fully opens.', true);
+      this.showSessionFeedback(
+        'Unable to save session. Try again after Riot Client fully opens.',
+        true
+      );
     } finally {
       this.isSavingSession.set(false);
     }
@@ -160,10 +250,13 @@ export class AccCardComponent implements OnDestroy {
       clearTimeout(this.sessionToastTimeout);
     }
 
-    this.sessionToastTimeout = setTimeout(() => {
-      this.showSessionToast.set(false);
-      this.sessionToastTimeout = null;
-    }, isError ? 5200 : 4200);
+    this.sessionToastTimeout = setTimeout(
+      () => {
+        this.showSessionToast.set(false);
+        this.sessionToastTimeout = null;
+      },
+      isError ? 5200 : 4200
+    );
   }
 
   requestEdit() {

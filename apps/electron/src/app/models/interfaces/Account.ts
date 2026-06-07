@@ -16,4 +16,6 @@ export interface Account {
   topChampionId?: string;
   boardId?: string;
   lastRefreshed?: number;
+  /** PUUID discovered by the LCU monitor and persisted for fast re-identification. */
+  puuid?: string;
 }

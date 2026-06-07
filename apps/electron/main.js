@@ -5,6 +5,8 @@ const http = require('http');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const fs = require('fs');
+const db = require('./database');
+const { startLcuMonitor, stopLcuMonitor, getLcuState } = require('./lcu-monitor');
 
 const GOOGLE_SYSTEM_AUTH_TIMEOUT_MS = 3 * 60 * 1000;
 const GOOGLE_SYSTEM_AUTH_CALLBACK_HOST = 'localhost';
@@ -134,9 +136,36 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  const dataPath = getDataPath();
+  if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
+  db.initDatabase(dataPath);
+  db.setEncryptionHelpers(encrypt, decrypt);
+
   createWindow();
   setupAutoUpdater();
+  startLcuMonitor(mainWindow, getDataPath, decryptAccount);
+
+  // Re-emit current LCU state after the renderer finishes loading so Angular
+  // can seed its live state even if the LCU connected before it bootstrapped.
+  mainWindow.webContents.on('did-finish-load', () => {
+    const state = getLcuState();
+    if (state.activeVaultId) {
+      mainWindow.webContents.send('lcu:account-identified', {
+        vaultId: state.activeVaultId,
+        puuid: state.puuid,
+        displayName: state.displayName,
+      });
+      if (state.phase && state.phase !== 'None') {
+        mainWindow.webContents.send('lcu:phase-change', {
+          vaultId: state.activeVaultId,
+          phase: state.phase,
+        });
+      }
+    }
+  });
 });
+
+app.on('before-quit', () => stopLcuMonitor());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -1387,6 +1416,88 @@ ipcMain.handle('save-boards', async (event, boards) => {
     return { success: true };
   } catch (error) {
     console.error('Error saving boards:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ── SQLite Database IPC Handlers ──────────────────────────────────────────────
+
+// App Settings — encrypted Riot API key
+ipcMain.handle('lcu:get-state', () => getLcuState());
+
+ipcMain.handle('db-get-api-key', () => {
+  try {
+    return { success: true, value: db.getEncryptedSetting('riot_api_key') };
+  } catch (error) {
+    console.error('db-get-api-key error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-set-api-key', (_event, apiKey) => {
+  try {
+    db.setEncryptedSetting('riot_api_key', apiKey || null);
+    return { success: true };
+  } catch (error) {
+    console.error('db-set-api-key error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Generic setting get/set (plaintext)
+ipcMain.handle('db-get-setting', (_event, key) => {
+  try {
+    return { success: true, value: db.getSetting(key) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-set-setting', (_event, key, value) => {
+  try {
+    db.setSetting(key, value);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// LP Snapshots
+ipcMain.handle('db-get-lp-snapshots', (_event, accountId) => {
+  try {
+    return { success: true, snapshots: db.getLpSnapshots(accountId) };
+  } catch (error) {
+    console.error('db-get-lp-snapshots error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-save-lp-snapshot', (_event, { accountId, tier, division, lp }) => {
+  try {
+    db.saveLpSnapshot(accountId, tier, division, lp);
+    return { success: true };
+  } catch (error) {
+    console.error('db-save-lp-snapshot error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Match Cache
+ipcMain.handle('db-get-match-cache', (_event, accountId, limit) => {
+  try {
+    return { success: true, matches: db.getMatchCache(accountId, limit) };
+  } catch (error) {
+    console.error('db-get-match-cache error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-save-match', (_event, { matchId, accountId, computed, rawJson }) => {
+  try {
+    db.saveMatchCache(matchId, accountId, computed || {}, rawJson);
+    return { success: true };
+  } catch (error) {
+    console.error('db-save-match error:', error);
     return { success: false, error: error.message };
   }
 });

@@ -15,6 +15,7 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",
+    "rebuild-native": "electron-rebuild -f -w better-sqlite3 --arch x64",
     "dist:win": "ng build --configuration production && electron-builder --win --x64",
     "dist:mac": "ng build --configuration production && electron-builder --mac",
     "dist:all": "ng build --configuration production && electron-builder --win --x64 --mac",
@@ -31,8 +32,10 @@
     "@angular/platform-browser": "^21.1.0",
     "@angular/platform-browser-dynamic": "^21.1.0",
     "@angular/router": "^21.1.0",
+    "better-sqlite3": "^12.10.0",
     "electron-updater": "^6.8.3",
     "firebase": "^12.13.0",
+    "league-connect": "^6.0.0-rc13",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.16.0"
@@ -41,6 +44,7 @@
     "@angular-devkit/build-angular": "^21.1.0",
     "@angular/cli": "^21.1.0",
     "@angular/compiler-cli": "^21.1.0",
+    "@electron/rebuild": "^4.0.1",
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^21.1.0",
     "concurrently": "^9.2.1",
@@ -62,7 +66,7 @@
   "build": {
     "appId": "com.lolvault.app",
     "productName": "LoL Vault",
-    "npmRebuild": false,
+    "npmRebuild": true,
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -78,6 +82,8 @@
       "dist/lolvault/**/*",
       "main.js",
       "preload.js",
+      "database.js",
+      "lcu-monitor.js",
       "src/app/data/**/*",
       {
         "from": "../../node_modules",
@@ -98,7 +104,11 @@
           "tiny-typed-emitter/**",
           "debug/**",
           "ms/**",
-          "sax/**"
+          "sax/**",
+          "better-sqlite3/**",
+          "bindings/**",
+          "file-uri-to-path/**",
+          "league-connect/**"
         ]
       }
     ],

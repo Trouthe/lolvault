@@ -1,5 +1,5 @@
 @if (account()) {
-  <div class="acc-card">
+  <div class="acc-card" [class.card--live]="isLive()">
     @if (account()!.hotStreak) {
       <div class="hot-streak-indicator" title="On a hot streak!">
         <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
@@ -14,6 +14,18 @@
         <img src="assets/icons/plus.svg" alt="Remove" width="12" />
       </button>
     }
+
+    <!-- LP delta overlay — slides up (win) or down (loss) then fades -->
+    @if (lpDeltaValue() !== null) {
+      <div
+        class="lp-delta"
+        [class.lp-delta--win]="lpDeltaWin()"
+        [class.lp-delta--loss]="!lpDeltaWin()"
+      >
+        {{ lpDeltaWin() ? '+' : '' }}{{ lpDeltaValue() }}LP
+      </div>
+    }
+
     <div class="card-top">
       <div class="account-info">
         <div class="account-details">
@@ -81,7 +93,9 @@
         }
 
         @if (showSessionToast()) {
-          <div class="session-toast" [class.error]="sessionToastError()">{{ sessionToastMessage() }}</div>
+          <div class="session-toast" [class.error]="sessionToastError()">
+            {{ sessionToastMessage() }}
+          </div>
         }
 
         <button class="action-btn delete-btn" (click)="requestDelete()" title="Delete Account">
@@ -122,37 +136,62 @@
             width="16"
           />
         </button>
-        <button
-          class="action-btn launch-btn launch-btn-inline"
-          (click)="launchAccount()"
-          [disabled]="isLaunching()"
-          [class.launching]="isLaunching()"
-          [class.error]="launchErrorState()"
-          title="Launch Account"
-        >
-          @if (isLaunching()) {
-            <div class="spinner"></div>
-          } @else {
-            <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+
+        <!-- Launch button OR live badge — mutually exclusive -->
+        @if (isLive()) {
+          <div class="live-badge" title="Game in progress">
+            <span class="live-dot"></span>
+            LIVE
+          </div>
+          @if (gameTimerDisplay()) {
+            <span class="live-timer">{{ gameTimerDisplay() }}</span>
           }
-        </button>
+        } @else {
+          <button
+            class="action-btn launch-btn launch-btn-inline"
+            (click)="launchAccount()"
+            [disabled]="isLaunching()"
+            [class.launching]="isLaunching()"
+            [class.error]="launchErrorState()"
+            title="Launch Account"
+          >
+            @if (isLaunching()) {
+              <div class="spinner"></div>
+            } @else {
+              <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+            }
+          </button>
+        }
       </div>
     </div>
 
-    <button
-      class="action-btn launch-btn launch-btn-mobile"
-      (click)="launchAccount()"
-      [disabled]="isLaunching()"
-      [class.launching]="isLaunching()"
-      [class.error]="launchErrorState()"
-      title="Launch Account"
-    >
-      @if (isLaunching()) {
-        <div class="spinner"></div>
-      } @else {
-        <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
-      }
-      <span>Launch Account</span>
-    </button>
+    <!-- Mobile launch / live row -->
+    @if (isLive()) {
+      <div class="live-mobile-row">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          LIVE
+        </div>
+        @if (gameTimerDisplay()) {
+          <span class="live-timer">{{ gameTimerDisplay() }}</span>
+        }
+      </div>
+    } @else {
+      <button
+        class="action-btn launch-btn launch-btn-mobile"
+        (click)="launchAccount()"
+        [disabled]="isLaunching()"
+        [class.launching]="isLaunching()"
+        [class.error]="launchErrorState()"
+        title="Launch Account"
+      >
+        @if (isLaunching()) {
+          <div class="spinner"></div>
+        } @else {
+          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+        }
+        <span>Launch Account</span>
+      </button>
+    }
   </div>
 }

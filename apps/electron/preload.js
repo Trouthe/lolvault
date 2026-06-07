@@ -23,4 +23,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startUpdateDownload: () => ipcRenderer.invoke('start-update-download'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  // SQLite — App Settings
+  getApiKey: () => ipcRenderer.invoke('db-get-api-key'),
+  setApiKey: (key) => ipcRenderer.invoke('db-set-api-key', key),
+  getSetting: (key) => ipcRenderer.invoke('db-get-setting', key),
+  setSetting: (key, value) => ipcRenderer.invoke('db-set-setting', key, value),
+
+  // SQLite — LP Snapshots
+  getLpSnapshots: (accountId) => ipcRenderer.invoke('db-get-lp-snapshots', accountId),
+  saveLpSnapshot: (data) => ipcRenderer.invoke('db-save-lp-snapshot', data),
+
+  // SQLite — Match Cache
+  getMatchCache: (accountId, limit) => ipcRenderer.invoke('db-get-match-cache', accountId, limit),
+  saveMatch: (data) => ipcRenderer.invoke('db-save-match', data),
+
+  // LCU Monitor — pull current state (handles race condition on startup)
+  getLcuState: () => ipcRenderer.invoke('lcu:get-state'),
+
+  // LCU Monitor events (main → renderer)
+  onLcuAccountIdentified: (cb) => ipcRenderer.on('lcu:account-identified', (_e, data) => cb(data)),
+  onLcuAccountUnrecognized: (cb) =>
+    ipcRenderer.on('lcu:account-unrecognized', (_e, data) => cb(data)),
+  onLcuPhaseChange: (cb) => ipcRenderer.on('lcu:phase-change', (_e, data) => cb(data)),
+  onLcuGameEnded: (cb) => ipcRenderer.on('lcu:game-ended', (_e, data) => cb(data)),
+  onLcuDisconnected: (cb) => ipcRenderer.on('lcu:disconnected', (_e, data) => cb(data)),
 });
