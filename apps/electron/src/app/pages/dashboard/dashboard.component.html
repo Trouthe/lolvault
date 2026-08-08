@@ -119,6 +119,8 @@
     </div>
 
     <div class="sidebar-buttons">
+      <app-ad-slot variant="sidebar" />
+
       <app-update-banner />
 
       <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
@@ -141,7 +143,7 @@
   <div>
     <!-- Actual Data -->
     <div class="data">
-      @if (settingsService.getShowMasteryBackground() && championId()) {
+      @if (settingsService.settings().showMasteryBackground && championId()) {
         <img
           [src]="
             'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + championId() + '_0.jpg'
@@ -153,7 +155,40 @@
 
       <div class="dash-header">
         <h1>{{ getCurrentBoardName() }}</h1>
+
+        <div class="profile-menu">
+          <button
+            type="button"
+            class="profile-avatar-btn"
+            (click)="toggleProfileMenu($event)"
+            aria-label="Open profile menu"
+          >
+            <img
+              class="profile-avatar"
+              [src]="profileImageUrl()"
+              [alt]="currentUser()?.email || 'User avatar'"
+              (error)="onProfileImageError($event)"
+            />
+          </button>
+
+          @if (isProfileMenuOpen()) {
+            <div class="profile-dropdown">
+              <p class="profile-email">{{ currentUser()?.email || 'No email available' }}</p>
+
+              <button
+                type="button"
+                class="profile-signout-btn"
+                (click)="signOutUser()"
+                [disabled]="!currentUser()"
+              >
+                Sign Out
+              </button>
+            </div>
+          }
+        </div>
       </div>
+
+      <app-ad-slot variant="banner" />
 
       <div class="search-section">
         <div class="search-container">
@@ -204,6 +239,17 @@
               </div>
             }
           </div>
+          <button
+            [title]="isGridLayout() ? 'Switch to list view' : 'Switch to grid view'"
+            class="btn-icon-outlined layout-toggle-btn"
+            (click)="toggleCardLayout()"
+          >
+            @if (isGridLayout()) {
+              <img src="assets/icons/rows.svg" class="icon" alt="List view" width="16" />
+            } @else {
+              <img src="assets/icons/grid.svg" class="icon" alt="Grid view" width="16" />
+            }
+          </button>
           <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
             <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
           </button>
@@ -212,38 +258,58 @@
 
       <div
         class="accounts-list"
+        [class.accounts-list--grid]="isGridLayout()"
         (dragover)="onAccountsListDragOver($event)"
         (drop)="onAccountsListDrop($event)"
       >
-        @for (account of displayedAccounts(); track account.id; let i = $index) {
-          <div
-            class="account-drag-wrapper"
-            [class.dragging]="draggingAccountId() === account.id.toString()"
-            [class.hovered]="hoveredAccountId() === account.id.toString()"
-            (mouseenter)="onAccountMouseEnter(account.id.toString())"
-            (mouseleave)="onAccountMouseLeave()"
-          >
+        @for (row of accountFeed(); track row.id) {
+          @if (row.account; as account) {
             <div
-              class="account-drag-handle"
-              draggable="true"
-              [attr.data-account-id]="account.id"
-              [attr.data-account-index]="i"
+              class="account-drag-wrapper"
+              [class.dragging]="draggingAccountId() === account.id.toString()"
+              [class.hovered]="hoveredAccountId() === account.id.toString()"
+              (mouseenter)="onAccountMouseEnter(account.id.toString())"
+              (mouseleave)="onAccountMouseLeave()"
             >
-              <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+              <div
+                class="account-drag-handle"
+                draggable="true"
+                [attr.data-account-id]="account.id"
+                [attr.data-account-index]="row.index"
+              >
+                <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+              </div>
+              <app-acc-card
+                [account]="account"
+                [layout]="cardLayout()"
+                [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
+                (dragover)="onAccountDragOver($event, row.index)"
+                (drop)="onAccountDrop($event)"
+                (editRequested)="openEditModal($event)"
+                (deleteRequested)="openDeleteModal($event)"
+                (removeFromFolderRequested)="onRemoveFromFolder($event)"
+                (refreshRequested)="onAccountRefreshed($event)"
+                (activityRecorded)="onAccountActivity($event)"
+              />
             </div>
-            <app-acc-card
-              [account]="account"
-              [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
-              (dragover)="onAccountDragOver($event, i)"
-              (drop)="onAccountDrop($event)"
-              (editRequested)="openEditModal($event)"
-              (deleteRequested)="openDeleteModal($event)"
-              (removeFromFolderRequested)="onRemoveFromFolder($event)"
-              (refreshRequested)="onAccountRefreshed($event)"
-            />
+          } @else {
+            <div class="ad-row">
+              <app-ad-slot variant="inline" />
+            </div>
+          }
+        }
+
+        @if (displayedAccounts().length === 0) {
+          <div class="empty-state">
+            <h3>No accounts yet</h3>
+            <p>Add your first account to get started.</p>
           </div>
         }
       </div>
+
+      @if (displayedAccounts().length > 0) {
+        <app-ad-slot variant="footer" />
+      }
 
       <!-- Add Account Modal -->
       <app-add-account-modal
@@ -268,15 +334,101 @@
         (accountDeleted)="onAccountDeleted($event)"
       />
 
-      <!-- Settings Modal -->
-      <app-settings-modal
+      <!-- Settings (fullscreen page overlay) -->
+      <app-settings-page
         [isOpen]="isSettingsOpen()"
+        [isSyncToggleBusy]="isSyncToggleBusy()"
         [accounts]="accounts()"
-        (closeModal)="closeSettings()"
+        (syncWithWebToggleRequested)="onSyncWithWebToggleRequested($event)"
+        (closePage)="closeSettings()"
       />
 
-      <!-- Footer -->
-      <p>League of Legends is a trademark of Riot Games, Inc.</p>
+      @if (isSyncConflictModalOpen()) {
+        <div
+          class="modal-overlay sync-conflict-overlay"
+          (click)="closeSyncConflictModal()"
+          tabindex="0"
+        >
+          <div
+            class="modal-content sync-conflict-modal"
+            (click)="$event.stopPropagation()"
+            tabindex="0"
+          >
+            <header>
+              <h2>Choose Sync Source</h2>
+              <img
+                src="assets/icons/plus.svg"
+                class="close-btn"
+                (click)="closeSyncConflictModal()"
+                alt="Close"
+                tabindex="0"
+                role="button"
+              />
+            </header>
+
+            <p class="sync-conflict-lead">
+              Turning on web sync will replace data on one side. Choose which data source to keep.
+            </p>
+
+            @if (syncConflictLocalOnly().length) {
+              <div class="sync-conflict-list">
+                <h4>Only in Electron (removed if you keep Web data)</h4>
+                <ul>
+                  @for (name of syncConflictLocalOnly(); track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (syncConflictWebOnly().length) {
+              <div class="sync-conflict-list">
+                <h4>Only in Web (removed if you keep Electron data)</h4>
+                <ul>
+                  @for (name of syncConflictWebOnly(); track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <div class="sync-conflict-options">
+              <button
+                type="button"
+                class="btn sync-option"
+                [class.btn-primary]="syncConflictResolution() === 'electron'"
+                [class.btn-secondary]="syncConflictResolution() !== 'electron'"
+                (click)="syncConflictResolution.set('electron')"
+              >
+                Keep Electron Data
+              </button>
+              <button
+                type="button"
+                class="btn sync-option"
+                [class.btn-primary]="syncConflictResolution() === 'web'"
+                [class.btn-secondary]="syncConflictResolution() !== 'web'"
+                (click)="syncConflictResolution.set('web')"
+              >
+                Keep Web Data
+              </button>
+            </div>
+
+            <footer>
+              <button type="button" class="btn btn-secondary" (click)="closeSyncConflictModal()">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="applySyncConflictResolution()"
+                [disabled]="isSyncToggleBusy()"
+              >
+                {{ isSyncToggleBusy() ? 'Applying...' : 'Continue' }}
+              </button>
+            </footer>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </section>

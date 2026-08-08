@@ -1,10 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import {
-  createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   User,
@@ -24,18 +21,6 @@ export class AuthService {
 
   signInWithGoogle() {
     return signInWithPopup(this.auth, new GoogleAuthProvider());
-  }
-
-  signInWithEmail(email: string, password: string) {
-    return signInWithEmailAndPassword(this.auth, email, password);
-  }
-
-  signUpWithEmail(email: string, password: string) {
-    return createUserWithEmailAndPassword(this.auth, email, password);
-  }
-
-  sendPasswordReset(email: string) {
-    return sendPasswordResetEmail(this.auth, email);
   }
 
   signOut() {

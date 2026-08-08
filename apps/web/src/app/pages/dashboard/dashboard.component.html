@@ -23,8 +23,12 @@
             tabindex="0"
             role="button"
             [class.active]="selectedBoardId() === null"
+            [class.drag-over]="dragOverBoardId() === 'all'"
             (click)="selectBoard(null)"
             (keydown.enter)="selectBoard(null)"
+            (dragover)="onDragOver($event, null)"
+            (dragleave)="onDragLeave()"
+            (drop)="onDrop($event, null)"
           >
             <span
               class="folder-color-dot"
@@ -36,19 +40,28 @@
             </div>
           </div>
 
-          @for (board of displayedBoards(); track board.id) {
+          @for (board of displayedBoards(); track board.id; let i = $index) {
             <div
               class="folder-item draggable"
               tabindex="0"
               role="button"
               [class.active]="selectedBoardId() === board.id"
+              [class.drag-over]="dragOverBoardId() === board.id && !draggingFolderId()"
+              [class.dragging]="draggingFolderId() === board.id"
               [class.hovered]="hoveredFolderId() === board.id"
               (click)="selectBoard(board.id)"
               (keydown.enter)="selectBoard(board.id)"
               (mouseenter)="onFolderMouseEnter(board.id)"
               (mouseleave)="onFolderMouseLeave()"
+              (dragover)="onFolderDragOver($event, i); onDragOver($event, board.id)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event, board.id)"
             >
-              <div class="folder-drag-handle">
+              <div
+                class="folder-drag-handle"
+                draggable="true"
+                (dragstart)="onFolderDragStart($event, board)"
+              >
                 <img src="assets/icons/grip.svg" alt="Drag" width="12" class="icon" />
               </div>
               <span
@@ -117,6 +130,37 @@
 
           <div class="dash-header">
             <h1>{{ currentBoardTitle() }}</h1>
+
+            <div class="profile-menu">
+              <button
+                type="button"
+                class="profile-avatar-btn"
+                (click)="toggleProfileMenu($event)"
+                aria-label="Open profile menu"
+              >
+                <img
+                  class="profile-avatar"
+                  [src]="profileImageUrl()"
+                  [alt]="currentUser()?.email || 'User avatar'"
+                  (error)="onProfileImageError($event)"
+                />
+              </button>
+
+              @if (isProfileMenuOpen()) {
+                <div class="profile-dropdown">
+                  <p class="profile-email">{{ currentUser()?.email || 'No email available' }}</p>
+
+                  <button
+                    type="button"
+                    class="profile-signout-btn"
+                    (click)="signOutUser()"
+                    [disabled]="!currentUser()"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              }
+            </div>
           </div>
 
           <div class="search-section">
@@ -181,15 +225,27 @@
             </div>
           </div>
 
-          <div class="accounts-list">
-            @for (account of displayedAccounts(); track account.id) {
+          <div
+            class="accounts-list"
+            (dragover)="onAccountsListDragOver($event)"
+            (drop)="onAccountsListDrop($event)"
+          >
+            @for (account of displayedAccounts(); track account.id; let i = $index) {
               <div
                 class="account-drag-wrapper"
+                [class.dragging]="draggingAccountId() === account.id.toString()"
                 [class.hovered]="hoveredAccountId() === account.id.toString()"
                 (mouseenter)="onAccountMouseEnter(account.id.toString())"
                 (mouseleave)="onAccountMouseLeave()"
+                (dragover)="onAccountDragOver($event, i)"
+                (drop)="onAccountDrop($event)"
               >
-                <div class="account-drag-handle">
+                <div
+                  class="account-drag-handle"
+                  draggable="true"
+                  [attr.data-account-id]="account.id"
+                  [attr.data-account-index]="i"
+                >
                   <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
                 </div>
 
@@ -215,13 +271,10 @@
                       <div class="account-details">
                         <div [class]="account.rank ? 'profile-icon' : ''">
                           <img
-                            [src]="
-                              'https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/' +
-                              (account.profileIconId || 29) +
-                              '.png'
-                            "
+                            [src]="getAccountProfileIconUrl(account.profileIconId)"
                             alt="Profile Icon"
                             width="48"
+                            (error)="onAccountImageError($event)"
                           />
 
                           @if (account.rank) {
@@ -309,6 +362,8 @@
                           width="16"
                         />
                       </button>
+
+                      <!-- Play/launch button removed on web build -->
                     </div>
                   </div>
                 </div>
@@ -317,13 +372,11 @@
 
             @if (displayedAccounts().length === 0) {
               <div class="empty-state">
-                <h3>No accounts in this view</h3>
-                <p>Try another board, search term, or sort option.</p>
+                <h3>No accounts yet</h3>
+                <p>Add your first account to get started.</p>
               </div>
             }
           </div>
-
-          <p>League of Legends is a trademark of Riot Games, Inc.</p>
         </div>
       </div>
     </section>

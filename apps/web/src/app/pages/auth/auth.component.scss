@@ -1,114 +1,63 @@
-@use 'sass:color';
-
 // ── Variables ──────────────────────────────────────────────
-$bg: #141313;
-$surface: #141313;
-$surface-card: rgba(20, 19, 19, 0.6);
-$surface-low: #0f0e0e;
-$surface-con: #201f1f;
-$surface-high: #2b2a2a;
-$border: #4c4546;
-$text: #e6e1e1;
-$text-muted: #cfc4c5;
-$outline: #988e8f;
-$primary: #c8c6c5;
-$primary-dim: #b0adac;
-$on-primary: #303030;
+$bg: #121212;
+$text: #ece7e2;
 $danger: #dc143c;
 
-// ── Outer wrapper ──────────────────────────────────────────
+:host {
+  display: block;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 .auth-bg {
-  min-height: 100vh;
-  background-color: $bg;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  height: 100dvh;
   position: relative;
   overflow: hidden;
-  padding: 16px;
-  font-family: 'Geist', sans-serif;
+  display: grid;
+  place-items: center;
+  background: $bg;
   color: $text;
+  font-family: 'Geist', sans-serif;
 }
 
-// ── Ambient glow ───────────────────────────────────────────
-.auth-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 600px;
-  height: 600px;
-  background: rgba($primary, 0.05);
-  border-radius: 9999px;
-  filter: blur(120px);
-  pointer-events: none;
-}
-
-// ── Card ───────────────────────────────────────────────────
-.auth-card {
+.auth-stage {
   position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 420px;
-  background: $surface-card;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid $border;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  padding: 24px;
-
-  @media (min-width: 768px) {
-    padding: 32px;
-  }
+  z-index: 2;
+  width: min(680px, calc(100vw - 40px));
+  display: grid;
+  place-items: center;
 }
 
-// ── Header ─────────────────────────────────────────────────
-.auth-header {
+.auth-panel {
+  width: min(420px, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
   text-align: center;
+  gap: 14px;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
-.auth-logo {
-  height: 52px;
-  width: auto;
+.brand-logo {
+  width: clamp(76px, 16vw, 112px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.35));
 }
 
 .auth-title {
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+  font-size: clamp(32px, 6vw, 46px);
+  letter-spacing: -0.03em;
   color: $text;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.auth-subtitle {
-  font-size: 14px;
-  color: $text-muted;
-  margin: 0;
-  line-height: 1.5;
-}
-
-// ── Body ───────────────────────────────────────────────────
-.auth-body {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.auth-section {
-  display: flex;
-  flex-direction: column;
 }
 
 // ── Google GSI Material Button ─────────────────────────────
 .gsi-material-button {
+  margin-top: 2px;
   user-select: none;
   appearance: none;
   background-color: #f2f2f2;
@@ -207,107 +156,6 @@ $danger: #dc143c;
   }
 }
 
-// ── Divider ────────────────────────────────────────────────
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.divider-line {
-  flex: 1;
-  height: 1px;
-  background: $border;
-}
-
-.divider-label {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: $text-muted;
-}
-
-// ── Form ───────────────────────────────────────────────────
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: $text-muted;
-  margin-left: 4px;
-}
-
-.field-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0 4px;
-}
-
-.forgot-link {
-  font-size: 12px;
-  font-weight: 500;
-  color: $primary;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: $text;
-  }
-}
-
-.input-wrapper {
-  position: relative;
-}
-
-.input-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: $text-muted;
-  pointer-events: none;
-}
-
-.form-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: $surface-low;
-  border: 1px solid $border;
-  border-radius: 10px;
-  padding: 10px 12px 10px 36px;
-  font-size: 14px;
-  font-family: 'Geist', sans-serif;
-  color: $text;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-  outline: none;
-
-  &::placeholder {
-    color: $outline;
-  }
-
-  &:focus {
-    border-color: $outline;
-    box-shadow: 0 0 0 1px $outline;
-  }
-}
-
 // ── Error ──────────────────────────────────────────────────
 .auth-error {
   font-size: 13px;
@@ -315,34 +163,13 @@ $danger: #dc143c;
   margin: 0;
   padding: 8px 12px;
   background: rgba($danger, 0.08);
-  border: 1px solid rgba($danger, 0.25);
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-// ── Primary button ─────────────────────────────────────────
-.btn-primary {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $primary;
-  color: $on-primary;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: 'Geist', sans-serif;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  margin-top: 4px;
-
-  &:hover:not(:disabled) {
-    background: $primary-dim;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+@media (max-width: 700px) {
+  .auth-stage {
+    width: min(420px, calc(100vw - 24px));
   }
 }

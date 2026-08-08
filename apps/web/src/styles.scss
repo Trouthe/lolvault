@@ -6,6 +6,8 @@
   --card: oklch(0.175 0 0);
   --border-color: oklch(0.25 0 0);
   --primary-text: oklch(0.9 0 0);
+
+  --lock-accent: oklch(0.74 0.1 85);
 }
 
 * {
@@ -18,8 +20,16 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Geist', sans-serif;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 10% -8%, oklch(0.42 0 0 / 0.18), transparent 46%),
+    radial-gradient(circle at 90% 114%, oklch(0.35 0 0 / 0.2), transparent 58%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--primary-text);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 .icon {

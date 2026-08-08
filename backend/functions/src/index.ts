@@ -6,36 +6,27 @@ import { onRequest } from 'firebase-functions/v2/https';
 admin.initializeApp();
 
 const PADDLE_API_KEY = defineSecret('pdl_sdbx_apikey_01krnjz3gd25ypjcabf53cnttn');
-const FALLBACK_PRODUCT_ID = 'pro_01krnjq9gag23958zagmrp69nx';
-
-type BillingInterval = 'day' | 'week' | 'month' | 'year';
+const FALLBACK_PREMIUM_PRICE_ID = 'pri_01ks089v0ytt2pd49ryqcbd5xd';
 
 interface PaddlePrice {
   id: string;
   product_id: string;
   status: 'active' | 'archived';
-  billing_cycle: {
-    interval: BillingInterval;
-    frequency: number;
-  } | null;
   unit_price: {
     amount: string;
     currency_code: string;
   };
-  updated_at: string;
 }
 
-interface PaddleListPricesResponse {
-  data: PaddlePrice[];
+interface PaddleGetPriceResponse {
+  data: PaddlePrice;
 }
 
-interface PublicRecurringPrice {
+interface PublicOneTimePrice {
   priceId: string;
   amount: string;
   amountMinor: number;
   currencyCode: string;
-  interval: 'month' | 'year';
-  frequency: number;
 }
 
 function parseQueryString(value: unknown): string | undefined {
@@ -54,17 +45,10 @@ function formatCurrencyFromMinor(amountMinor: number, currencyCode: string): str
   return formatter.format(majorAmount);
 }
 
-function toPublicPrice(price: PaddlePrice): PublicRecurringPrice {
+function toPublicPrice(price: PaddlePrice): PublicOneTimePrice {
   const amountMinor = Number.parseInt(price.unit_price.amount, 10);
   if (Number.isNaN(amountMinor)) {
     throw new Error(`Invalid amount for price ${price.id}`);
-  }
-
-  if (
-    !price.billing_cycle ||
-    (price.billing_cycle.interval !== 'month' && price.billing_cycle.interval !== 'year')
-  ) {
-    throw new Error(`Invalid billing cycle for price ${price.id}`);
   }
 
   return {
@@ -72,23 +56,7 @@ function toPublicPrice(price: PaddlePrice): PublicRecurringPrice {
     amountMinor,
     amount: formatCurrencyFromMinor(amountMinor, price.unit_price.currency_code),
     currencyCode: price.unit_price.currency_code,
-    interval: price.billing_cycle.interval,
-    frequency: price.billing_cycle.frequency,
   };
-}
-
-function findRecurringPrice(
-  prices: PaddlePrice[],
-  interval: 'month' | 'year'
-): PaddlePrice | undefined {
-  return prices
-    .filter(
-      (price) =>
-        price.status === 'active' &&
-        price.billing_cycle?.interval === interval &&
-        price.billing_cycle.frequency === 1
-    )
-    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))[0];
 }
 
 // Example Cloud Function - you can remove or modify this
@@ -108,8 +76,9 @@ export const getPaddlePremiumPricing = onRequest(
       return;
     }
 
-    const queryProductId = parseQueryString(request.query.productId);
-    const productId = queryProductId ?? process.env.PADDLE_PRODUCT_ID ?? FALLBACK_PRODUCT_ID;
+    const queryPriceId = parseQueryString(request.query.priceId);
+    const priceId =
+      queryPriceId ?? process.env.PADDLE_EARLY_SUPPORTER_PRICE_ID ?? FALLBACK_PREMIUM_PRICE_ID;
     const paddleApiKey = PADDLE_API_KEY.value();
 
     if (!paddleApiKey) {
@@ -117,11 +86,7 @@ export const getPaddlePremiumPricing = onRequest(
       return;
     }
 
-    const url = new URL('https://api.paddle.com/prices');
-    url.searchParams.set('product_id', productId);
-    url.searchParams.set('recurring', 'true');
-    url.searchParams.set('status', 'active');
-    url.searchParams.set('per_page', '200');
+    const url = new URL(`https://api.paddle.com/prices/${priceId}`);
 
     let paddleResponse: globalThis.Response;
     try {
@@ -148,30 +113,28 @@ export const getPaddlePremiumPricing = onRequest(
       return;
     }
 
-    let payload: PaddleListPricesResponse;
+    let payload: PaddleGetPriceResponse;
     try {
-      payload = (await paddleResponse.json()) as PaddleListPricesResponse;
+      payload = (await paddleResponse.json()) as PaddleGetPriceResponse;
     } catch (error) {
       functions.logger.error('Unable to parse Paddle pricing payload', error);
       response.status(502).json({ error: 'Received invalid response from Paddle API.' });
       return;
     }
 
-    const monthly = findRecurringPrice(payload.data ?? [], 'month');
-    const yearly = findRecurringPrice(payload.data ?? [], 'year');
-
-    if (!monthly || !yearly) {
+    const premiumPrice = payload.data;
+    if (!premiumPrice || premiumPrice.status !== 'active') {
       response.status(404).json({
-        error: 'Could not find both monthly and yearly recurring prices for the product.',
+        error: 'Could not find an active one-time premium price for the requested ID.',
       });
       return;
     }
 
     response.set('Cache-Control', 'public, max-age=300, s-maxage=300');
     response.status(200).json({
-      productId,
-      monthly: toPublicPrice(monthly),
-      yearly: toPublicPrice(yearly),
+      productId: premiumPrice.product_id,
+      premium: toPublicPrice(premiumPrice),
+      offerLabel: 'Early supporter one-time price',
       fetchedAt: new Date().toISOString(),
     });
   }

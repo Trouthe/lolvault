@@ -2,13 +2,17 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   launchAccount: (accountData) => ipcRenderer.invoke('launch-account', accountData),
+  captureAccountSession: (payload) => ipcRenderer.invoke('capture-account-session', payload),
+  openCleanRiotClient: (payload) => ipcRenderer.invoke('open-clean-riot-client', payload),
   loadAccounts: () => ipcRenderer.invoke('load-accounts'),
   saveAccounts: (accounts) => ipcRenderer.invoke('save-accounts', accounts),
   loadBoards: () => ipcRenderer.invoke('load-boards'),
   saveBoards: (boards) => ipcRenderer.invoke('save-boards', boards),
   openFilePicker: (options) => ipcRenderer.invoke('open-file-dialog', options),
+  openDirectoryPicker: (options) => ipcRenderer.invoke('open-directory-dialog', options),
   openExternal: (url) => ipcRenderer.send('open-external-url', url),
   getPlatform: () => ipcRenderer.invoke('get-platform'),
+  startGoogleSystemSignIn: (options) => ipcRenderer.invoke('start-google-system-sign-in', options),
 
   // Auto-update
   onUpdateAvailable: (callback) =>
@@ -20,4 +24,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startUpdateDownload: () => ipcRenderer.invoke('start-update-download'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  // Persistent game settings (League config read-only lock)
+  inspectLeagueConfig: (payload) => ipcRenderer.invoke('settings:inspect-league-config', payload),
+  setLeagueConfigReadOnly: (payload) =>
+    ipcRenderer.invoke('settings:set-league-config-readonly', payload),
+
+  // SQLite — App Settings
+  getApiKey: () => ipcRenderer.invoke('db-get-api-key'),
+  setApiKey: (key) => ipcRenderer.invoke('db-set-api-key', key),
+  getSetting: (key) => ipcRenderer.invoke('db-get-setting', key),
+  setSetting: (key, value) => ipcRenderer.invoke('db-set-setting', key, value),
+
+  // SQLite — LP Snapshots
+  getLpSnapshots: (accountId) => ipcRenderer.invoke('db-get-lp-snapshots', accountId),
+  saveLpSnapshot: (data) => ipcRenderer.invoke('db-save-lp-snapshot', data),
+
+  // SQLite — Match Cache
+  getMatchCache: (accountId, limit) => ipcRenderer.invoke('db-get-match-cache', accountId, limit),
+  saveMatch: (data) => ipcRenderer.invoke('db-save-match', data),
+
+  // Riot API
+  riotGetSummonerByRiotId: (args) => ipcRenderer.invoke('riot:get-summoner-by-riot-id', args),
+  riotGetSummonerByPuuid: (args) => ipcRenderer.invoke('riot:get-summoner-by-puuid', args),
+  riotGetRankedByPuuid: (args) => ipcRenderer.invoke('riot:get-ranked-by-puuid', args),
+  riotGetTopMastery: (args) => ipcRenderer.invoke('riot:get-top-mastery', args),
+  riotGetMatchHistory: (args) => ipcRenderer.invoke('riot:get-match-history', args),
+  riotGetCachedMatches: (args) => ipcRenderer.invoke('riot:get-cached-matches', args),
+  riotValidateKey: (args) => ipcRenderer.invoke('riot:validate-key', args),
+  riotSaveKey: (args) => ipcRenderer.invoke('riot:save-key', args),
+  riotGetDDragonVersion: () => ipcRenderer.invoke('riot:get-ddragon-version'),
+
+  // LCU Monitor — pull current state (handles race condition on startup)
+  getLcuState: () => ipcRenderer.invoke('lcu:get-state'),
+
+  // LCU Monitor events (main → renderer)
+  onLcuAccountIdentified: (cb) => ipcRenderer.on('lcu:account-identified', (_e, data) => cb(data)),
+  onLcuAccountUnrecognized: (cb) =>
+    ipcRenderer.on('lcu:account-unrecognized', (_e, data) => cb(data)),
+  onLcuPhaseChange: (cb) => ipcRenderer.on('lcu:phase-change', (_e, data) => cb(data)),
+  onLcuGameEnded: (cb) => ipcRenderer.on('lcu:game-ended', (_e, data) => cb(data)),
+  onLcuDisconnected: (cb) => ipcRenderer.on('lcu:disconnected', (_e, data) => cb(data)),
 });

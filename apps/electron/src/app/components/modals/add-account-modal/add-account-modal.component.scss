@@ -20,7 +20,9 @@
     border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 24px;
-    width: 500px;
+    width: min(500px, calc(100vw - 24px));
+    max-height: 90vh;
+    overflow-y: auto;
     color: var(--primary-text);
 
     .modal-header {
@@ -87,12 +89,22 @@
         &:focus {
           outline: 2px solid var(--outline);
         }
+
+        &.input-invalid {
+          outline: 2px solid var(--danger);
+        }
       }
 
       label {
         font-size: 14px;
         font-weight: 600;
         margin-bottom: 4px;
+      }
+
+      .field-error {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--danger);
       }
     }
 
@@ -101,29 +113,35 @@
       flex-direction: column;
       gap: 16px;
 
-      // user/pass row
-      > div:nth-child(1) {
-        display: flex;
-        flex-direction: row;
+      .credential-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
 
-        & .form-group {
-          width: 50%;
-        }
-      }
-
-      // displayName + tag row
-      .form-row {
-        display: flex;
-        flex-direction: row;
-        gap: 16px;
-
-        .display-name-group {
-          flex: 3; // 75%
+        .credential-warning {
+          grid-column: 1 / -1;
+          margin: -4px 0 0;
+          font-size: 12px;
+          color: var(--secondary-text);
+          opacity: 0.9;
         }
 
-        .tag-group {
-          flex: 1; // 25%
+        .session-actions {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+
+          .clean-client-notice {
+            margin: 0;
+            font-size: 12px;
+            color: var(--secondary-text);
+
+            &.error {
+              color: var(--danger);
+            }
+          }
         }
       }
     }
@@ -133,20 +151,31 @@
       flex-direction: column;
       gap: 16px;
 
-      p {
+      .bulk-format-hint {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
         font-size: 14px;
+        margin: 0;
+        line-height: 1.35;
 
         span {
           background-color: var(--muted);
           color: var(--secondary-text);
           filter: brightness(111%);
           padding: 4px 8px;
-          margin-inline: 3px;
           font-size: 13px;
           border-radius: 8px;
+          max-width: 100%;
+          overflow-wrap: anywhere;
         }
+      }
+    }
+
+    @media (max-width: 640px) {
+      .single-account-form .credential-row {
+        grid-template-columns: 1fr;
       }
     }
   }

@@ -1,0 +1,106 @@
+:host {
+  display: block;
+  color: var(--primary-text);
+}
+
+.legal-page {
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in oklch, var(--inverted-background) 14%, transparent), transparent 45%),
+    radial-gradient(circle at 92% 100%, color-mix(in oklch, var(--outline) 20%, transparent), transparent 50%),
+    var(--background);
+}
+
+.legal-shell {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: color-mix(in oklch, var(--card) 94%, var(--background));
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.legal-header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 44px);
+    letter-spacing: -0.02em;
+    line-height: 1.06;
+  }
+}
+
+.legal-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.legal-meta {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 14px;
+}
+
+.legal-back {
+  width: fit-content;
+  font-size: 14px;
+  text-decoration: none;
+  color: color-mix(in oklch, var(--inverted-background) 80%, var(--primary-text));
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.legal-content {
+  display: grid;
+  gap: 14px;
+
+  section {
+    border-top: 1px solid color-mix(in oklch, var(--border-color) 75%, transparent);
+    padding-top: 14px;
+  }
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  p {
+    margin: 0;
+    color: var(--secondary-text);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+    color: var(--secondary-text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+.legal-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: color-mix(in oklch, var(--secondary-text) 85%, transparent);
+}
+
+@media (max-width: 760px) {
+  .legal-page {
+    padding: 12px;
+  }
+}

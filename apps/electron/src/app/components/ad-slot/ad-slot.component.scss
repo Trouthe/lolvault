@@ -1,0 +1,44 @@
+.ad-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--card) 55%, transparent);
+  user-select: none;
+
+  .ad-slot__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--secondary-text);
+    opacity: 0.55;
+    filter: none;
+  }
+
+  // Sidebar rail unit
+  &.ad-slot--sidebar {
+    height: 120px;
+    width: 100%;
+  }
+
+  // Full-width banner above the account list
+  &.ad-slot--banner {
+    height: 72px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  // Injected between account cards
+  &.ad-slot--inline {
+    height: 76px;
+    width: 100%;
+  }
+
+  // Below the account list
+  &.ad-slot--footer {
+    height: 90px;
+    width: 100%;
+    margin-top: 20px;
+  }
+}

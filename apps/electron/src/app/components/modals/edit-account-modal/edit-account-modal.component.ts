@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Account } from '../../../models/interfaces/Account';
 import { LOL_DATA } from '../../../models/constants';
-import { RiotService } from '../../../services/riot.service';
+import { RiotApiService } from '../../../services/riot-api.service';
 
 @Component({
   selector: 'app-edit-account-modal',
@@ -13,7 +13,7 @@ import { RiotService } from '../../../services/riot.service';
   styleUrl: './edit-account-modal.component.scss',
 })
 export class EditAccountModalComponent {
-  private riotService = inject(RiotService);
+  private riotApiService = inject(RiotApiService);
 
   isOpen = input<boolean>(false);
   account = input<Account | undefined>(undefined);
@@ -24,8 +24,7 @@ export class EditAccountModalComponent {
   editForm = signal({
     username: '',
     password: '',
-    displayName: '',
-    tag: '',
+    riotId: '',
     server: '',
   });
 
@@ -38,16 +37,10 @@ export class EditAccountModalComponent {
     effect(() => {
       const acc = this.account();
       if (acc) {
-        // Split name into displayName and tag if it contains #
-        const [displayName, tag] = acc.name?.includes('#')
-          ? acc.name.split('#')
-          : [acc.name || '', ''];
-
         this.editForm.set({
           username: acc.username || '',
           password: acc.password || '',
-          displayName: displayName,
-          tag: tag,
+          riotId: acc.name || '',
           server: acc.server || '',
         });
       }
@@ -58,15 +51,10 @@ export class EditAccountModalComponent {
     const acc = this.account();
     this.showPassword.set(false);
     if (acc) {
-      const [displayName, tag] = acc.name?.includes('#')
-        ? acc.name.split('#')
-        : [acc.name || '', ''];
-
       this.editForm.set({
         username: acc.username || '',
         password: acc.password || '',
-        displayName: displayName,
-        tag: tag,
+        riotId: acc.name || '',
         server: acc.server || '',
       });
     }
@@ -74,6 +62,11 @@ export class EditAccountModalComponent {
 
   togglePasswordVisibility() {
     this.showPassword.set(!this.showPassword());
+  }
+
+  isRiotIdInvalid(): boolean {
+    const riotId = this.editForm().riotId.trim();
+    return riotId.length > 0 && !this.parseRiotId(riotId);
   }
 
   close() {
@@ -84,31 +77,31 @@ export class EditAccountModalComponent {
   async saveChanges() {
     const acc = this.account();
     const form = this.editForm();
+    const parsedRiotId = this.parseRiotId(form.riotId);
 
-    if (
-      !acc ||
-      !form.username ||
-      !form.password ||
-      !form.displayName ||
-      !form.tag ||
-      !form.server
-    ) {
+    if (!acc || !parsedRiotId || !form.server) {
       return;
     }
 
-    // Combine displayName and tag with #
-    const fullName = `${form.displayName}#${form.tag}`;
+    const username = form.username.trim();
+    const password = form.password.trim();
+
+    const fullName = `${parsedRiotId.displayName}#${parsedRiotId.tag}`;
 
     // Fetch PUUID and ranked info
     let puuid: string | undefined;
     let fetchedRank: string | undefined;
 
     try {
-      puuid = await this.riotService.getPUUID(form.displayName, form.tag, form.server);
+      puuid = await this.riotApiService.getPUUID(
+        parsedRiotId.displayName,
+        parsedRiotId.tag,
+        form.server
+      );
       console.log('Fetched PUUID:', puuid);
 
       // Fetch ranked info
-      const rankedInfo = await this.riotService.getRankedInfo(puuid, form.server);
+      const rankedInfo = await this.riotApiService.getRankedInfo(puuid, form.server);
       if (rankedInfo && rankedInfo.length > 0) {
         // Find RANKED_SOLO_5x5 queue
         const soloQueue = rankedInfo.find(
@@ -126,8 +119,8 @@ export class EditAccountModalComponent {
     const updatedAccount: Account = {
       ...acc,
       id: puuid || acc.id,
-      username: form.username,
-      password: form.password,
+      username: username || undefined,
+      password: password || undefined,
       name: fullName,
       server: form.server,
       rank: fetchedRank,
@@ -135,5 +128,21 @@ export class EditAccountModalComponent {
 
     this.accountUpdated.emit(updatedAccount);
     this.close();
+  }
+
+  private parseRiotId(input: string): { displayName: string; tag: string } | null {
+    const trimmed = input.trim();
+    const separatorIndex = trimmed.lastIndexOf('#');
+    if (separatorIndex <= 0 || separatorIndex >= trimmed.length - 1) {
+      return null;
+    }
+
+    const displayName = trimmed.slice(0, separatorIndex).trim();
+    const tag = trimmed.slice(separatorIndex + 1).trim();
+    if (!displayName || !tag) {
+      return null;
+    }
+
+    return { displayName, tag };
   }
 }

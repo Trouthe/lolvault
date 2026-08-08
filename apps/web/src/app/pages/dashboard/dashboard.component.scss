@@ -173,6 +173,15 @@
           }
         }
 
+        &.dragging {
+          opacity: 0.4;
+        }
+
+        &.drag-over:not(.dragging) {
+          border-color: var(--outline);
+          background-color: color-mix(in srgb, var(--outline) 20%, transparent);
+        }
+
         &.draggable.hovered {
           background-color: var(--card);
           transform: translateX(24px);
@@ -326,6 +335,10 @@
 }
 
 .data {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+
   .mastery-bg {
     position: fixed;
     top: 0;
@@ -338,10 +351,11 @@
   }
 
   .accounts-list {
-    min-height: 100px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    flex: 1 1 auto;
   }
 
   .dash-header {
@@ -349,6 +363,80 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+
+    .profile-menu {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .profile-avatar-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 2px solid var(--border-color);
+      background: var(--card);
+      padding: 0;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+
+      &:hover {
+        border-color: var(--outline);
+      }
+    }
+
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 40;
+      min-width: 230px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 2px solid var(--border-color);
+      background: var(--card);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-email {
+      margin: 0;
+      font-size: 13px;
+      color: var(--secondary-text);
+      word-break: break-word;
+    }
+
+    .profile-signout-btn {
+      width: 100%;
+      border: 2px solid var(--border-color);
+      background: transparent;
+      color: var(--primary-text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: var(--muted);
+      }
+
+      &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+    }
   }
 
   .search-section {
@@ -486,7 +574,11 @@
       }
     }
 
-    &.hovered {
+    &.dragging {
+      opacity: 0.4;
+    }
+
+    &.hovered:not(.dragging) {
       transform: translateX(24px);
       margin-right: 24px;
 
@@ -494,13 +586,6 @@
         opacity: 1;
       }
     }
-  }
-
-  > p {
-    color: var(--secondary-text);
-    font-size: 14px;
-    text-align: center;
-    margin-block: 32px;
   }
 }
 
@@ -563,28 +648,41 @@
 
   .remove-from-folder-btn {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 24px;
-    height: 24px;
+    top: -10px;
+    right: -10px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background-color: var(--card);
-    border: 2px solid var(--border-color);
+    background: color-mix(in srgb, var(--danger-hover) 28%, var(--card));
+    border: 2px solid color-mix(in srgb, var(--danger) 65%, var(--border-color));
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     z-index: 10;
+    transition:
+      transform 0.16s ease,
+      opacity 0.16s ease,
+      background-color 0.16s ease,
+      border-color 0.16s ease;
 
     img {
       transform: rotate(45deg);
-      opacity: 0.7;
+      opacity: 0.95;
     }
 
     &:hover {
-      background-color: var(--border-color);
-      border-color: var(--outline);
+      transform: scale(1.18);
+      background: var(--danger-hover);
+      border-color: var(--danger);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background-color: color-mix(in srgb, var(--muted) 70%, transparent);
+      border-color: var(--border-color);
     }
   }
 
@@ -616,20 +714,24 @@
       min-width: 0;
       width: 100%;
 
+      div img {
+        border-radius: 8px;
+      }
+
       .profile-icon {
         position: relative;
         margin-inline: 0.5rem 1rem;
 
         img:nth-of-type(1) {
           border-radius: 999px;
-          scale: 0.75;
+          transform: scale(0.75);
         }
 
         img:nth-of-type(2) {
           position: absolute;
           bottom: 15%;
           left: 0;
-          scale: 2;
+          transform: scale(2);
           user-select: none;
           -webkit-user-drag: none;
         }
@@ -671,6 +773,12 @@
             &:hover {
               opacity: 1;
               transform: scale(1.1);
+            }
+
+            &:disabled {
+              opacity: 0.25;
+              cursor: not-allowed;
+              transform: none;
             }
 
             img {
@@ -807,6 +915,8 @@
       }
     }
 
+    /* Play/launch tooltip removed for web build */
+
     @keyframes spin {
       to {
         transform: rotate(360deg);
@@ -821,6 +931,13 @@
   padding: 20px;
   text-align: center;
   background: color-mix(in oklch, var(--card) 90%, var(--background));
+  min-height: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 
   h3 {
     margin: 0;
@@ -835,7 +952,7 @@
   }
 }
 
-.action-btn {
+  .action-btn {
   background-color: transparent;
   width: 36px;
   height: 36px;
@@ -876,6 +993,12 @@
   &:hover {
     background-color: var(--border-color);
     cursor: pointer;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background-color: transparent;
   }
 }
 
@@ -1302,9 +1425,14 @@
         height: 24px;
 
         input {
+          position: absolute;
+          inset: 0;
+          margin: 0;
           opacity: 0;
-          width: 0;
-          height: 0;
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
+          z-index: 2;
 
           &:checked + .slider {
             background-color: var(--outline);
@@ -1379,7 +1507,14 @@
 }
 
 @media (max-width: 1000px) {
+  :host {
+    height: auto;
+    min-height: 100vh;
+  }
+
   .dashboard-page {
+    height: auto;
+    min-height: 100vh;
     overflow-y: auto;
 
     &::-webkit-scrollbar {
@@ -1387,6 +1522,11 @@
     }
     scrollbar-width: none;
     -ms-overflow-style: none;
+  }
+
+  .dashboard-shell {
+    height: auto;
+    overflow: visible;
   }
 
   .electron-dashboard {
@@ -1403,6 +1543,10 @@
       border-right: none;
       border-bottom: 2px solid var(--border-color);
     }
+
+    > div:nth-of-type(2) {
+      overflow-y: visible;
+    }
   }
 
   .acc-card .account-info {
@@ -1413,6 +1557,15 @@
     .stats-container {
       width: fit-content;
     }
+  }
+
+  .acc-card .card-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acc-card .button-collection {
+    align-self: flex-start;
   }
 }
 

@@ -13,10 +13,34 @@ const redirectLoggedInFromAuth: CanActivateFn = () => {
   );
 };
 
+const redirectLoggedOutFromDashboard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return authService.currentUser$.pipe(
+    take(1),
+    map((user) => (user ? true : router.createUrlTree(['/'])))
+  );
+};
+
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
+  },
+  {
+    path: 'privacy-policy',
+    loadComponent: () =>
+      import('./pages/privacy-policy/privacy-policy.component').then(
+        (m) => m.PrivacyPolicyComponent
+      ),
+  },
+  {
+    path: 'terms-of-service',
+    loadComponent: () =>
+      import('./pages/terms-of-service/terms-of-service.component').then(
+        (m) => m.TermsOfServiceComponent
+      ),
   },
   {
     path: 'auth',
@@ -25,6 +49,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
+    canActivate: [redirectLoggedOutFromDashboard],
     loadComponent: () =>
       import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },

@@ -1,5 +1,13 @@
 @if (account()) {
-  <div class="acc-card">
+  <div
+    class="acc-card"
+    [class.acc-card--grid]="isGrid()"
+    [class.card--live]="isLive()"
+    tabindex="0"
+    role="button"
+    (click)="navigateToAnalytics()"
+    (keydown.enter)="navigateToAnalytics()"
+  >
     @if (account()!.hotStreak) {
       <div class="hot-streak-indicator" title="On a hot streak!">
         <img src="assets/icons/fire.svg" alt="Hot Streak" width="16" />
@@ -8,23 +16,29 @@
     @if (showRemoveFromFolder()) {
       <button
         class="remove-from-folder-btn"
-        (click)="requestRemoveFromFolder()"
+        (click)="requestRemoveFromFolder(); $event.stopPropagation()"
         title="Remove from folder"
       >
         <img src="assets/icons/plus.svg" alt="Remove" width="12" />
       </button>
     }
+
+    <!-- LP delta overlay — slides up (win) or down (loss) then fades -->
+    @if (lpDeltaValue() !== null) {
+      <div
+        class="lp-delta"
+        [class.lp-delta--win]="lpDeltaWin()"
+        [class.lp-delta--loss]="!lpDeltaWin()"
+      >
+        {{ lpDeltaWin() ? '+' : '' }}{{ lpDeltaValue() }}LP
+      </div>
+    }
+
     <div class="card-top">
       <div class="account-info">
         <div class="account-details">
           <div [class]="account()!.rank ? 'profile-icon' : ''">
-            <img
-              src="https://ddragon.leagueoflegends.com/cdn/15.21.1/img/profileicon/{{
-                account()!.profileIconId || 29
-              }}.png"
-              alt="profile icon"
-              width="48"
-            />
+            <img [src]="getProfileIconUrl()" alt="profile icon" width="48" />
             @if (account()!.rank) {
               <img
                 src="assets/emblems/Wings/{{ getRankName(account()!.rank) }}.webp"
@@ -45,7 +59,7 @@
             </div>
             <p class="account-subtitle">
               <span class="subtitle-text">
-                {{ account()!.username }}
+                {{ getSubtitleLabel() }}
                 @if (account()!.server) {
                   <span class="server">- {{ account()!.server }}</span>
                 }
@@ -76,16 +90,47 @@
       </div>
 
       <div class="button-collection">
-        <button class="action-btn delete-btn" (click)="requestDelete()" title="Delete Account">
+        @if (showLaunchToast()) {
+          <div class="launch-error-toast">{{ launchToastMessage() }}</div>
+        }
+
+        @if (showSessionToast()) {
+          <div class="session-toast" [class.error]="sessionToastError()">
+            {{ sessionToastMessage() }}
+          </div>
+        }
+
+        <button
+          class="action-btn delete-btn"
+          (click)="requestDelete(); $event.stopPropagation()"
+          title="Delete Account"
+        >
           <img src="assets/icons/trash.svg" alt="Delete" width="16" />
         </button>
-        <button class="action-btn edit-btn" (click)="requestEdit()" title="Edit Account">
+        <button
+          class="action-btn edit-btn"
+          (click)="requestEdit(); $event.stopPropagation()"
+          title="Edit Account"
+        >
           <img src="assets/icons/edit.svg" class="icon" alt="Edit" width="16" />
+        </button>
+        <button
+          class="action-btn save-session-btn"
+          (click)="saveSession(); $event.stopPropagation()"
+          [disabled]="isSavingSession()"
+          [class.saving]="isSavingSession()"
+          title="Save Current Riot Session"
+        >
+          @if (isSavingSession()) {
+            <div class="spinner"></div>
+          } @else {
+            <img src="assets/icons/database.svg" class="icon" alt="Save Session" width="16" />
+          }
         </button>
         <hr />
         <button
           class="action-btn refresh-btn"
-          (click)="refreshAccount()"
+          (click)="refreshAccount(); $event.stopPropagation()"
           [disabled]="isRefreshing() || isRefreshOnCooldown()"
           [class.refreshing]="isRefreshing()"
           [class.cooldown]="isRefreshOnCooldown()"
@@ -101,35 +146,191 @@
             width="16"
           />
         </button>
-        <button
-          class="action-btn launch-btn launch-btn-inline"
-          (click)="launchAccount()"
-          [disabled]="isLaunching()"
-          [class.launching]="isLaunching()"
-          title="Launch Account"
-        >
-          @if (isLaunching()) {
-            <div class="spinner"></div>
-          } @else {
-            <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+
+        <!-- Launch button OR live badge — mutually exclusive -->
+        @if (isLive()) {
+          <div class="live-badge" title="Game in progress">
+            <span class="live-dot"></span>
+            LIVE
+          </div>
+          @if (gameTimerDisplay()) {
+            <span class="live-timer">{{ gameTimerDisplay() }}</span>
           }
-        </button>
+        } @else {
+          <button
+            class="action-btn launch-btn launch-btn-inline"
+            (click)="launchAccount(); $event.stopPropagation()"
+            [disabled]="isLaunching()"
+            [class.launching]="isLaunching()"
+            [class.error]="launchErrorState()"
+            title="Launch Account"
+          >
+            @if (isLaunching()) {
+              <div class="spinner"></div>
+            } @else {
+              <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+            }
+            <span class="launch-label">Launch</span>
+          </button>
+        }
       </div>
     </div>
 
-    <button
-      class="action-btn launch-btn launch-btn-mobile"
-      (click)="launchAccount()"
-      [disabled]="isLaunching()"
-      [class.launching]="isLaunching()"
-      title="Launch Account"
-    >
-      @if (isLaunching()) {
-        <div class="spinner"></div>
-      } @else {
-        <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
-      }
-      <span>Launch Account</span>
-    </button>
+    <!-- Stat strip — lane, previous games, mastery, LP trend, last active -->
+    @if (hasStatStrip()) {
+      <div class="stat-strip">
+        @if (hasLane()) {
+          <div class="stat-item" [title]="'Most played lane: ' + laneLabel()">
+            <img class="lane-icon" [src]="laneIconUrl()" [alt]="laneLabel()" width="16" />
+            <span class="stat-value">{{ laneLabel() }}</span>
+          </div>
+        }
+
+        @if (previousGames().length) {
+          @if (hasLane()) {
+            <span class="stat-divider"></span>
+          }
+          <div
+            class="stat-item"
+            [title]="
+              'Last ' +
+              previousGamesRecord().total +
+              ' games: ' +
+              previousGamesRecord().wins +
+              'W ' +
+              previousGamesRecord().losses +
+              'L'
+            "
+          >
+            <span class="stat-label">Last {{ previousGamesRecord().total }}</span>
+            <div class="form-dots">
+              @for (game of previousGames(); track $index) {
+                <span class="form-dot" [class.win]="game.win" [class.loss]="!game.win"></span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (masteryChampions().length) {
+          @if (hasLane() || previousGames().length) {
+            <span class="stat-divider"></span>
+          }
+          <div class="stat-item" title="Highest mastery champions">
+            <span class="stat-label">Mastery</span>
+            <div class="mastery-champs">
+              @for (champion of masteryChampions(); track champion.key) {
+                <img
+                  class="mastery-champ"
+                  [src]="champion.iconUrl"
+                  [alt]="champion.name"
+                  [title]="champion.name"
+                  width="20"
+                />
+              }
+            </div>
+          </div>
+        }
+
+        @if (hasLpTrend()) {
+          @if (hasLane() || previousGames().length || masteryChampions().length) {
+            <span class="stat-divider"></span>
+          }
+          <div
+            class="stat-item lp-trend"
+            [class.up]="lpTrendUp()"
+            [class.down]="!lpTrendUp()"
+            [title]="lpTrendTooltip()"
+          >
+            <span class="stat-label">7 Day Trend</span>
+            <svg
+              class="spark"
+              [attr.viewBox]="'0 0 ' + sparkWidth + ' ' + sparkHeight"
+              [attr.width]="sparkWidth"
+              [attr.height]="sparkHeight"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient [attr.id]="sparkGradientId" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="currentColor" stop-opacity="0.38" />
+                  <stop offset="65%" stop-color="currentColor" stop-opacity="0.1" />
+                  <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Where the week started, so the curve reads against something -->
+              <line
+                class="spark-baseline"
+                [attr.x1]="sparkPaddingX"
+                [attr.x2]="sparkInnerRight"
+                [attr.y1]="lpBaselineY()"
+                [attr.y2]="lpBaselineY()"
+              />
+
+              <path class="spark-area" [attr.d]="lpAreaPath()" [attr.fill]="sparkFill" />
+
+              <path
+                class="spark-line"
+                [attr.d]="lpLinePath()"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+
+              <circle
+                class="spark-dot-halo"
+                [attr.cx]="lpEndPoint().x"
+                [attr.cy]="lpEndPoint().y"
+                r="5"
+              />
+              <circle
+                class="spark-dot"
+                [attr.cx]="lpEndPoint().x"
+                [attr.cy]="lpEndPoint().y"
+                r="2.4"
+              />
+            </svg>
+            <span class="lp-trend-delta">{{ lpTrendLabel() }}</span>
+          </div>
+        }
+
+        @if (lastActiveLabel()) {
+          <div class="stat-item last-active" title="Last time you used this account in LoL Vault">
+            <span class="last-active-dot"></span>
+            <span class="stat-value">{{ lastActiveLabel() }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Mobile launch / live row -->
+    @if (isLive()) {
+      <div class="live-mobile-row">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          LIVE
+        </div>
+        @if (gameTimerDisplay()) {
+          <span class="live-timer">{{ gameTimerDisplay() }}</span>
+        }
+      </div>
+    } @else {
+      <button
+        class="action-btn launch-btn launch-btn-mobile"
+        (click)="launchAccount(); $event.stopPropagation()"
+        [disabled]="isLaunching()"
+        [class.launching]="isLaunching()"
+        [class.error]="launchErrorState()"
+        title="Launch Account"
+      >
+        @if (isLaunching()) {
+          <div class="spinner"></div>
+        } @else {
+          <img src="assets/icons/play.svg" class="icon" alt="Launch" width="16" />
+        }
+        <span>Launch Account</span>
+      </button>
+    }
   </div>
 }

@@ -1,9 +1,65 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const { dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const http = require('http');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const fs = require('fs');
+const db = require('./database');
+const { startLcuMonitor, stopLcuMonitor, getLcuState } = require('./lcu-monitor');
+const riotApi = require('./riot-api.service');
+
+const GOOGLE_SYSTEM_AUTH_TIMEOUT_MS = 3 * 60 * 1000;
+const GOOGLE_SYSTEM_AUTH_CALLBACK_HOST = 'localhost';
+const GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS = '127.0.0.1';
+const DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT = 51793;
+const parsedGoogleSystemAuthCallbackPort = Number.parseInt(
+  process.env.GOOGLE_SYSTEM_AUTH_CALLBACK_PORT || `${DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}`,
+  10
+);
+const GOOGLE_SYSTEM_AUTH_CALLBACK_PORT =
+  Number.isInteger(parsedGoogleSystemAuthCallbackPort) &&
+  parsedGoogleSystemAuthCallbackPort > 0 &&
+  parsedGoogleSystemAuthCallbackPort <= 65535
+    ? parsedGoogleSystemAuthCallbackPort
+    : DEFAULT_GOOGLE_SYSTEM_AUTH_CALLBACK_PORT;
+
+const RIOT_PROFILE_DIR_NAME = 'Riot Client';
+const RIOT_SESSION_VAULT_DIR_NAME = 'riot-session-vault';
+const RIOT_LOCAL_CLIENT_DIR_SEGMENTS = ['Riot Games', 'Riot Client'];
+const RIOT_LOCAL_DATA_DIR_NAME = 'Data';
+const RIOT_LOCAL_CONFIG_DIR_NAME = 'Config';
+const RIOT_LOCAL_CONFIG_SETTINGS_FILE_NAME = 'RiotClientSettings.yaml';
+const RIOT_SESSION_SNAPSHOT_ROAMING_SUBDIR = 'roaming-profile';
+const RIOT_SESSION_SNAPSHOT_LOCAL_DATA_SUBDIR = 'local-data';
+const RIOT_SESSION_SNAPSHOT_LOCAL_CONFIG_SUBDIR = 'local-config';
+const RIOT_SESSION_SNAPSHOT_META_FILE = 'session-meta.json';
+const RIOT_SESSION_EXCLUDED_TOP_LEVEL = new Set([
+  'blob_storage',
+  'cache',
+  'code cache',
+  'dawncache',
+  'gpucache',
+  'videodecodestats',
+]);
+const RIOT_SESSION_EXCLUDED_FILE_NAMES = new Set([
+  'lock',
+  'lock-journal',
+  'singletoncookie',
+  'singletonlock',
+  'singletonsocket',
+  'devtoolsactiveport',
+  'chrome_debug.log',
+]);
+const RIOT_WINDOWS_PROCESS_NAMES = [
+  'RiotClientServices.exe',
+  'RiotClientUx.exe',
+  'RiotClientUxRender.exe',
+  'LeagueClient.exe',
+  'LeagueClientUx.exe',
+  'LeagueClientUxRender.exe',
+];
+const RIOT_LAUNCH_ARGS = ['--launch-patchline=live'];
 
 function encrypt(text) {
   if (!text) return text;
@@ -81,9 +137,36 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  const dataPath = getDataPath();
+  if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath, { recursive: true });
+  db.initDatabase(dataPath);
+  db.setEncryptionHelpers(encrypt, decrypt);
+
   createWindow();
   setupAutoUpdater();
+  startLcuMonitor(mainWindow, getDataPath, decryptAccount);
+
+  // Re-emit current LCU state after the renderer finishes loading so Angular
+  // can seed its live state even if the LCU connected before it bootstrapped.
+  mainWindow.webContents.on('did-finish-load', () => {
+    const state = getLcuState();
+    if (state.activeVaultId) {
+      mainWindow.webContents.send('lcu:account-identified', {
+        vaultId: state.activeVaultId,
+        puuid: state.puuid,
+        displayName: state.displayName,
+      });
+      if (state.phase && state.phase !== 'None') {
+        mainWindow.webContents.send('lcu:phase-change', {
+          vaultId: state.activeVaultId,
+          phase: state.phase,
+        });
+      }
+    }
+  });
 });
+
+app.on('before-quit', () => stopLcuMonitor());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -237,6 +320,358 @@ ipcMain.handle('check-for-updates', () => {
 
 const isMac = process.platform === 'darwin';
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runCommand(command) {
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        reject({ error, stdout, stderr });
+        return;
+      }
+
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+function shouldRetryPathOperation(error) {
+  const code = error?.code;
+  return code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY';
+}
+
+async function removePathWithRetry(targetPath, attempts = 8) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await fs.promises.rm(targetPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt >= attempts || !shouldRetryPathOperation(error)) {
+        throw error;
+      }
+
+      await delay(120 * attempt);
+    }
+  }
+}
+
+async function copyDirectoryFiltered(sourceDir, targetDir, filter) {
+  await fs.promises.cp(sourceDir, targetDir, {
+    recursive: true,
+    force: true,
+    errorOnExist: false,
+    filter,
+  });
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fs.promises.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getRiotProfilePath() {
+  return path.join(app.getPath('appData'), RIOT_PROFILE_DIR_NAME);
+}
+
+function getRiotSessionVaultPath() {
+  return path.join(getDataPath(), RIOT_SESSION_VAULT_DIR_NAME);
+}
+
+function getLocalAppDataPath() {
+  return process.env.LOCALAPPDATA || app.getPath('appData');
+}
+
+function getRiotLocalClientRootPath() {
+  return path.join(getLocalAppDataPath(), ...RIOT_LOCAL_CLIENT_DIR_SEGMENTS);
+}
+
+function getRiotLocalDataPath() {
+  return path.join(getRiotLocalClientRootPath(), RIOT_LOCAL_DATA_DIR_NAME);
+}
+
+function getRiotLocalConfigPath() {
+  return path.join(getRiotLocalClientRootPath(), RIOT_LOCAL_CONFIG_DIR_NAME);
+}
+
+function sanitizePathSegment(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 96);
+}
+
+function getAccountSessionKey(account) {
+  const fromSyncId = sanitizePathSegment(account?.syncId);
+  if (fromSyncId) {
+    return fromSyncId;
+  }
+
+  const fromNameServer = sanitizePathSegment(`${account?.name || ''}_${account?.server || ''}`);
+  if (fromNameServer) {
+    return fromNameServer;
+  }
+
+  const fromId = sanitizePathSegment(account?.id);
+  if (fromId) {
+    return fromId;
+  }
+
+  return `account_${Date.now()}`;
+}
+
+function getAccountSessionSnapshotPath(account) {
+  return path.join(getRiotSessionVaultPath(), getAccountSessionKey(account));
+}
+
+function shouldIncludeRiotSessionPath(relativePath) {
+  if (!relativePath || relativePath === '.') {
+    return true;
+  }
+
+  const normalized = relativePath.split(path.sep).join('/');
+  const firstSegment = normalized.split('/')[0]?.toLowerCase();
+  if (firstSegment && RIOT_SESSION_EXCLUDED_TOP_LEVEL.has(firstSegment)) {
+    return false;
+  }
+
+  const fileName = path.basename(normalized).toLowerCase();
+  if (RIOT_SESSION_EXCLUDED_FILE_NAMES.has(fileName)) {
+    return false;
+  }
+
+  return true;
+}
+
+async function terminateRiotProcesses() {
+  if (process.platform === 'win32') {
+    await Promise.all(
+      RIOT_WINDOWS_PROCESS_NAMES.map((processName) =>
+        runCommand(`taskkill /T /IM "${processName}"`).catch(() => undefined)
+      )
+    );
+
+    await delay(500);
+
+    await Promise.all(
+      RIOT_WINDOWS_PROCESS_NAMES.map(async (processName) => {
+        const result = await runCommand(`tasklist /FI "IMAGENAME eq ${processName}" /NH`).catch(
+          () => ({ stdout: '' })
+        );
+        if (result.stdout.toLowerCase().includes(processName.toLowerCase())) {
+          await runCommand(`taskkill /F /T /IM "${processName}"`).catch(() => undefined);
+        }
+      })
+    );
+
+    await delay(250);
+    return;
+  }
+
+  if (process.platform === 'darwin') {
+    await runCommand("pkill -f 'Riot Client|LeagueClient'").catch(() => undefined);
+  }
+}
+
+async function captureRiotSessionSnapshot(account) {
+  const roamingSourceDir = getRiotProfilePath();
+  const localDataSourceDir = getRiotLocalDataPath();
+  const localConfigSourceFile = path.join(
+    getRiotLocalConfigPath(),
+    RIOT_LOCAL_CONFIG_SETTINGS_FILE_NAME
+  );
+  const snapshotKey = getAccountSessionKey(account);
+
+  const hasRoamingProfile = await pathExists(roamingSourceDir);
+  const hasLocalData = await pathExists(localDataSourceDir);
+  const hasLocalConfig = await pathExists(localConfigSourceFile);
+
+  if (!hasRoamingProfile && !hasLocalData && !hasLocalConfig) {
+    throw new Error(
+      'No Riot session data was found. Sign in once before saving the session snapshot.'
+    );
+  }
+
+  const snapshotDir = getAccountSessionSnapshotPath(account);
+  const tempSnapshotDir = `${snapshotDir}.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  console.log(`[Riot Session] Capturing snapshot for key: ${snapshotKey}`);
+
+  await fs.promises.mkdir(getRiotSessionVaultPath(), { recursive: true });
+  await removePathWithRetry(tempSnapshotDir);
+
+  const roamingSnapshotDir = path.join(tempSnapshotDir, RIOT_SESSION_SNAPSHOT_ROAMING_SUBDIR);
+  const localDataSnapshotDir = path.join(tempSnapshotDir, RIOT_SESSION_SNAPSHOT_LOCAL_DATA_SUBDIR);
+  const localConfigSnapshotDir = path.join(
+    tempSnapshotDir,
+    RIOT_SESSION_SNAPSHOT_LOCAL_CONFIG_SUBDIR
+  );
+
+  if (hasRoamingProfile) {
+    await copyDirectoryFiltered(roamingSourceDir, roamingSnapshotDir, (entryPath) => {
+      const relative = path.relative(roamingSourceDir, entryPath);
+      return shouldIncludeRiotSessionPath(relative);
+    });
+  }
+
+  if (hasLocalData) {
+    await copyDirectoryFiltered(localDataSourceDir, localDataSnapshotDir, () => true);
+  }
+
+  if (hasLocalConfig) {
+    await fs.promises.mkdir(localConfigSnapshotDir, { recursive: true });
+    await fs.promises.copyFile(
+      localConfigSourceFile,
+      path.join(localConfigSnapshotDir, RIOT_LOCAL_CONFIG_SETTINGS_FILE_NAME)
+    );
+  }
+
+  const metadata = {
+    capturedAt: Date.now(),
+    hasRoamingProfile,
+    hasLocalData,
+    hasLocalConfig,
+  };
+  await fs.promises.writeFile(
+    path.join(tempSnapshotDir, RIOT_SESSION_SNAPSHOT_META_FILE),
+    JSON.stringify(metadata, null, 2),
+    'utf8'
+  );
+
+  await removePathWithRetry(snapshotDir);
+  await fs.promises.rename(tempSnapshotDir, snapshotDir);
+
+  console.log(
+    `[Riot Session] Snapshot captured for key ${snapshotKey}. Roaming: ${hasRoamingProfile}, LocalData: ${hasLocalData}, LocalConfig: ${hasLocalConfig}`
+  );
+
+  return { snapshotDir };
+}
+
+async function restoreSnapshotDirectory(snapshotSourceDir, targetDir) {
+  const tempRestoreDir = `${targetDir}.restore-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await fs.promises.mkdir(path.dirname(targetDir), { recursive: true });
+  await removePathWithRetry(tempRestoreDir);
+  await copyDirectoryFiltered(snapshotSourceDir, tempRestoreDir, () => true);
+  await removePathWithRetry(targetDir);
+  await fs.promises.rename(tempRestoreDir, targetDir);
+}
+
+async function restoreRiotSessionSnapshot(account) {
+  const snapshotKey = getAccountSessionKey(account);
+  const snapshotDir = getAccountSessionSnapshotPath(account);
+  if (!(await pathExists(snapshotDir))) {
+    console.warn(`[Riot Session] No snapshot found for key: ${snapshotKey}`);
+    return { restored: false };
+  }
+
+  console.log(`[Riot Session] Restoring snapshot for key: ${snapshotKey}`);
+
+  const roamingSnapshotDir = path.join(snapshotDir, RIOT_SESSION_SNAPSHOT_ROAMING_SUBDIR);
+  const localDataSnapshotDir = path.join(snapshotDir, RIOT_SESSION_SNAPSHOT_LOCAL_DATA_SUBDIR);
+  const localConfigSnapshotDir = path.join(snapshotDir, RIOT_SESSION_SNAPSHOT_LOCAL_CONFIG_SUBDIR);
+  const localConfigSnapshotFile = path.join(
+    localConfigSnapshotDir,
+    RIOT_LOCAL_CONFIG_SETTINGS_FILE_NAME
+  );
+
+  const hasRoamingProfile = await pathExists(roamingSnapshotDir);
+  const hasLocalData = await pathExists(localDataSnapshotDir);
+  const hasLocalConfig = await pathExists(localConfigSnapshotFile);
+
+  if (!hasRoamingProfile && !hasLocalData && !hasLocalConfig) {
+    console.warn(`[Riot Session] Snapshot exists but no data subfolders for key: ${snapshotKey}`);
+    return { restored: false };
+  }
+
+  if (hasRoamingProfile) {
+    await restoreSnapshotDirectory(roamingSnapshotDir, getRiotProfilePath());
+  }
+
+  if (hasLocalData) {
+    await restoreSnapshotDirectory(localDataSnapshotDir, getRiotLocalDataPath());
+  }
+
+  if (hasLocalConfig) {
+    const localConfigTargetDir = getRiotLocalConfigPath();
+    await fs.promises.mkdir(localConfigTargetDir, { recursive: true });
+    await fs.promises.copyFile(
+      localConfigSnapshotFile,
+      path.join(localConfigTargetDir, RIOT_LOCAL_CONFIG_SETTINGS_FILE_NAME)
+    );
+  }
+
+  return {
+    restored: true,
+    restoredRoamingProfile: hasRoamingProfile,
+    restoredLocalData: hasLocalData,
+    restoredLocalConfig: hasLocalConfig,
+  };
+}
+
+async function clearActiveRiotSessionProfile() {
+  const roamingProfileDir = getRiotProfilePath();
+  await removePathWithRetry(roamingProfileDir);
+  await fs.promises.mkdir(roamingProfileDir, { recursive: true });
+
+  const localDataDir = getRiotLocalDataPath();
+  await removePathWithRetry(localDataDir);
+  await fs.promises.mkdir(localDataDir, { recursive: true });
+}
+
+function launchRiotClient(riotClientPath) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(riotClientPath, RIOT_LAUNCH_ARGS, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+
+    let settled = false;
+
+    child.once('error', (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+
+    child.once('spawn', () => {
+      if (!settled) {
+        settled = true;
+        child.unref();
+        resolve();
+      }
+    });
+
+    child.once('exit', (code) => {
+      if (!settled && code !== 0) {
+        settled = true;
+        reject(new Error(`Riot launcher exited with code ${code}`));
+      }
+    });
+  });
+}
+
+function validateRiotClientPath(riotClientPath) {
+  if (!riotClientPath || riotClientPath === 'undefined' || riotClientPath.trim() === '') {
+    return 'Riot Client path is not set. Please set it in Settings.';
+  }
+
+  if (!fs.existsSync(riotClientPath)) {
+    return `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
+  }
+
+  return null;
+}
+
 // Expose platform to renderer
 ipcMain.handle('get-platform', () => process.platform);
 
@@ -244,42 +679,88 @@ ipcMain.handle('get-platform', () => process.platform);
 ipcMain.handle('launch-account', async (event, accountData) => {
   const { account, riotClientPath, windowTitle } = accountData;
 
-  // Validate Riot Client path
-  if (!riotClientPath || riotClientPath === 'undefined' || riotClientPath.trim() === '') {
-    const error = 'Riot Client path is not set. Please set it in Settings.';
-    console.error(error);
-    return { success: false, error };
-  }
-
-  // On macOS, check for .app bundle or direct path
-  if (isMac) {
-    const isAppBundle = riotClientPath.endsWith('.app');
-    const pathToCheck = isAppBundle ? riotClientPath : riotClientPath;
-    if (!fs.existsSync(pathToCheck)) {
-      const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
-      console.error(error);
-      return { success: false, error };
-    }
-  } else {
-    if (!fs.existsSync(riotClientPath)) {
-      const error = `Riot Client not found at: ${riotClientPath}. Please update the path in Settings.`;
-      console.error(error);
-      return { success: false, error };
-    }
+  const pathError = validateRiotClientPath(riotClientPath);
+  if (pathError) {
+    console.error(pathError);
+    return { success: false, error: pathError };
   }
 
   if (isMac) return launchAccountMac(account, riotClientPath, windowTitle);
-  else return launchAccountWindows(account, accountData, riotClientPath, windowTitle);
+  return launchAccountWindows(account, accountData, riotClientPath, windowTitle);
+});
+
+ipcMain.handle('capture-account-session', async (event, payload = {}) => {
+  const relaunch = payload?.relaunch !== false;
+  const riotClientPath = payload?.riotClientPath;
+  const account = payload?.account;
+
+  if (!account || typeof account !== 'object') {
+    return { success: false, error: 'Cannot save session without account data.' };
+  }
+
+  if (relaunch) {
+    const pathError = validateRiotClientPath(riotClientPath);
+    if (pathError) {
+      console.error(pathError);
+      return { success: false, error: pathError };
+    }
+  }
+
+  try {
+    await terminateRiotProcesses();
+    await delay(250);
+    await captureRiotSessionSnapshot(account);
+
+    if (relaunch) {
+      await launchRiotClient(riotClientPath);
+    }
+
+    return { success: true, capturedAt: Date.now(), relaunched: relaunch };
+  } catch (error) {
+    const message = error?.message || 'Unable to save Riot session snapshot.';
+    console.error('Failed to capture Riot session snapshot:', error);
+    return { success: false, error: message };
+  }
+});
+
+ipcMain.handle('open-clean-riot-client', async (event, payload = {}) => {
+  const riotClientPath = payload?.riotClientPath;
+  const pathError = validateRiotClientPath(riotClientPath);
+  if (pathError) {
+    console.error(pathError);
+    return { success: false, error: pathError };
+  }
+
+  try {
+    await terminateRiotProcesses();
+    await delay(250);
+    await clearActiveRiotSessionProfile();
+    await launchRiotClient(riotClientPath);
+    return { success: true };
+  } catch (error) {
+    const message = error?.message || 'Unable to open Riot Client with a clean profile.';
+    console.error('Failed to open clean Riot Client session:', error);
+    return { success: false, error: message };
+  }
 });
 
 // macOS launch using open command + AppleScript for auto-login
 function launchAccountMac(account, riotClientPath, windowTitle) {
+  const username = account?.username?.trim?.() || '';
+  const password = account?.password?.trim?.() || '';
+  if (!username || !password) {
+    const error =
+      'Launch failed on macOS: username/password are required for this flow. Save-session launch is currently Windows-only.';
+    console.error(error);
+    return { success: false, error };
+  }
+
   return new Promise((resolve) => {
     // Determine launch command based on path type
     const isAppBundle = riotClientPath.endsWith('.app');
     const launchCmd = isAppBundle
-      ? `open -a "${riotClientPath}" --args --launch-product=league_of_legends --launch-patchline=live`
-      : `"${riotClientPath}" --launch-product=league_of_legends --launch-patchline=live`;
+      ? `open -a "${riotClientPath}" --args  --launch-patchline=live`
+      : `"${riotClientPath}" --launch-patchline=live`;
 
     exec(launchCmd, (err) => {
       if (err) {
@@ -346,8 +827,42 @@ function launchAccountMac(account, riotClientPath, windowTitle) {
 }
 
 // Windows launch using PowerShell + NirCmd
-function launchAccountWindows(account, accountData, riotClientPath, windowTitle) {
+async function launchAccountWindows(account, accountData, riotClientPath, windowTitle) {
+  try {
+    await terminateRiotProcesses();
+    await delay(250);
+
+    const restoreResult = await restoreRiotSessionSnapshot(account);
+    if (restoreResult.restored) {
+      await launchRiotClient(riotClientPath);
+      return { success: true, usedSavedSession: true };
+    }
+
+    const username = account?.username?.trim?.() || '';
+    const password = account?.password?.trim?.() || '';
+    if (!username || !password) {
+      const error =
+        'Launch failed: no saved Riot session for this account. Sign in once with Stay signed in enabled, then click Save Session.';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    return launchAccountWindowsWithCredentials(account, accountData, riotClientPath, windowTitle);
+  } catch (error) {
+    const message = error?.message || 'Failed to launch Riot Client with saved session.';
+    console.error('Windows account launch failed:', error);
+    return { success: false, error: message };
+  }
+}
+
+function launchAccountWindowsWithCredentials(account, accountData, riotClientPath, windowTitle) {
   const { psFilePath, nircmdPath } = accountData;
+
+  if (!app.isPackaged && (!psFilePath || !nircmdPath)) {
+    const error = 'Launch scripts are missing for credential fallback mode.';
+    console.error(error);
+    return Promise.resolve({ success: false, error });
+  }
 
   // Resolve absolute paths for PowerShell script and nircmd
   let absolutePsFilePath, absoluteNircmdPath;
@@ -374,18 +889,8 @@ function launchAccountWindows(account, accountData, riotClientPath, windowTitle)
   }
 
   return new Promise((resolve) => {
-    exec(
-      `"${riotClientPath}" --launch-product=league_of_legends --launch-patchline=live`,
-      (err) => {
-        if (err) {
-          console.error('Riot Client launch error:', err);
-          resolve({
-            success: false,
-            error: 'Failed to launch Riot Client: ' + err.message,
-          });
-          return;
-        }
-
+    launchRiotClient(riotClientPath)
+      .then(() => {
         const quotePsArg = (value) => `"${String(value).replace(/"/g, '""')}"`;
 
         const psCommand = [
@@ -416,11 +921,20 @@ function launchAccountWindows(account, accountData, riotClientPath, windowTitle)
               error: 'Auto-login failed: ' + error.message,
             });
           } else {
-            resolve({ success: true });
+            resolve({ success: true, usedCredentialFallback: true });
           }
         });
-      }
-    );
+      })
+      .catch((err) => {
+        if (err) {
+          console.error('Riot Client launch error:', err);
+          resolve({
+            success: false,
+            error: 'Failed to launch Riot Client: ' + err.message,
+          });
+          return;
+        }
+      });
   });
 }
 
@@ -454,6 +968,330 @@ ipcMain.handle('open-file-dialog', async (event, options = {}) => {
 ipcMain.on('open-external-url', (event, url) => {
   console.log('Main process opening:', url);
   shell.openExternal(url);
+});
+
+function createGoogleAuthCallbackPage() {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LoL Vault Sign-In</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #111214;
+        color: #ece7e2;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .panel {
+        width: min(520px, calc(100vw - 28px));
+        border-radius: 12px;
+        border: 1px solid #3e3e42;
+        background: #1a1b1f;
+        padding: 20px;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0;
+        color: #bab7b2;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .error {
+        color: #ff8f8f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>LoL Vault</h1>
+      <p id="status">Finishing sign-in...</p>
+    </div>
+
+    <script>
+      (async function finalizeOAuth() {
+        const status = document.getElementById('status');
+
+        try {
+          const hash = window.location.hash && window.location.hash.startsWith('#')
+            ? window.location.hash.slice(1)
+            : '';
+
+          if (!hash) {
+            throw new Error('Missing sign-in token in callback URL.');
+          }
+
+          const response = await fetch('/oauth-finish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: hash,
+          });
+
+          if (!response.ok) {
+            const details = await response.text();
+            throw new Error(details || 'OAuth callback failed.');
+          }
+
+          status.textContent = 'Sign-in complete. You can close this tab and return to LoL Vault.';
+        } catch (error) {
+          status.textContent = error && error.message ? error.message : 'Sign-in failed.';
+          status.classList.add('error');
+        }
+      })();
+    </script>
+  </body>
+</html>`;
+}
+
+function readRequestBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let totalLength = 0;
+    const maxBodySize = 32 * 1024;
+
+    request.on('data', (chunk) => {
+      totalLength += chunk.length;
+      if (totalLength > maxBodySize) {
+        reject(new Error('Callback payload exceeded allowed size.'));
+        request.destroy();
+        return;
+      }
+
+      chunks.push(chunk);
+    });
+
+    request.on('end', () => {
+      resolve(Buffer.concat(chunks).toString('utf8'));
+    });
+
+    request.on('error', reject);
+    request.on('aborted', () => reject(new Error('Callback request was aborted.')));
+  });
+}
+
+async function fetchGoogleAuthUri({ apiKey, continueUri }) {
+  if (typeof fetch !== 'function') {
+    throw new Error('Network fetch API is unavailable in this environment.');
+  }
+
+  const response = await fetch(
+    `https://www.googleapis.com/identitytoolkit/v3/relyingparty/createAuthUri?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        continueUri,
+        providerId: 'google.com',
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Auth URL request failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  if (!data || typeof data.authUri !== 'string' || !data.authUri) {
+    throw new Error('Auth URL response did not include a valid URL.');
+  }
+
+  return data.authUri;
+}
+
+function createSignInResult(success, { idToken, error } = {}) {
+  return {
+    success,
+    ...(idToken ? { idToken } : {}),
+    ...(error ? { error } : {}),
+  };
+}
+
+ipcMain.handle('start-google-system-sign-in', async (_event, options = {}) => {
+  const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : '';
+
+  if (!apiKey) {
+    return createSignInResult(false, { error: 'Missing Firebase API key for Google sign-in.' });
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let expectedState = '';
+    let timeoutHandle;
+
+    const settle = (result) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = undefined;
+      }
+
+      if (result.success && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+
+      try {
+        server.close();
+      } catch {
+        // ignore close errors
+      }
+
+      resolve(result);
+    };
+
+    const server = http.createServer(async (request, response) => {
+      try {
+        const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+
+        if (request.method === 'GET' && requestUrl.pathname === '/callback') {
+          response.writeHead(200, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+          });
+          response.end(createGoogleAuthCallbackPage());
+          return;
+        }
+
+        if (request.method === 'POST' && requestUrl.pathname === '/oauth-finish') {
+          const body = await readRequestBody(request);
+          const params = new URLSearchParams(body);
+
+          const oauthError = params.get('error');
+          const oauthErrorDescription = params.get('error_description');
+          const state = params.get('state') || '';
+          const idToken = params.get('id_token');
+
+          if (oauthError) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('Google sign-in was cancelled or failed.');
+            settle(
+              createSignInResult(false, {
+                error: oauthErrorDescription || oauthError,
+              })
+            );
+            return;
+          }
+
+          if (expectedState && state !== expectedState) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('OAuth state validation failed.');
+            settle(createSignInResult(false, { error: 'OAuth state validation failed.' }));
+            return;
+          }
+
+          if (!idToken) {
+            response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            response.end('Missing id_token from Google callback.');
+            settle(createSignInResult(false, { error: 'Missing id_token in Google callback.' }));
+            return;
+          }
+
+          response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+          response.end('ok');
+          settle(createSignInResult(true, { idToken }));
+          return;
+        }
+
+        if (request.method === 'GET' && requestUrl.pathname === '/favicon.ico') {
+          response.writeHead(204);
+          response.end();
+          return;
+        }
+
+        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Not Found');
+      } catch (error) {
+        response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Internal callback error.');
+        settle(
+          createSignInResult(false, {
+            error: error instanceof Error ? error.message : 'OAuth callback failed unexpectedly.',
+          })
+        );
+      }
+    });
+
+    server.on('error', (error) => {
+      const addressInUse =
+        !!error && typeof error === 'object' && 'code' in error && error.code === 'EADDRINUSE';
+
+      settle(
+        createSignInResult(false, {
+          error: addressInUse
+            ? `OAuth callback port ${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT} is already in use. Close the other process or set GOOGLE_SYSTEM_AUTH_CALLBACK_PORT to a free port.`
+            : error instanceof Error
+              ? error.message
+              : 'Could not start OAuth callback server.',
+        })
+      );
+    });
+
+    server.listen(
+      GOOGLE_SYSTEM_AUTH_CALLBACK_PORT,
+      GOOGLE_SYSTEM_AUTH_CALLBACK_BIND_ADDRESS,
+      async () => {
+        try {
+          const address = server.address();
+          if (!address || typeof address === 'string') {
+            settle(
+              createSignInResult(false, { error: 'Could not resolve callback server address.' })
+            );
+            return;
+          }
+
+          const continueUri = `http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback`;
+          const authUri = await fetchGoogleAuthUri({ apiKey, continueUri });
+
+          try {
+            expectedState = new URL(authUri).searchParams.get('state') || '';
+          } catch {
+            expectedState = '';
+          }
+
+          timeoutHandle = setTimeout(() => {
+            settle(
+              createSignInResult(false, {
+                error: `Google sign-in timed out. Verify OAuth redirect URI http://${GOOGLE_SYSTEM_AUTH_CALLBACK_HOST}:${GOOGLE_SYSTEM_AUTH_CALLBACK_PORT}/callback is allowed for the Google client.`,
+              })
+            );
+          }, GOOGLE_SYSTEM_AUTH_TIMEOUT_MS);
+
+          await shell.openExternal(authUri);
+        } catch (error) {
+          settle(
+            createSignInResult(false, {
+              error: error instanceof Error ? error.message : 'Failed to start Google sign-in.',
+            })
+          );
+        }
+      }
+    );
+  });
 });
 
 // Helper function to get the correct data path
@@ -580,5 +1418,321 @@ ipcMain.handle('save-boards', async (event, boards) => {
   } catch (error) {
     console.error('Error saving boards:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// ── SQLite Database IPC Handlers ──────────────────────────────────────────────
+
+// App Settings — encrypted Riot API key
+ipcMain.handle('lcu:get-state', () => getLcuState());
+
+ipcMain.handle('db-get-api-key', () => {
+  try {
+    return { success: true, value: db.getEncryptedSetting('riot_api_key') };
+  } catch (error) {
+    console.error('db-get-api-key error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-set-api-key', (_event, apiKey) => {
+  try {
+    db.setEncryptedSetting('riot_api_key', apiKey || null);
+    return { success: true };
+  } catch (error) {
+    console.error('db-set-api-key error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Generic setting get/set (plaintext)
+ipcMain.handle('db-get-setting', (_event, key) => {
+  try {
+    return { success: true, value: db.getSetting(key) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-set-setting', (_event, key, value) => {
+  try {
+    db.setSetting(key, value);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// LP Snapshots
+ipcMain.handle('db-get-lp-snapshots', (_event, accountId) => {
+  try {
+    return { success: true, snapshots: db.getLpSnapshots(accountId) };
+  } catch (error) {
+    console.error('db-get-lp-snapshots error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-save-lp-snapshot', (_event, { accountId, tier, division, lp }) => {
+  try {
+    db.saveLpSnapshot(accountId, tier, division, lp);
+    return { success: true };
+  } catch (error) {
+    console.error('db-save-lp-snapshot error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Match Cache
+ipcMain.handle('db-get-match-cache', (_event, accountId, limit) => {
+  try {
+    return { success: true, matches: db.getMatchCache(accountId, limit) };
+  } catch (error) {
+    console.error('db-get-match-cache error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-save-match', (_event, { matchId, accountId, computed, rawJson }) => {
+  try {
+    db.saveMatchCache(matchId, accountId, computed || {}, rawJson);
+    return { success: true };
+  } catch (error) {
+    console.error('db-save-match error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ── Riot API ──────────────────────────────────────────────────────────────────
+
+ipcMain.handle('riot:get-summoner-by-riot-id', async (_event, { gameName, tagLine, platform }) => {
+  try {
+    return await riotApi.getSummonerByRiotId(gameName, tagLine, platform);
+  } catch (err) {
+    console.error('riot:get-summoner-by-riot-id error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-summoner-by-puuid', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getSummonerByPuuid(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-summoner-by-puuid error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-ranked-by-puuid', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getRankedByPuuid(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-ranked-by-puuid error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-top-mastery', async (_event, { puuid, platform }) => {
+  try {
+    return await riotApi.getTopMasteryChampions(puuid, platform);
+  } catch (err) {
+    console.error('riot:get-top-mastery error:', err?.message);
+    return [];
+  }
+});
+
+ipcMain.handle('riot:get-match-history', async (_event, { accountId, puuid, platform, count }) => {
+  try {
+    return await riotApi.fetchAndCacheMatchHistory(accountId, puuid, platform, count);
+  } catch (err) {
+    console.error('riot:get-match-history error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-cached-matches', (_event, { accountId, limit }) => {
+  try {
+    return db.getMatchCache(accountId, limit);
+  } catch (err) {
+    console.error('riot:get-cached-matches error:', err?.message);
+    return [];
+  }
+});
+
+ipcMain.handle('riot:validate-key', async (_event, { key }) => {
+  try {
+    return await riotApi.validateApiKey(key);
+  } catch (err) {
+    console.error('riot:validate-key error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:save-key', (_event, { key }) => {
+  try {
+    riotApi.saveApiKey(key);
+    return { success: true };
+  } catch (err) {
+    console.error('riot:save-key error:', err?.message);
+    return { success: false, error: err?.message };
+  }
+});
+
+ipcMain.handle('riot:get-ddragon-version', async () => {
+  try {
+    return await riotApi.getDDragonVersion();
+  } catch (err) {
+    console.error('riot:get-ddragon-version error:', err?.message);
+    return '15.21.1';
+  }
+});
+
+// ── Persistent game settings ─────────────────────────────────────────────────
+//
+// League rewrites its Config files whenever the client signs a different
+// account in. Flipping the well-known settings files to read-only keeps the
+// user's own configuration in place across account switches.
+
+const LEAGUE_PERSISTENT_SETTINGS_FILES = [
+  'PersistedSettings.json',
+  'game.cfg',
+  'input.ini',
+];
+
+function resolveLeagueConfigFiles(configPath) {
+  return LEAGUE_PERSISTENT_SETTINGS_FILES.map((name) => path.join(configPath, name)).filter(
+    (filePath) => {
+      try {
+        return fs.statSync(filePath).isFile();
+      } catch {
+        return false;
+      }
+    }
+  );
+}
+
+function isFileReadOnly(filePath) {
+  try {
+    // Windows maps the read-only attribute onto the owner-write permission bit.
+    return (fs.statSync(filePath).mode & 0o200) === 0;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.handle('settings:inspect-league-config', async (_event, { configPath } = {}) => {
+  try {
+    if (!configPath) {
+      return { success: false, error: 'No League config folder provided.' };
+    }
+
+    let exists = false;
+    try {
+      exists = fs.statSync(configPath).isDirectory();
+    } catch {
+      exists = false;
+    }
+
+    if (!exists) {
+      return { success: true, exists: false, files: [], readOnly: false };
+    }
+
+    const files = resolveLeagueConfigFiles(configPath);
+    return {
+      success: true,
+      exists: true,
+      files: files.map((filePath) => ({
+        path: filePath,
+        name: path.basename(filePath),
+        readOnly: isFileReadOnly(filePath),
+      })),
+      readOnly: files.length > 0 && files.every((filePath) => isFileReadOnly(filePath)),
+    };
+  } catch (error) {
+    console.error('settings:inspect-league-config error:', error?.message);
+    return { success: false, error: error?.message || 'Failed to inspect League config folder.' };
+  }
+});
+
+ipcMain.handle('settings:set-league-config-readonly', async (_event, payload = {}) => {
+  const { configPath, readOnly } = payload;
+
+  try {
+    if (!configPath) {
+      return { success: false, error: 'No League config folder provided.' };
+    }
+
+    let isDirectory = false;
+    try {
+      isDirectory = fs.statSync(configPath).isDirectory();
+    } catch {
+      isDirectory = false;
+    }
+
+    if (!isDirectory) {
+      return {
+        success: false,
+        error: `League config folder not found at "${configPath}". Pick the correct folder in Settings.`,
+      };
+    }
+
+    const files = resolveLeagueConfigFiles(configPath);
+
+    if (files.length === 0) {
+      return {
+        success: false,
+        error:
+          'No League settings files found in that folder. Launch League once so it writes its config, then try again.',
+      };
+    }
+
+    const changed = [];
+    const failed = [];
+
+    for (const filePath of files) {
+      try {
+        fs.chmodSync(filePath, readOnly ? 0o444 : 0o666);
+        changed.push(path.basename(filePath));
+      } catch (error) {
+        console.error(`Failed to update read-only flag for ${filePath}:`, error?.message);
+        failed.push(path.basename(filePath));
+      }
+    }
+
+    if (changed.length === 0) {
+      return {
+        success: false,
+        error: `Could not change the read-only flag on ${failed.join(', ')}. Try running LoL Vault as administrator.`,
+      };
+    }
+
+    return {
+      success: true,
+      readOnly: !!readOnly,
+      files: changed,
+      failed,
+      warning: failed.length ? `Skipped ${failed.join(', ')} — permission denied.` : undefined,
+    };
+  } catch (error) {
+    console.error('settings:set-league-config-readonly error:', error?.message);
+    return { success: false, error: error?.message || 'Failed to update League config files.' };
+  }
+});
+
+// Directory picker — used to locate the League config folder
+ipcMain.handle('open-directory-dialog', async (_event, options = {}) => {
+  try {
+    const win = BrowserWindow.getFocusedWindow();
+    const result = await dialog.showOpenDialog(win, {
+      title: options.title || 'Select folder',
+      defaultPath: options.defaultPath || undefined,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+
+    if (result.canceled) return { canceled: true, filePaths: [] };
+    return { canceled: false, filePaths: result.filePaths };
+  } catch (error) {
+    console.error('Error opening directory dialog:', error);
+    return { canceled: true, filePaths: [] };
   }
 });

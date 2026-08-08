@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   z-index: 1000;
 
   .modal-content {
@@ -15,7 +16,9 @@
     border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 24px;
-    width: 500px;
+    width: min(500px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     color: var(--primary-text);
   }
 
@@ -59,6 +62,16 @@
         &:focus {
           outline: 2px solid var(--outline);
         }
+
+        &.input-invalid {
+          outline: 2px solid var(--danger);
+        }
+      }
+
+      .field-error {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--danger);
       }
     }
 
@@ -69,16 +82,12 @@
       .form-group {
         flex: 1;
       }
+    }
+  }
 
-      &.display-tag-row {
-        .display-name-group {
-          flex: 3; // 75%
-        }
-
-        .tag-group {
-          flex: 1; // 25%
-        }
-      }
+  @media (max-width: 640px) {
+    .edit-form .form-row {
+      flex-direction: column;
     }
   }
 

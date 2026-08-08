@@ -1,131 +1,148 @@
 @if (isOpen()) {
-<div class="modal-overlay" (click)="close()" tabindex="0">
-  <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
-    <div class="modal-header">
-      <div>
-        <h2>Add New Account</h2>
-        <p>Add a single account or multiple accounts in bulk</p>
-      </div>
-      <img
-        src="assets/icons/plus.svg"
-        class="close-btn"
-        (click)="close()"
-        alt="Close"
-        tabindex="0"
-      />
-    </div>
-
-    <div class="modal-tabs">
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'single'"
-        (click)="setActiveTab('single')"
-      >
-        Single Account
-      </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'bulk'"
-        (click)="setActiveTab('bulk')"
-      >
-        Bulk Import
-      </button>
-    </div>
-
-    @if (activeTab() === 'single') {
-    <form class="single-account-form" (ngSubmit)="addSingleAccount()">
-      <div>
-        <div class="form-group">
-          <label for="username">Username *</label>
-          <input
-            type="text"
-            id="username"
-            [(ngModel)]="singleAccount().username"
-            name="username"
-            placeholder="Enter username"
-            required
-          />
+  <div class="modal-overlay" (click)="close()" tabindex="0">
+    <div class="modal-content" (click)="$event.stopPropagation()" tabindex="0">
+      <div class="modal-header">
+        <div>
+          <h2>Add New Account</h2>
+          <p>Add a single account or multiple accounts in bulk</p>
         </div>
-
-        <div class="form-group">
-          <label for="password">Password *</label>
-          <input
-            type="password"
-            id="password"
-            [(ngModel)]="singleAccount().password"
-            name="password"
-            placeholder="Enter password"
-            required
-          />
-        </div>
+        <img
+          src="assets/icons/plus.svg"
+          class="close-btn"
+          (click)="close()"
+          alt="Close"
+          tabindex="0"
+        />
       </div>
 
-      <div class="form-row">
-        <div class="form-group display-name-group">
-          <label for="displayName">Display Name *</label>
-          <input
-            type="text"
-            id="displayName"
-            [(ngModel)]="singleAccount().displayName"
-            name="displayName"
-            placeholder="Summoner name"
-            required
-          />
-        </div>
-
-        <div class="form-group tag-group">
-          <label for="tag">Tag *</label>
-          <input
-            type="text"
-            id="tag"
-            [(ngModel)]="singleAccount().tag"
-            name="tag"
-            placeholder="Tag"
-            required
-          />
-        </div>
+      <div class="modal-tabs">
+        <button
+          class="tab-btn"
+          [class.active]="activeTab() === 'single'"
+          (click)="setActiveTab('single')"
+        >
+          Single Account
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab() === 'bulk'"
+          (click)="setActiveTab('bulk')"
+        >
+          Bulk Import
+        </button>
       </div>
 
-      <div class="form-group">
-        <label for="server">Server *</label>
-        <div class="select-wrapper">
-          <select
-            id="server"
-            class="form-select"
-            [(ngModel)]="singleAccount().server"
-            name="server"
-            required
-          >
-            <option value="">Select Server</option>
-            @for (server of servers; track server) {
-            <option [value]="server">{{ server }}</option>
+      @if (activeTab() === 'single') {
+        <form class="single-account-form" (ngSubmit)="addSingleAccount()">
+          <div class="credential-row">
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                [(ngModel)]="singleAccount().username"
+                name="username"
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                [(ngModel)]="singleAccount().password"
+                name="password"
+                placeholder="Enter password"
+              />
+            </div>
+
+            @if (hasSingleFormCredentialWarning()) {
+              <p class="credential-warning">
+                Username/password are optional. Preferred flow: log in manually with Stay signed in,
+                then use Save Session on the account card.
+              </p>
             }
-          </select>
+
+            <div class="session-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="openCleanRiotClient()"
+                [disabled]="isOpeningCleanClient()"
+              >
+                {{ isOpeningCleanClient() ? 'Opening...' : 'Open Clean Riot Login' }}
+              </button>
+
+              @if (cleanClientNotice()) {
+                <p class="clean-client-notice" [class.error]="cleanClientNoticeError()">
+                  {{ cleanClientNotice() }}
+                </p>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="riotId">Riot ID (displayName#tag) *</label>
+            <input
+              type="text"
+              id="riotId"
+              [(ngModel)]="singleAccount().riotId"
+              name="riotId"
+              placeholder="spice#2123"
+              [class.input-invalid]="isRiotIdInvalid()"
+              required
+            />
+            @if (isRiotIdInvalid()) {
+              <small class="field-error">Use displayName#tag format.</small>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="server">Server *</label>
+            <div class="select-wrapper">
+              <select
+                id="server"
+                class="form-select"
+                [(ngModel)]="singleAccount().server"
+                name="server"
+                required
+              >
+                <option value="">Select Server</option>
+                @for (server of servers; track server) {
+                  <option [value]="server">{{ server }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Add Account</button>
+        </form>
+      } @else {
+        <div class="bulk-import-form">
+          <div class="form-group">
+            <label for="bulkAccounts">Bulk Import</label>
+            <textarea
+              id="bulkAccounts"
+              [(ngModel)]="bulkAccountsText"
+              name="bulkAccounts"
+              placeholder="displayName#tag:EUW:Gold II&#10;username:password:displayName#tag:NA:Emerald I"
+              rows="8"
+            ></textarea>
+          </div>
+
+          <p class="bulk-format-hint">
+            Format:
+            <span>displayName#tag:server:rank</span>
+            or
+            <span>username:password:displayName#tag:server:rank</span>
+          </p>
+
+          <button type="button" class="btn btn-primary" (click)="importBulkAccounts()">
+            Import Accounts
+          </button>
         </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary">Add Account</button>
-    </form>
-    } @else {
-    <div class="bulk-import-form">
-      <div class="form-group">
-        <label for="bulkAccounts">Bulk Import</label>
-        <textarea
-          id="bulkAccounts"
-          [(ngModel)]="bulkAccountsText"
-          name="bulkAccounts"
-          placeholder="example1:password1:Example Account 1:EUW:Gold&#10;example2:password2:Example Account 2&#10;example3:password3"
-          rows="8"
-        ></textarea>
-      </div>
-
-      <p>Format: <span>username:password:displayName:server:rank</span> (one per line)</p>
-
-      <button type="button" class="btn btn-primary" (click)="importBulkAccounts()">
-        Import Accounts
-      </button>
+      }
     </div>
-    }
   </div>
-</div>
 }

@@ -57,3 +57,4 @@ backend/functions/lib/
 # Local app data
 apps/electron/src/app/data/boards.json
 apps/electron/src/app/data/accounts.json
+apps/electron/src/app/data/riot-session-vault/

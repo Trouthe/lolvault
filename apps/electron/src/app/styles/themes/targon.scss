@@ -11,6 +11,7 @@
   --card: oklch(0.17 0.045 280);
   --border-color: oklch(0.52 0.12 280);
   --outline: oklch(0.65 0.14 75);
+  --lock-accent: color-mix(in oklch, var(--outline) 62%, oklch(0.82 0.13 85) 38%);
 
   // Text - celestial glow
   --primary-text: oklch(0.9 0.08 280);
@@ -31,6 +32,7 @@
   --card: oklch(0.92 0.025 280);
   --border-color: oklch(0.7 0.1 280);
   --outline: oklch(0.55 0.12 280);
+  --lock-accent: color-mix(in oklch, var(--outline) 72%, oklch(0.7 0.11 85) 28%);
 
   // Text
   --primary-text: oklch(0.2 0.05 280);

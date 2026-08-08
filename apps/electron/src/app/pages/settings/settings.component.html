@@ -1,0 +1,489 @@
+@if (isOpen()) {
+  <div class="settings-page">
+    <!-- Sidebar -->
+    <aside class="settings-sidebar">
+      <div class="sidebar-identity">
+        <img class="identity-avatar" [src]="avatarUrl()" alt="" />
+        <div class="identity-text">
+          <strong>{{ displayName() }}</strong>
+          <span>{{ currentUser()?.email || 'Not signed in' }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        @for (group of navGroups; track group.label) {
+          <div class="nav-group">
+            @if (group.label) {
+              <span class="nav-group-label">{{ group.label }}</span>
+            }
+            @for (item of group.items; track item.id) {
+              <button
+                type="button"
+                class="nav-item"
+                [class.active]="activeSection() === item.id"
+                (click)="selectSection(item.id)"
+              >
+                <img src="assets/icons/{{ item.icon }}.svg" class="icon" alt="" width="16" />
+                {{ item.label }}
+              </button>
+            }
+          </div>
+        }
+
+        <div class="nav-divider"></div>
+
+        <button type="button" class="nav-item nav-item--danger" (click)="signOut()">
+          <img src="assets/icons/log-out.svg" class="icon" alt="" width="16" />
+          Log Out
+        </button>
+      </nav>
+
+      <span class="sidebar-version">v{{ version[0] }} ({{ version[1] }})</span>
+    </aside>
+
+    <!-- Content -->
+    <main class="settings-content">
+      <button type="button" class="settings-close" (click)="close()" title="Close settings">
+        <img src="assets/icons/plus.svg" alt="Close" width="18" />
+        <span>ESC</span>
+      </button>
+
+      <div class="content-scroll">
+        <!-- ── My Account ─────────────────────────────────────────────────── -->
+        @if (activeSection() === 'account') {
+          <section class="settings-section">
+            <h2>My Account</h2>
+
+            <div class="account-card">
+              <div class="account-card-header">
+                <img class="account-avatar" [src]="avatarUrl()" alt="" />
+                <div class="account-heading">
+                  <strong>{{ displayName() }}</strong>
+                  <span>Signed in to LoL Vault</span>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field-label">Email</div>
+                <div class="field-value">
+                  <span>{{ maskedEmail() }}</span>
+                  @if (currentUser()?.email) {
+                    <button type="button" class="link-btn" (click)="toggleEmailReveal()">
+                      {{ isEmailRevealed() ? 'Hide' : 'Reveal' }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field-label">User ID</div>
+                <div class="field-value">
+                  <code>{{ currentUser()?.uid || '—' }}</code>
+                </div>
+              </div>
+            </div>
+
+            <h3>Connections</h3>
+            <p class="section-hint">Accounts you can sign in to LoL Vault with.</p>
+
+            <div class="connection-list">
+              @for (connection of connections(); track connection.providerId) {
+                <div class="connection-item">
+                  <div class="connection-info">
+                    <strong>{{ connection.label }}</strong>
+                    <span>{{ connection.email || 'Linked' }}</span>
+                  </div>
+                  <span class="connection-badge">Connected</span>
+                </div>
+              } @empty {
+                <p class="section-hint">No connected accounts.</p>
+              }
+            </div>
+
+            <div class="section-divider"></div>
+
+            <h3>Log Out</h3>
+            <div class="action-row">
+              <div class="action-text">
+                <strong>Sign out of LoL Vault</strong>
+                <small>Your accounts stay on this computer.</small>
+              </div>
+              <button type="button" class="btn btn-secondary" (click)="signOut()">Log Out</button>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <h3 class="danger-heading">Close your account</h3>
+            <div class="action-row">
+              <div class="action-text">
+                <strong>Permanently delete your LoL Vault account</strong>
+                <small>
+                  This removes your account and any data synced to the web. Accounts stored locally
+                  on this computer are not deleted.
+                </small>
+              </div>
+              <button
+                type="button"
+                class="btn btn-danger"
+                (click)="openDeleteDialog()"
+                [disabled]="!currentUser()"
+              >
+                DELETE ACCOUNT
+              </button>
+            </div>
+          </section>
+        }
+
+        <!-- ── Password & Security ────────────────────────────────────────── -->
+        @if (activeSection() === 'security') {
+          <section class="settings-section">
+            <h2>Password &amp; Security</h2>
+
+            <h3>Password</h3>
+            <div class="action-row">
+              <div class="action-text">
+                <strong>Reset your password</strong>
+                @if (hasPasswordProvider()) {
+                  <small>We'll email a reset link to {{ currentUser()?.email }}.</small>
+                } @else {
+                  <small>
+                    This account signs in with
+                    {{ connections()[0]?.label || 'an external provider' }}, so there is no LoL Vault
+                    password to reset. Change it with your provider instead.
+                  </small>
+                }
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="sendPasswordReset()"
+                [disabled]="isSendingReset() || !hasPasswordProvider()"
+              >
+                {{ isSendingReset() ? 'Sending…' : 'Reset Password' }}
+              </button>
+            </div>
+
+            @if (resetFeedback()) {
+              <p class="feedback" [class.error]="resetFeedbackError()">{{ resetFeedback() }}</p>
+            }
+
+            <div class="section-divider"></div>
+
+            <h3>Stored credentials</h3>
+            <p class="section-hint">
+              League account usernames and passwords are encrypted and stay on this computer. They
+              are never uploaded, even with web sync turned on.
+            </p>
+          </section>
+        }
+
+        <!-- ── Appearance ─────────────────────────────────────────────────── -->
+        @if (activeSection() === 'appearance') {
+          <section class="settings-section">
+            <h2>Appearance</h2>
+
+            <h3>Theme</h3>
+            <div class="theme-options">
+              <button
+                type="button"
+                class="theme-btn"
+                [class.active]="themeService.theme() === 'light'"
+                (click)="setLightTheme()"
+              >
+                <div class="theme-preview light-preview"></div>
+                <span>Light</span>
+              </button>
+              <button
+                type="button"
+                class="theme-btn"
+                [class.active]="themeService.theme() === 'dark'"
+                (click)="setDarkTheme()"
+              >
+                <div class="theme-preview dark-preview"></div>
+                <span>Dark</span>
+              </button>
+            </div>
+
+            <h3>Region theme</h3>
+            <div class="select-wrapper">
+              <select
+                id="theme-variant"
+                class="form-select"
+                name="themeVariant"
+                [ngModel]="themeService.themeVariant()"
+                (ngModelChange)="themeService.setThemeVariant($event)"
+              >
+                @for (variant of themeService.themeVariants; track variant.id) {
+                  <option [value]="variant.id">{{ variant.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <h3>Account cards</h3>
+            <div class="layout-options">
+              <button
+                type="button"
+                class="layout-btn"
+                [class.active]="settingsService.settings().cardLayout === 'list'"
+                (click)="onCardLayoutChange('list')"
+              >
+                <img src="assets/icons/rows.svg" class="icon" alt="" width="18" />
+                <span>List</span>
+              </button>
+              <button
+                type="button"
+                class="layout-btn"
+                [class.active]="settingsService.settings().cardLayout === 'grid'"
+                (click)="onCardLayoutChange('grid')"
+              >
+                <img src="assets/icons/grid.svg" class="icon" alt="" width="18" />
+                <span>Grid</span>
+              </button>
+            </div>
+
+            <div class="toggle-setting">
+              <label for="mastery-bg-toggle" class="toggle-label">
+                <span>Show Mastery Background</span>
+                <small>Display your highest mastery champion as a background</small>
+              </label>
+              <div class="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="mastery-bg-toggle"
+                  [checked]="settingsService.settings().showMasteryBackground"
+                  (change)="onMasteryBackgroundToggle($event)"
+                />
+                <span class="slider"></span>
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- ── Riot Client ────────────────────────────────────────────────── -->
+        @if (activeSection() === 'riot-client') {
+          <section class="settings-section">
+            <h2>Riot Client</h2>
+
+            <h3>Riot Client path</h3>
+            <div class="path-setting">
+              <div class="path-display">
+                <code>{{ settingsService.getRiotClientPath() }}</code>
+                <button type="button" class="btn btn-primary" (click)="browseForRiotClient()">
+                  Browse
+                </button>
+              </div>
+              <small class="section-hint">
+                @if (isMac) {
+                  Click "Browse" to set the path to your Riot Client.app (usually in /Applications)
+                  if the path displayed above does not match.
+                } @else {
+                  Click "Browse" to set the path to your RiotClientServices.exe file if the path
+                  displayed above does not match.
+                }
+              </small>
+            </div>
+          </section>
+        }
+
+        <!-- ── Game Settings ──────────────────────────────────────────────── -->
+        @if (activeSection() === 'game-settings') {
+          <section class="settings-section">
+            <h2>Game Settings</h2>
+
+            <h3>Persistent settings</h3>
+            <div class="toggle-setting">
+              <label for="persistent-settings-toggle" class="toggle-label">
+                <span>Keep my League settings between accounts</span>
+                <small>
+                  Locks League's config files as read-only so Riot cannot reset your keybinds, video
+                  and HUD settings when you switch accounts.
+                </small>
+              </label>
+              <div class="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="persistent-settings-toggle"
+                  [checked]="settingsService.settings().persistentGameSettings"
+                  [disabled]="isPersistenceBusy()"
+                  (change)="onPersistentSettingsToggle($event)"
+                />
+                <span class="slider"></span>
+              </div>
+            </div>
+
+            @if (persistenceNotice()) {
+              <p class="feedback">{{ persistenceNotice() }}</p>
+            }
+            @if (persistenceError()) {
+              <p class="feedback error">{{ persistenceError() }}</p>
+            }
+
+            <h3>League config folder</h3>
+            <div class="path-setting">
+              <div class="path-display">
+                <code>{{ leagueConfigPath() }}</code>
+                <button type="button" class="btn btn-primary" (click)="browseForLeagueConfig()">
+                  Browse
+                </button>
+              </div>
+              <small class="section-hint">
+                @if (isLeagueConfigDerived()) {
+                  Detected from your Riot Client path. Click "Browse" if your League install lives
+                  somewhere else.
+                } @else {
+                  Custom folder.
+                  <button type="button" class="link-btn" (click)="resetLeagueConfigPath()">
+                    Use the detected folder
+                  </button>
+                }
+              </small>
+
+              @if (!configFolderExists()) {
+                <p class="feedback error">
+                  That folder does not exist yet. Launch League once, or pick the correct Config
+                  folder.
+                </p>
+              }
+
+              @if (lockedFiles().length) {
+                <div class="locked-files">
+                  <span class="locked-label">Currently locked</span>
+                  <div class="locked-chips">
+                    @for (file of lockedFiles(); track file) {
+                      <span class="locked-chip">{{ file }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ── Data & Sync ────────────────────────────────────────────────── -->
+        @if (activeSection() === 'data') {
+          <section class="settings-section">
+            <h2>Data &amp; Sync</h2>
+
+            <div class="toggle-setting">
+              <label for="sync-web-toggle" class="toggle-label">
+                <span>Sync with Web</span>
+                <small>
+                  Syncs only required account/folder/settings data. Username and password stay
+                  encrypted on this computer.
+                </small>
+              </label>
+              <div class="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="sync-web-toggle"
+                  [checked]="settingsService.settings().syncWithWeb"
+                  [disabled]="isSyncToggleBusy()"
+                  (change)="onSyncWithWebToggle($event)"
+                />
+                <span class="slider"></span>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <h3>Export</h3>
+            <button type="button" class="btn btn-secondary export-btn" (click)="exportAccounts()">
+              <img src="assets/icons/file-down.svg" class="icon" width="26" alt="" />
+              <span>
+                <strong>Export as CSV</strong>
+                <small>Download accounts in spreadsheet format</small>
+              </span>
+            </button>
+
+            <div class="section-divider"></div>
+
+            <h3>Reset</h3>
+            <div class="action-row">
+              <div class="action-text">
+                <strong>Reset app settings</strong>
+                <small>Restores paths, layout and toggles to their defaults.</small>
+              </div>
+              <button type="button" class="btn btn-secondary" (click)="resetToDefault()">
+                Reset Settings
+              </button>
+            </div>
+          </section>
+        }
+
+        <!-- ── About ──────────────────────────────────────────────────────── -->
+        @if (activeSection() === 'about') {
+          <section class="settings-section">
+            <h2>About</h2>
+
+            <div class="account-card">
+              <div class="field-row">
+                <div class="field-label">Version</div>
+                <div class="field-value">{{ version[0] }}</div>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Build</div>
+                <div class="field-value">{{ version[1] }}</div>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Platform</div>
+                <div class="field-value">{{ isMac ? 'macOS' : 'Windows' }}</div>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+    </main>
+
+    <!-- Delete account confirmation -->
+    @if (isDeleteDialogOpen()) {
+      <div class="delete-overlay" (click)="closeDeleteDialog()" tabindex="0">
+        <div class="delete-dialog" (click)="$event.stopPropagation()" tabindex="0">
+          <h3>Delete your account?</h3>
+          <p>
+            This permanently deletes your LoL Vault account and any data synced to the web. It
+            cannot be undone.
+          </p>
+          <p class="delete-instruction">Type <strong>DELETE</strong> to confirm.</p>
+
+          <input
+            type="text"
+            class="delete-input"
+            placeholder="DELETE"
+            autocomplete="off"
+            [ngModel]="deleteConfirmation()"
+            (ngModelChange)="deleteConfirmation.set($event)"
+          />
+
+          @if (deleteError()) {
+            <p class="feedback error">{{ deleteError() }}</p>
+          }
+
+          <p class="section-hint">
+            You'll be asked to sign in again to confirm it's really you.
+          </p>
+
+          <div class="delete-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="closeDeleteDialog()"
+              [disabled]="isDeletingAccount()"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              (click)="confirmDeleteAccount()"
+              [disabled]="!canConfirmDelete()"
+            >
+              {{ isDeletingAccount() ? 'Deleting…' : 'DELETE ACCOUNT' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
