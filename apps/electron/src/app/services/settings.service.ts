@@ -2,6 +2,13 @@ import { Injectable, signal } from '@angular/core';
 
 export type CardLayout = 'list' | 'grid';
 
+/**
+ * How the analytics view occupies the window.
+ * `sidebar` keeps a left rail (account identity + screen switcher) alongside the
+ * content; `full` gives the content the whole width.
+ */
+export type AnalyticsLeftMode = 'sidebar' | 'full';
+
 export interface AppSettings {
   riotClientPath: string;
   showMasteryBackground: boolean;
@@ -12,6 +19,8 @@ export interface AppSettings {
   persistentGameSettings: boolean;
   /** Folder holding League's config files. Empty means "derive from the Riot Client path". */
   leagueConfigPath: string;
+  /** Layout of the analytics view when an account is opened. */
+  analyticsLeft: AnalyticsLeftMode;
 }
 
 function isMacPlatform(): boolean {
@@ -30,6 +39,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   cardLayout: 'list',
   persistentGameSettings: false,
   leagueConfigPath: '',
+  analyticsLeft: 'sidebar',
 };
 
 @Injectable({
@@ -107,6 +117,22 @@ export class SettingsService {
   toggleCardLayout(): CardLayout {
     const next: CardLayout = this.getCardLayout() === 'grid' ? 'list' : 'grid';
     this.setCardLayout(next);
+    return next;
+  }
+
+  // ── Analytics layout ────────────────────────────────────────────────────────
+
+  getAnalyticsLeft(): AnalyticsLeftMode {
+    return this.settings().analyticsLeft;
+  }
+
+  setAnalyticsLeft(mode: AnalyticsLeftMode): void {
+    this.update({ analyticsLeft: mode });
+  }
+
+  toggleAnalyticsLeft(): AnalyticsLeftMode {
+    const next: AnalyticsLeftMode = this.getAnalyticsLeft() === 'sidebar' ? 'full' : 'sidebar';
+    this.setAnalyticsLeft(next);
     return next;
   }
 

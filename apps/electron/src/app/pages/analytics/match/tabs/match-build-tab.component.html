@@ -1,0 +1,137 @@
+<div class="build-tab">
+  <!-- ── Player picker ────────────────────────────────────────────────────── -->
+  <nav class="picker" aria-label="Select player">
+    <div class="picker-side">
+      @for (p of players().allies; track p.puuid) {
+        <button
+          type="button"
+          class="picker-btn ally"
+          [class.active]="isActive(p)"
+          [title]="p.riotIdGameName + ' — ' + p.championName"
+          (click)="selectPlayer(p.participantId)"
+        >
+          <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+        </button>
+      }
+    </div>
+    <span class="picker-divider" aria-hidden="true"></span>
+    <div class="picker-side">
+      @for (p of players().enemies; track p.puuid) {
+        <button
+          type="button"
+          class="picker-btn enemy"
+          [class.active]="isActive(p)"
+          [title]="p.riotIdGameName + ' — ' + p.championName"
+          (click)="selectPlayer(p.participantId)"
+        >
+          <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+        </button>
+      }
+    </div>
+  </nav>
+
+  @if (activePlayer(); as player) {
+    <header class="active-head">
+      <img
+        class="active-champ"
+        [src]="championIcon(player.championName)"
+        [alt]="player.championName"
+        loading="lazy"
+      />
+      <div class="active-meta">
+        <span class="active-name">{{ player.riotIdGameName }}</span>
+        <span class="active-sub">
+          {{ player.championName }} · Level {{ player.champLevel }} ·
+          {{ player.goldEarned | number: '1.0-0' }} gold
+        </span>
+      </div>
+    </header>
+
+    <!-- ── Build path ─────────────────────────────────────────────────────── -->
+    <section class="block">
+      <h4 class="block-title">Build path</h4>
+
+      @if (buildSteps().length) {
+        <ol class="steps">
+          @for (step of buildSteps(); track step.minute) {
+            <li class="step">
+              <span class="step-time">{{ step.minute }}:00</span>
+              <div class="step-items">
+                @for (item of step.items; track $index) {
+                  <img
+                    class="step-item"
+                    [class.sold]="item.sold"
+                    [src]="itemIcon(item.itemId)"
+                    [alt]="item.sold ? 'Sold item' : 'Item'"
+                    [title]="item.sold ? 'Sold later in the game' : ''"
+                    loading="lazy"
+                  />
+                }
+              </div>
+            </li>
+          }
+        </ol>
+      } @else if (finalItems().length) {
+        <div class="fallback">
+          <p class="fallback-note">
+            Purchase order needs the match timeline, which isn't available for this game. Showing the
+            final build instead.
+          </p>
+          <div class="step-items">
+            @for (item of finalItems(); track $index) {
+              <img class="step-item" [src]="itemIcon(item)" alt="" loading="lazy" />
+            }
+          </div>
+        </div>
+      } @else {
+        <app-empty-state inline title="No item data for this player" />
+      }
+    </section>
+
+    <!-- ── Skill order ────────────────────────────────────────────────────── -->
+    <section class="block">
+      <h4 class="block-title">Skill order</h4>
+
+      @if (skillOrder(); as skills) {
+        <div class="skills-scroll">
+          <table class="skills">
+            <thead>
+              <tr>
+                <th class="skill-key-head"></th>
+                @for (level of [].constructor(skills.levels); track $index) {
+                  <th class="skill-level-head">{{ $index + 1 }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (key of skillKeys; track key; let slotIndex = $index) {
+                <tr>
+                  <th class="skill-key" [attr.data-skill]="key">{{ key }}</th>
+                  @for (taken of skills.grid[slotIndex]; track $index) {
+                    <td>
+                      <span
+                        class="skill-cell"
+                        [class.taken]="taken"
+                        [attr.data-skill]="taken ? key : null"
+                      >
+                        @if (taken) {
+                          {{ $index + 1 }}
+                        }
+                      </span>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          inline
+          title="No skill order recorded"
+          hint="Skill levels come from the match timeline, which isn't cached for this game."
+        />
+      }
+    </section>
+  }
+</div>

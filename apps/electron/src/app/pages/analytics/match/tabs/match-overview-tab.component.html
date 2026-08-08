@@ -1,0 +1,159 @@
+<div class="overview-tab">
+  <!-- ── Team gold + objectives band ──────────────────────────────────────── -->
+  <div class="band">
+    @if (orderedTeams().length === 2) {
+      <div class="team-summary">
+        <span class="team-label" [class.win]="orderedTeams()[0].win">
+          {{ orderedTeams()[0].win ? 'Victory' : 'Defeat' }}
+        </span>
+        <span class="team-kills">{{ orderedTeams()[0].kills }} kills</span>
+      </div>
+
+      <!-- Gold bar: hovering reveals the gold-lead-over-time graph -->
+      <div
+        class="gold"
+        tabindex="0"
+        role="button"
+        [attr.aria-expanded]="showGoldGraph()"
+        aria-label="Show gold lead over time"
+        (mouseenter)="showGoldGraph.set(true)"
+        (mouseleave)="showGoldGraph.set(false)"
+        (focus)="showGoldGraph.set(true)"
+        (blur)="showGoldGraph.set(false)"
+      >
+        <div class="gold-values">
+          <span class="gold-ally">{{ orderedTeams()[0].gold | number: '1.0-0' }}</span>
+          <span class="gold-caption">Total gold</span>
+          <span class="gold-enemy">{{ orderedTeams()[1].gold | number: '1.0-0' }}</span>
+        </div>
+        <div class="gold-bar">
+          <div class="gold-bar-ally" [style.width.%]="goldShare()"></div>
+          <div class="gold-bar-enemy"></div>
+        </div>
+
+        @if (showGoldGraph()) {
+          <div class="gold-pop">
+            @if (goldLeadSeries(); as series) {
+              <p class="gold-pop-title">Gold lead over time</p>
+              <apx-chart
+                [series]="series"
+                [chart]="goldChartOptions().chart"
+                [colors]="goldChartOptions().colors"
+                [stroke]="goldChartOptions().stroke"
+                [fill]="goldChartOptions().fill"
+                [xaxis]="goldChartOptions().xaxis"
+                [yaxis]="goldChartOptions().yaxis"
+                [grid]="goldChartOptions().grid"
+                [theme]="goldChartOptions().theme"
+                [tooltip]="goldChartOptions().tooltip"
+                [annotations]="goldChartOptions().annotations"
+                [dataLabels]="goldChartOptions().dataLabels"
+              />
+            } @else {
+              <p class="gold-pop-empty">
+                Gold history needs this match's timeline, which isn't cached yet.
+              </p>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="team-summary right">
+        <span class="team-label" [class.win]="orderedTeams()[1].win">
+          {{ orderedTeams()[1].win ? 'Victory' : 'Defeat' }}
+        </span>
+        <span class="team-kills">{{ orderedTeams()[1].kills }} kills</span>
+      </div>
+    }
+  </div>
+
+  <!-- ── Objectives ───────────────────────────────────────────────────────── -->
+  @if (orderedTeams().length === 2) {
+    <div class="objectives">
+      @for (key of objectiveKeys; track key) {
+        <div class="objective">
+          <span class="objective-count left">{{ objectiveCount(orderedTeams()[0], key) }}</span>
+          <span class="objective-name">{{ objectiveLabels[key] }}</span>
+          <span class="objective-count right">{{ objectiveCount(orderedTeams()[1], key) }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Scoreboards ──────────────────────────────────────────────────────── -->
+  <div class="boards">
+    @for (team of orderedTeams(); track team.teamId) {
+      <section class="board" [class.win]="team.win">
+        <header class="board-head">
+          <span class="board-title" [class.win]="team.win">
+            {{ team.win ? 'Victory' : 'Defeat' }}
+          </span>
+
+          @if (team.bans.length) {
+            <div class="bans" [title]="'Bans: ' + team.bans.length">
+              <span class="bans-label">Bans</span>
+              @for (ban of team.bans; track $index) {
+                @if (championIconById(ban)) {
+                  <img
+                    class="ban"
+                    [src]="championIconById(ban)"
+                    [alt]="championNameById(ban)"
+                    [title]="championNameById(ban)"
+                    loading="lazy"
+                  />
+                } @else {
+                  <span class="ban ban-unknown" title="Unknown champion"></span>
+                }
+              }
+            </div>
+          }
+        </header>
+
+        <table class="score">
+          <thead>
+            <tr>
+              <th class="sc-player">Player</th>
+              <th>KDA</th>
+              <th>CS</th>
+              <th>Gold</th>
+              <th>Damage</th>
+              <th class="sc-items">Items</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of team.players; track p.puuid) {
+              <tr [class.self]="isSelf(p)">
+                <td class="sc-player">
+                  <img
+                    class="sc-champ"
+                    [src]="championIcon(p.championName)"
+                    [alt]="p.championName"
+                    loading="lazy"
+                  />
+                  <span class="sc-level">{{ p.champLevel }}</span>
+                  <span class="sc-name" [title]="p.riotIdGameName">{{ p.riotIdGameName }}</span>
+                </td>
+                <td class="num">
+                  <span class="sc-kda">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+                  <span class="sc-kda-ratio">{{ kda(p) | number: '1.2-2' }}</span>
+                </td>
+                <td class="num">{{ csOf(p) }}</td>
+                <td class="num">{{ p.goldEarned | number: '1.0-0' }}</td>
+                <td class="num">{{ p.totalDamageDealtToChampions | number: '1.0-0' }}</td>
+                <td class="sc-items">
+                  @for (item of p.items; track $index) {
+                    @if (item > 0) {
+                      <img class="sc-item" [src]="itemIcon(item)" alt="" loading="lazy" />
+                    } @else {
+                      <span class="sc-item sc-item-empty"></span>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  </div>
+</div>

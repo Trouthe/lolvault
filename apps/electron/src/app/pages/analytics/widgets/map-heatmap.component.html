@@ -1,0 +1,109 @@
+<div class="heatmap">
+  <header class="heatmap-head">
+    <h4 class="heatmap-title">Position heatmap</h4>
+    <app-segmented-toggle
+      [options]="scopeOptions"
+      [value]="scope()"
+      label="Heatmap scope"
+      compact
+      (valueChange)="scope.set($event)"
+    />
+  </header>
+
+  @if (!hasTimeline()) {
+    <app-empty-state
+      inline
+      icon="🗺️"
+      title="No position data for this match"
+      hint="The heatmap is built from the match timeline. Riot does not provide timelines for every game, and very old matches fall outside the Match API window."
+    />
+  } @else {
+    <div class="map-wrap">
+      <div class="map-stack">
+        <canvas #baseLayer class="layer" aria-hidden="true"></canvas>
+        <canvas #heatLayer class="layer" aria-hidden="true"></canvas>
+        <canvas
+          #markerLayer
+          class="layer"
+          role="img"
+          [attr.aria-label]="
+            'Position heatmap between minute ' + startMinute() + ' and ' + endMinute()
+          "
+        ></canvas>
+      </div>
+
+      <div class="controls">
+        <app-segmented-toggle
+          [options]="presetOptions"
+          [value]="activePreset()"
+          label="Time window"
+          compact
+          (valueChange)="applyPreset($event)"
+        />
+
+        <div class="range">
+          <div class="range-row">
+            <label class="range-label" for="heat-start">From</label>
+            <input
+              id="heat-start"
+              class="range-input"
+              type="range"
+              min="0"
+              [max]="maxMinute()"
+              [value]="startMinute()"
+              (input)="onStartInput($event)"
+            />
+            <span class="range-value">{{ startMinute() }}m</span>
+          </div>
+
+          <div class="range-row">
+            <label class="range-label" for="heat-end">To</label>
+            <input
+              id="heat-end"
+              class="range-input"
+              type="range"
+              min="0"
+              [max]="maxMinute()"
+              [value]="endMinute()"
+              (input)="onEndInput($event)"
+            />
+            <span class="range-value">{{ endMinute() }}m</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="marker-toggle"
+          [class.on]="showMarkers()"
+          [attr.aria-pressed]="showMarkers()"
+          (click)="toggleMarkers()"
+        >
+          {{ showMarkers() ? 'Hide events' : 'Show events' }}
+        </button>
+
+        <dl class="legend">
+          <div class="legend-item">
+            <span class="legend-mark kill" aria-hidden="true">✕</span>
+            <dt>Kills</dt>
+            <dd>{{ markerCounts().kill }}</dd>
+          </div>
+          <div class="legend-item">
+            <span class="legend-mark death" aria-hidden="true">☠</span>
+            <dt>Deaths</dt>
+            <dd>{{ markerCounts().death }}</dd>
+          </div>
+          <div class="legend-item">
+            <span class="legend-mark objective" aria-hidden="true">◆</span>
+            <dt>Objectives</dt>
+            <dd>{{ markerCounts().objective }}</dd>
+          </div>
+        </dl>
+
+        <p class="sample">
+          {{ pointCount() }} position {{ pointCount() === 1 ? 'sample' : 'samples' }} ·
+          one per minute per player
+        </p>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,209 @@
+<section class="champions">
+  <header class="head">
+    <div class="head-titles">
+      <h2>Champion Pool</h2>
+      <p class="subtitle">
+        Across {{ data.matches().length }} cached
+        {{ data.matches().length === 1 ? 'game' : 'games' }}
+      </p>
+    </div>
+
+    <div class="head-controls">
+      <app-segmented-toggle
+        [options]="queueOptions"
+        [value]="queueFilter()"
+        label="Queue filter"
+        compact
+        (valueChange)="queueFilter.set($event)"
+      />
+      <input
+        class="search"
+        type="search"
+        placeholder="Search champion"
+        [value]="search()"
+        (input)="onSearch($event)"
+        aria-label="Search champion"
+      />
+    </div>
+  </header>
+
+  @if (!hasMatches()) {
+    <app-empty-state
+      icon="📭"
+      title="No cached matches yet"
+      hint="Match data is fetched from Riot when you open this account. If this persists, check your API key in Settings."
+    />
+  } @else if (rows().length === 0) {
+    <app-empty-state
+      inline
+      icon="🔍"
+      title="No champions match this filter"
+      hint="Try a different queue or clear the search."
+    />
+  } @else {
+    <div class="table-scroll">
+      <table class="pool">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th class="col-champ">Champion</th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'games'" (click)="setSort('games')">
+              Games
+            </th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'winRate'" (click)="setSort('winRate')">
+              Win / Lose
+            </th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'kda'" (click)="setSort('kda')">KDA</th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'damagePerMin'" (click)="setSort('damagePerMin')">
+              Damage/m
+            </th>
+            <th
+              class="sortable"
+              [class.sorted]="sortColumn() === 'damageTakenPerMin'"
+              (click)="setSort('damageTakenPerMin')"
+            >
+              Taken/m
+            </th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'csPerMin'" (click)="setSort('csPerMin')">
+              CS/m
+            </th>
+            <th class="sortable" [class.sorted]="sortColumn() === 'goldDiff15'" (click)="setSort('goldDiff15')">
+              GD@15
+            </th>
+            <th class="col-expand" aria-label="Expand"></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @if (overall(); as all) {
+            <tr class="row row-total">
+              <td class="col-rank">–</td>
+              <td class="col-champ">
+                <span class="champ-name">All Champions</span>
+              </td>
+              <td class="num">{{ all.games }}</td>
+              <td>
+                <div class="wl">
+                  <div class="wl-bar" [style.--win-pct.%]="all.winRate">
+                    <span class="wl-win">{{ all.wins }}</span>
+                    <span class="wl-loss">{{ all.losses }}</span>
+                  </div>
+                  <span class="wl-pct" [class.positive]="all.winRate >= 50">
+                    {{ all.winRate | number: '1.0-0' }}%
+                  </span>
+                </div>
+              </td>
+              <td class="num">
+                <span class="kda-main">{{ all.kda | number: '1.2-2' }}</span>
+                <span class="kda-sub">
+                  {{ all.kills | number: '1.1-1' }} / {{ all.deaths | number: '1.1-1' }} /
+                  {{ all.assists | number: '1.1-1' }}
+                </span>
+              </td>
+              <td class="num">{{ all.damagePerMin | number: '1.0-0' }}</td>
+              <td class="num">{{ all.damageTakenPerMin | number: '1.0-0' }}</td>
+              <td class="num">{{ all.csPerMin | number: '1.1-1' }}</td>
+              <td class="num" [class.positive]="(all.goldDiff15 ?? 0) > 0" [class.negative]="(all.goldDiff15 ?? 0) < 0">
+                {{ formatDiff(all.goldDiff15) }}
+              </td>
+              <td></td>
+            </tr>
+          }
+
+          @for (row of rows(); track trackChampion($index, row); let i = $index) {
+            <tr
+              class="row row-champ"
+              [class.expanded]="expanded() === row.champion"
+              (click)="toggleExpanded(row.champion)"
+              (keydown.enter)="toggleExpanded(row.champion)"
+              tabindex="0"
+              role="button"
+              [attr.aria-expanded]="expanded() === row.champion"
+            >
+              <td class="col-rank">{{ i + 1 }}</td>
+              <td class="col-champ">
+                <img class="champ-icon" [src]="championIcon(row.champion)" [alt]="row.champion" loading="lazy" />
+                <span class="champ-name">{{ row.champion }}</span>
+              </td>
+              <td class="num">{{ row.games }}</td>
+              <td>
+                <div class="wl">
+                  <div class="wl-bar" [style.--win-pct.%]="row.winRate">
+                    <span class="wl-win">{{ row.wins }}</span>
+                    <span class="wl-loss">{{ row.losses }}</span>
+                  </div>
+                  <span class="wl-pct" [class.positive]="row.winRate >= 50">
+                    {{ row.winRate | number: '1.0-0' }}%
+                  </span>
+                </div>
+              </td>
+              <td class="num">
+                <span class="kda-main">{{ row.kda | number: '1.2-2' }}</span>
+                <span class="kda-sub">
+                  {{ row.kills | number: '1.1-1' }} / {{ row.deaths | number: '1.1-1' }} /
+                  {{ row.assists | number: '1.1-1' }}
+                </span>
+              </td>
+              <td class="num">{{ row.damagePerMin | number: '1.0-0' }}</td>
+              <td class="num">{{ row.damageTakenPerMin | number: '1.0-0' }}</td>
+              <td class="num">{{ row.csPerMin | number: '1.1-1' }}</td>
+              <td class="num" [class.positive]="(row.goldDiff15 ?? 0) > 0" [class.negative]="(row.goldDiff15 ?? 0) < 0">
+                {{ formatDiff(row.goldDiff15) }}
+              </td>
+              <td class="col-expand">
+                <span class="chevron" [class.open]="expanded() === row.champion" aria-hidden="true">⌄</span>
+              </td>
+            </tr>
+
+            @if (expanded() === row.champion) {
+              <tr class="row-detail">
+                <td colspan="10">
+                  <div class="matchups">
+                    <h3 class="matchups-title">Matchups on {{ row.champion }}</h3>
+                    @if (matchupsFor().length === 0) {
+                      <app-empty-state
+                        inline
+                        title="No lane opponents recorded"
+                        hint="Matchups need the opposing laner's role, which older cached games may not include."
+                      />
+                    } @else {
+                      <div class="matchup-grid">
+                        @for (mu of matchupsFor(); track mu.opponent) {
+                          <div class="matchup">
+                            <img
+                              class="matchup-icon"
+                              [src]="championIcon(mu.opponent)"
+                              [alt]="mu.opponent"
+                              loading="lazy"
+                            />
+                            <div class="matchup-body">
+                              <span class="matchup-name">{{ mu.opponent }}</span>
+                              <span class="matchup-record">
+                                {{ mu.wins }}W {{ mu.games - mu.wins }}L
+                                <span class="matchup-wr" [class.positive]="mu.winRate >= 50">
+                                  {{ mu.winRate | number: '1.0-0' }}%
+                                </span>
+                              </span>
+                            </div>
+                            <span
+                              class="matchup-gd"
+                              [class.positive]="(mu.goldDiff15 ?? 0) > 0"
+                              [class.negative]="(mu.goldDiff15 ?? 0) < 0"
+                              title="Average gold difference at 15 minutes"
+                            >
+                              {{ formatDiff(mu.goldDiff15) }}
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

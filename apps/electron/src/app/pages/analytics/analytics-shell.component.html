@@ -1,0 +1,123 @@
+<div class="analytics" [class.with-sidebar]="sidebarMode()">
+  <!-- ── Left rail: account identity + screen switcher ───────────────────── -->
+  <aside class="rail">
+    <button class="rail-back" type="button" (click)="goBack()" aria-label="Back to dashboard">
+      <span class="rail-back-chevron" aria-hidden="true">‹</span>
+      <span>Vault</span>
+    </button>
+
+    @if (data.account(); as account) {
+      <div class="identity">
+        <div class="identity-avatar">
+          <img [src]="profileIconUrl()" alt="" />
+          @if (account.summonerLevel) {
+            <span class="identity-level">{{ account.summonerLevel }}</span>
+          }
+        </div>
+
+        <div class="identity-name">
+          <h1 class="identity-game">{{ accountName().game }}</h1>
+          @if (accountName().tag) {
+            <span class="identity-tag">#{{ accountName().tag }}</span>
+          }
+        </div>
+
+        @if (account.server) {
+          <span class="identity-server">{{ account.server }}</span>
+        }
+      </div>
+
+      <!-- Rank card -->
+      <div class="rank-card">
+        @if (rankEmblemUrl()) {
+          <img class="rank-emblem" [src]="rankEmblemUrl()!" [alt]="rankLabel()" />
+        } @else {
+          <div class="rank-emblem rank-emblem-empty" aria-hidden="true"></div>
+        }
+        <div class="rank-body">
+          <span class="rank-pill" [attr.data-rank]="rankSlug()">{{ rankLabel() }}</span>
+          @if (soloRecord(); as record) {
+            <span class="rank-lp">{{ record.lp }} LP</span>
+            <div class="rank-record">
+              <span class="rank-wins">{{ record.wins }}W</span>
+              <span class="rank-losses">{{ record.losses }}L</span>
+              <span class="rank-wr" [class.positive]="record.winRate >= 50">
+                {{ record.winRate | number: '1.0-0' }}%
+              </span>
+            </div>
+          } @else {
+            <span class="rank-lp muted">No ranked games this season</span>
+          }
+        </div>
+      </div>
+
+      @if (streak().count >= 2) {
+        <div class="streak" [class.win]="streak().type === 'win'" [class.loss]="streak().type === 'loss'">
+          {{ streak().count }}-game {{ streak().type }} streak
+        </div>
+      }
+
+      @if (flexQueue(); as flex) {
+        <div class="secondary-queue">
+          <span class="secondary-queue-label">Flex</span>
+          <span class="secondary-queue-value">
+            {{ flex.tier | titlecase }} {{ flex.rank }} · {{ flex.leaguePoints }} LP
+          </span>
+          <span class="secondary-queue-record">{{ flex.wins }}W {{ flex.losses }}L</span>
+        </div>
+      }
+    }
+
+    <nav class="rail-nav" aria-label="Analytics sections">
+      @for (item of screens; track item.id) {
+        <button
+          type="button"
+          class="rail-nav-item"
+          [class.active]="screen() === item.id"
+          [attr.aria-current]="screen() === item.id ? 'page' : null"
+          (click)="setScreen(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </nav>
+  </aside>
+
+  <!-- ── Content ─────────────────────────────────────────────────────────── -->
+  <main class="content">
+    @if (data.loading()) {
+      <div class="loading">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading analytics…</p>
+      </div>
+    } @else if (data.failure() === 'no-api-key') {
+      <app-empty-state
+        icon="🔑"
+        title="No Riot API key configured"
+        hint="Analytics reads match data straight from Riot. Add your API key in Settings to enable it."
+      />
+    } @else if (data.failure() === 'no-account') {
+      <app-empty-state icon="🔍" title="Account not found" hint="This vault entry no longer exists." />
+    } @else if (data.failure() === 'no-puuid') {
+      <app-empty-state
+        icon="⚠️"
+        title="Could not resolve this Riot ID"
+        hint="Check the account name and tag are correct, then refresh the account from the dashboard."
+      />
+    } @else if (data.failure() === 'error') {
+      <app-empty-state icon="⚠️" title="Could not load analytics" [hint]="data.errorMessage() ?? ''" />
+    } @else {
+      @switch (screen()) {
+        @case ('overview') {
+          <app-overview-screen />
+        }
+        @case ('champions') {
+          <app-champions-screen />
+        }
+        @case ('insights') {
+          <app-insights-screen />
+        }
+      }
+    }
+  </main>
+</div>

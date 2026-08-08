@@ -1,0 +1,350 @@
+.overview-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// ── Gold + team band ─────────────────────────────────────────────────────────
+
+.band {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(200px, 2.4fr) minmax(90px, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.team-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  &.right {
+    align-items: flex-end;
+  }
+}
+
+.team-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--danger);
+
+  &.win {
+    color: #4a8fe0;
+  }
+}
+
+.team-kills {
+  font-size: 11px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.gold {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: default;
+  outline: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--muted);
+  }
+}
+
+.gold-values {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gold-ally {
+  font-weight: 700;
+  color: #4a8fe0;
+}
+
+.gold-enemy {
+  font-weight: 700;
+  color: #e0697c;
+}
+
+.gold-caption {
+  font-size: 10px;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.gold-bar {
+  display: flex;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--muted);
+}
+
+.gold-bar-ally {
+  background: #2f6fd0;
+}
+
+.gold-bar-enemy {
+  flex: 1;
+  background: #d6455d;
+}
+
+// Hover popover carrying the gold-lead chart.
+.gold-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(420px, 76vw);
+  padding: 10px 12px 4px;
+  border-radius: 11px;
+  background: var(--card);
+  border: 1px solid var(--outline);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 32%);
+}
+
+.gold-pop-title {
+  margin: 0 0 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.gold-pop-empty {
+  margin: 0;
+  padding: 8px 0 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+// ── Objectives ───────────────────────────────────────────────────────────────
+
+.objectives {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border-color);
+}
+
+.objective {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.objective-count {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary-text);
+
+  &.left {
+    text-align: right;
+    color: #4a8fe0;
+  }
+
+  &.right {
+    text-align: left;
+    color: #e0697c;
+  }
+}
+
+.objective-name {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--secondary-text);
+  white-space: nowrap;
+}
+
+// ── Scoreboards ──────────────────────────────────────────────────────────────
+
+.boards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.board {
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 11px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.board-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--danger);
+
+  &.win {
+    color: #4a8fe0;
+  }
+}
+
+.bans {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.bans-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--secondary-text);
+  margin-right: 2px;
+}
+
+.ban {
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
+  object-fit: cover;
+  display: block;
+  // Bans read as "denied", so they are desaturated.
+  filter: grayscale(1);
+  opacity: 0.75;
+}
+
+.ban-unknown {
+  background: var(--muted);
+}
+
+.score {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.score thead th {
+  padding: 5px 10px;
+  text-align: right;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.score thead th.sc-player,
+.score thead th.sc-items {
+  text-align: left;
+}
+
+.score tbody td {
+  padding: 5px 10px;
+  text-align: right;
+  border-bottom: 1px solid color-mix(in oklch, var(--border-color) 50%, transparent);
+  color: var(--primary-text);
+  white-space: nowrap;
+}
+
+.score tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.score tbody tr.self {
+  background: color-mix(in oklch, var(--outline) 22%, transparent);
+
+  .sc-name {
+    font-weight: 700;
+    color: var(--primary-text);
+  }
+}
+
+td.sc-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  min-width: 168px;
+}
+
+.sc-champ {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sc-level {
+  min-width: 16px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--secondary-text);
+  max-width: 118px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-kda {
+  display: block;
+  font-weight: 600;
+}
+
+.sc-kda-ratio {
+  display: block;
+  font-size: 9.5px;
+  color: var(--secondary-text);
+}
+
+td.sc-items {
+  text-align: left;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.sc-item {
+  width: 19px;
+  height: 19px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--muted);
+  display: block;
+}
+
+.sc-item-empty {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+}

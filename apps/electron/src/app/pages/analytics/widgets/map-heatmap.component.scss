@@ -1,0 +1,181 @@
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.heatmap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.heatmap-title {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.map-wrap {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .map-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Stacked layers: minimap, density, markers.
+.map-stack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: #0d1117;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.range {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.range-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.range-input {
+  width: 100%;
+  accent-color: var(--outline);
+  cursor: pointer;
+}
+
+.range-value {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--primary-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.marker-toggle {
+  align-self: flex-start;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: var(--primary-text);
+  }
+
+  &.on {
+    background: var(--muted);
+    color: var(--primary-text);
+  }
+}
+
+// ── Legend ───────────────────────────────────────────────────────────────────
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--card);
+  border: 1px solid var(--border-color);
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend-mark {
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+
+  &.kill {
+    color: #5ad18f;
+  }
+
+  &.death {
+    color: #ff6b7d;
+  }
+
+  &.objective {
+    color: #c9a227;
+  }
+}
+
+.legend dt {
+  font-size: 11px;
+  color: var(--secondary-text);
+}
+
+.legend dd {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--primary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sample {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--secondary-text);
+  opacity: 0.85;
+}

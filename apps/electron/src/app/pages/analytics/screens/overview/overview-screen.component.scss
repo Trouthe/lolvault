@@ -1,0 +1,132 @@
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Top band ─────────────────────────────────────────────────────────────────
+
+.band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1100px) {
+  .band {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--card) 55%, transparent);
+  border: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.panel-note {
+  font-size: 10.5px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-toggle {
+  align-self: flex-start;
+}
+
+// ── Main layout ──────────────────────────────────────────────────────────────
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.section-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-text);
+}
+
+.section-note {
+  font-size: 11px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.load-more {
+  align-self: center;
+  margin-top: 4px;
+  padding: 8px 20px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--muted);
+    color: var(--primary-text);
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}

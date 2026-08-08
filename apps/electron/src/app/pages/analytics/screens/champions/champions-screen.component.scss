@@ -1,0 +1,329 @@
+.champions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.head-titles h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary-text);
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--secondary-text);
+}
+
+.head-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search {
+  width: 170px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  color: var(--primary-text);
+  font-size: 12px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--secondary-text);
+  }
+
+  &:focus {
+    border-color: var(--outline);
+  }
+}
+
+// Wide tables scroll inside their own container rather than the page.
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+}
+
+.pool {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 860px;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--secondary-text);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  text-align: right;
+  white-space: nowrap;
+}
+
+thead th.col-rank,
+thead th.col-champ {
+  text-align: left;
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: var(--primary-text);
+  }
+
+  &.sorted {
+    color: var(--primary-text);
+  }
+}
+
+tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: right;
+  color: var(--primary-text);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.col-rank {
+  width: 34px;
+  text-align: left !important;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.col-champ {
+  text-align: left !important;
+  min-width: 170px;
+}
+
+.col-expand {
+  width: 34px;
+}
+
+.row-champ {
+  cursor: pointer;
+  transition: background 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--muted);
+    outline: none;
+  }
+
+  &.expanded {
+    background: var(--muted);
+  }
+}
+
+.row-total {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+
+  .champ-name {
+    font-weight: 700;
+  }
+}
+
+.champ-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  vertical-align: middle;
+  margin-right: 8px;
+  object-fit: cover;
+}
+
+.champ-name {
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: #2f9e6f;
+}
+
+.negative {
+  color: var(--danger);
+}
+
+// ── Win/loss bar ─────────────────────────────────────────────────────────────
+
+.wl {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wl-bar {
+  display: flex;
+  width: 92px;
+  height: 17px;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.wl-win {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--win-pct, 50%);
+  background: #2f6fd0;
+  min-width: 0;
+}
+
+.wl-loss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  background: #d6455d;
+  min-width: 0;
+}
+
+.wl-pct {
+  min-width: 32px;
+  text-align: right;
+  font-weight: 700;
+  color: var(--secondary-text);
+
+  &.positive {
+    color: #2f9e6f;
+  }
+}
+
+.kda-main {
+  display: block;
+  font-weight: 700;
+}
+
+.kda-sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--secondary-text);
+}
+
+.chevron {
+  display: inline-block;
+  color: var(--secondary-text);
+  transition: transform 0.18s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+// ── Expanded matchups ────────────────────────────────────────────────────────
+
+.row-detail td {
+  padding: 0 12px 14px;
+  background: var(--muted);
+  text-align: left;
+  white-space: normal;
+}
+
+.matchups-title {
+  margin: 4px 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+}
+
+.matchup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.matchup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--card);
+  border: 1px solid var(--border-color);
+}
+
+.matchup-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.matchup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.matchup-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matchup-record {
+  font-size: 10.5px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.matchup-wr {
+  margin-left: 4px;
+  font-weight: 700;
+
+  &.positive {
+    color: #2f9e6f;
+  }
+}
+
+.matchup-gd {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary-text);
+}

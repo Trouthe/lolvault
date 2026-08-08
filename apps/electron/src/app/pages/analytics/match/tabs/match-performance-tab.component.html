@@ -1,0 +1,149 @@
+<div class="performance-tab">
+  <!-- ── Team totals ──────────────────────────────────────────────────────── -->
+  <section class="block">
+    <h4 class="block-title">Team comparison</h4>
+    <div class="team-rows">
+      @for (row of teamTotals(); track row.label) {
+        <div class="team-row">
+          <span class="team-value ally">{{ row.ally | number: '1.0-0' }}</span>
+          <div class="team-mid">
+            <span class="team-label">{{ row.label }}</span>
+            <div class="team-track">
+              <div class="team-fill ally" [style.width.%]="teamShare(row.ally, row.enemy)"></div>
+              <div class="team-fill enemy"></div>
+            </div>
+          </div>
+          <span class="team-value enemy">{{ row.enemy | number: '1.0-0' }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Head-to-head ─────────────────────────────────────────────────────── -->
+  <section class="block">
+    <h4 class="block-title">Head to head</h4>
+    <p class="block-hint">Pick a player on each side to compare.</p>
+
+    <div class="compare">
+      <!-- Left picker: your team -->
+      <div class="picker left">
+        @for (p of players().allies; track p.puuid) {
+          <button
+            type="button"
+            class="picker-btn ally"
+            [class.active]="isLeft(p)"
+            [title]="p.riotIdGameName + ' — ' + p.championName"
+            (click)="selectLeft(p.participantId)"
+          >
+            <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+          </button>
+        }
+      </div>
+
+      <div class="compare-body">
+        @if (left(); as l) {
+          @if (right(); as r) {
+            <header class="compare-head">
+              <div class="compare-player">
+                <img [src]="championIcon(l.championName)" [alt]="l.championName" loading="lazy" />
+                <span class="compare-name">{{ l.riotIdGameName }}</span>
+              </div>
+              <span class="compare-vs">vs</span>
+              <div class="compare-player right">
+                <span class="compare-name">{{ r.riotIdGameName }}</span>
+                <img [src]="championIcon(r.championName)" [alt]="r.championName" loading="lazy" />
+              </div>
+            </header>
+
+            <!-- @15 differentials -->
+            @if (diffs15(); as diffs) {
+              <div class="diffs">
+                <div class="diff">
+                  <span class="diff-label">Gold @15</span>
+                  <span
+                    class="diff-value"
+                    [class.positive]="diffs.gold > 0"
+                    [class.negative]="diffs.gold < 0"
+                  >
+                    {{ formatDiff(diffs.gold) }}
+                  </span>
+                </div>
+                <div class="diff">
+                  <span class="diff-label">CS @15</span>
+                  <span
+                    class="diff-value"
+                    [class.positive]="diffs.cs > 0"
+                    [class.negative]="diffs.cs < 0"
+                  >
+                    {{ formatDiff(diffs.cs) }}
+                  </span>
+                </div>
+                <div class="diff">
+                  <span class="diff-label">XP @15</span>
+                  <span
+                    class="diff-value"
+                    [class.positive]="diffs.xp > 0"
+                    [class.negative]="diffs.xp < 0"
+                  >
+                    {{ formatDiff(diffs.xp) }}
+                  </span>
+                </div>
+              </div>
+            } @else if (gameTooShort()) {
+              <p class="diffs-note">
+                This game ended before 15 minutes, so there are no @15 differentials.
+              </p>
+            } @else {
+              <p class="diffs-note">
+                @15 differentials need the match timeline, which isn't available for this game.
+              </p>
+            }
+
+            <!-- Metric rows -->
+            <div class="rows">
+              @for (row of compareRows(); track row.label) {
+                <div class="row">
+                  <span class="row-value left" [class.wins]="leftWins(row)">
+                    {{ formatValue(row, row.left) }}
+                  </span>
+                  <div class="row-mid">
+                    <span class="row-label">{{ row.label }}</span>
+                    <div class="row-track">
+                      <div class="row-fill left" [style.width.%]="leftShare(row)"></div>
+                      <div class="row-fill right"></div>
+                    </div>
+                  </div>
+                  <span class="row-value right" [class.wins]="rightWins(row)">
+                    {{ formatValue(row, row.right) }}
+                  </span>
+                </div>
+              }
+            </div>
+          } @else {
+            <app-empty-state inline title="No opposing player to compare" />
+          }
+        }
+      </div>
+
+      <!-- Right picker: enemy team -->
+      <div class="picker right">
+        @for (p of players().enemies; track p.puuid) {
+          <button
+            type="button"
+            class="picker-btn enemy"
+            [class.active]="isRight(p)"
+            [title]="p.riotIdGameName + ' — ' + p.championName"
+            (click)="selectRight(p.participantId)"
+          >
+            <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Heatmap ──────────────────────────────────────────────────────────── -->
+  <section class="block">
+    <app-map-heatmap [match]="match()" [detail]="detail()" [timeline]="timeline()" />
+  </section>
+</div>

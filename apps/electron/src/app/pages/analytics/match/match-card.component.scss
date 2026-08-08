@@ -1,0 +1,350 @@
+.card {
+  border-radius: 11px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.15s ease;
+
+  // Result stripe down the left edge.
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--secondary-text);
+  }
+
+  &.win::before {
+    background: #2f6fd0;
+  }
+
+  &.loss::before {
+    background: #d6455d;
+  }
+
+  &.remake::before {
+    background: var(--outline);
+  }
+
+  &.is-open {
+    border-color: var(--outline);
+  }
+}
+
+// ── Summary row ──────────────────────────────────────────────────────────────
+
+.summary {
+  display: grid;
+  grid-template-columns:
+    minmax(84px, 0.9fr)
+    minmax(120px, 1.1fr)
+    minmax(74px, 0.7fr)
+    minmax(104px, 1fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1.1fr)
+    minmax(58px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px 9px 15px;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--muted);
+  }
+}
+
+@media (max-width: 1250px) {
+  .summary {
+    grid-template-columns:
+      minmax(80px, 0.9fr)
+      minmax(112px, 1.1fr)
+      minmax(70px, 0.7fr)
+      minmax(96px, 1fr)
+      minmax(140px, 1fr)
+      minmax(52px, auto);
+  }
+
+  .col-teams {
+    display: none;
+  }
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+// Meta
+.queue {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--primary-text);
+}
+
+.ago,
+.duration {
+  font-size: 10.5px;
+  color: var(--secondary-text);
+}
+
+.outcome {
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.win .outcome {
+  color: #4a8fe0;
+}
+
+.loss .outcome {
+  color: #e0697c;
+}
+
+.remake .outcome {
+  color: var(--secondary-text);
+}
+
+// Champion
+.col-champ {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+}
+
+.champ-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.champ-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.champ-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.champ-role {
+  font-size: 10px;
+  color: var(--secondary-text);
+  text-transform: capitalize;
+}
+
+// KDA
+.kda-line {
+  font-size: 13.5px;
+  color: var(--primary-text);
+  font-variant-numeric: tabular-nums;
+
+  b {
+    font-weight: 700;
+  }
+
+  .deaths {
+    color: var(--danger);
+  }
+}
+
+.kda-ratio {
+  font-size: 10.5px;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+// Stats
+.stat {
+  font-size: 11px;
+  color: var(--primary-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.muted {
+    font-size: 10.5px;
+    color: var(--secondary-text);
+  }
+}
+
+// Items
+.col-items {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-content: center;
+}
+
+.item {
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--muted);
+  display: block;
+}
+
+.item-empty {
+  background: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+.trinket {
+  border-radius: 999px;
+}
+
+// Teams
+.col-teams {
+  flex-direction: row;
+  gap: 10px;
+}
+
+.team {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  img {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+}
+
+.team-name {
+  font-size: 9.5px;
+  color: var(--secondary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team li.self .team-name {
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+// LP + chevron
+.col-lp {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.lp {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.gain {
+    color: #2f9e6f;
+  }
+}
+
+.chevron {
+  color: var(--secondary-text);
+  font-size: 14px;
+  transition: transform 0.18s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+// ── Expanded detail ──────────────────────────────────────────────────────────
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
+.detail-tabs {
+  align-self: flex-start;
+}
+
+.detail-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 34px;
+  color: var(--secondary-text);
+  font-size: 12px;
+}
+
+.detail-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary-text);
+  border-radius: 50%;
+  animation: match-spin 0.8s linear infinite;
+}
+
+@keyframes match-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-spinner {
+    animation-duration: 2s;
+  }
+}
+
+.detail-error {
+  padding: 22px;
+  text-align: center;
+}
+
+.detail-error-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-text);
+}
+
+.detail-error-hint {
+  margin: 0 auto;
+  max-width: 46ch;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}

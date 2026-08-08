@@ -44,7 +44,7 @@ export const routes: Routes = [
     path: 'analytics/:vaultId',
     canActivate: [redirectLoggedOutFromDashboard],
     loadComponent: () =>
-      import('./pages/analytics/analytics.component').then((m) => m.AnalyticsComponent),
+      import('./pages/analytics/analytics-shell.component').then((m) => m.AnalyticsShellComponent),
   },
   { path: '**', redirectTo: 'dashboard' },
 ];

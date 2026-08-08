@@ -1,0 +1,146 @@
+<article
+  class="card"
+  [class.win]="won() && !remake()"
+  [class.loss]="!won() && !remake()"
+  [class.remake]="remake()"
+  [class.is-open]="expanded()"
+>
+  <!-- ── Collapsed summary row ────────────────────────────────────────────── -->
+  <div
+    class="summary"
+    role="button"
+    tabindex="0"
+    [attr.aria-expanded]="expanded()"
+    (click)="onToggle()"
+    (keydown.enter)="onToggle()"
+    (keydown.space)="onToggle(); $event.preventDefault()"
+  >
+    <div class="col col-meta">
+      <span class="queue">{{ queueName() }}</span>
+      <span class="ago">{{ timeAgo() }}</span>
+      <span class="outcome">{{ outcomeLabel() }}</span>
+      <span class="duration">{{ duration() }}</span>
+    </div>
+
+    <div class="col col-champ">
+      <img
+        class="champ-icon"
+        [src]="championIcon(match().champion ?? '')"
+        [alt]="match().champion ?? ''"
+        loading="lazy"
+      />
+      <div class="champ-meta">
+        <span class="champ-name">{{ match().champion }}</span>
+        @if (match().position) {
+          <span class="champ-role">{{ match().position }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="col col-kda">
+      <span class="kda-line">
+        <b>{{ match().kills }}</b> / <b class="deaths">{{ match().deaths }}</b> /
+        <b>{{ match().assists }}</b>
+      </span>
+      <span class="kda-ratio">{{ kda() | number: '1.2-2' }} KDA</span>
+    </div>
+
+    <div class="col col-stats">
+      <span class="stat">{{ match().cs ?? 0 }} CS ({{ match().cs_per_min | number: '1.1-1' }})</span>
+      @if (killParticipation(); as kp) {
+        <span class="stat muted">{{ kp | number: '1.0-0' }}% KP</span>
+      }
+      @if (match().vision_score !== null) {
+        <span class="stat muted">{{ match().vision_score }} VS</span>
+      }
+    </div>
+
+    <div class="col col-items">
+      @for (item of items(); track $index) {
+        @if (item > 0) {
+          <img class="item" [src]="itemIcon(item)" alt="" loading="lazy" />
+        } @else {
+          <span class="item item-empty"></span>
+        }
+      }
+      @if (trinket() > 0) {
+        <img class="item trinket" [src]="itemIcon(trinket())" alt="" loading="lazy" />
+      }
+    </div>
+
+    <div class="col col-teams">
+      <ul class="team">
+        @for (p of teams().allies.slice(0, 5); track p.puuid) {
+          <li [class.self]="p.puuid === match().puuid" [title]="p.riotIdGameName">
+            <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+            <span class="team-name">{{ p.riotIdGameName }}</span>
+          </li>
+        }
+      </ul>
+      <ul class="team">
+        @for (p of teams().enemies.slice(0, 5); track p.puuid) {
+          <li [title]="p.riotIdGameName">
+            <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
+            <span class="team-name">{{ p.riotIdGameName }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="col col-lp">
+      @if (match().lp_delta !== null) {
+        <span class="lp" [class.gain]="(match().lp_delta ?? 0) >= 0">
+          {{ (match().lp_delta ?? 0) >= 0 ? '+' : '' }}{{ match().lp_delta }} LP
+        </span>
+      }
+      <span class="chevron" [class.open]="expanded()" aria-hidden="true">⌄</span>
+    </div>
+  </div>
+
+  <!-- ── Expanded detail ──────────────────────────────────────────────────── -->
+  @if (expanded()) {
+    <div class="detail">
+      <app-segmented-toggle
+        class="detail-tabs"
+        [options]="tabs"
+        [value]="activeTab()"
+        label="Match detail sections"
+        (valueChange)="setTab($event)"
+      />
+
+      @if (loadingDetail()) {
+        <div class="detail-loading">
+          <div class="detail-spinner" aria-hidden="true"></div>
+          <span>Fetching match details…</span>
+        </div>
+      } @else if (detailFailed() || !detail()) {
+        <div class="detail-error">
+          <p class="detail-error-title">Match details unavailable</p>
+          <p class="detail-error-hint">
+            Riot did not return full data for this game. It may be too old for the Match API, or the
+            request was rate limited — reopening the card will retry.
+          </p>
+        </div>
+      } @else {
+        @switch (activeTab()) {
+          @case ('overview') {
+            <app-match-overview-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+          }
+          @case ('performance') {
+            <app-match-performance-tab
+              [match]="match()"
+              [detail]="detail()!"
+              [timeline]="timeline()"
+            />
+          }
+          @case ('damage') {
+            <app-match-damage-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+          }
+          @case ('build') {
+            <app-match-build-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+          }
+        }
+      }
+    </div>
+  }
+</article>

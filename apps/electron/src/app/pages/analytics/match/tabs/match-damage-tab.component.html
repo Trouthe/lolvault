@@ -1,0 +1,102 @@
+<div class="damage-tab">
+  <header class="controls">
+    <app-segmented-toggle
+      [options]="directionOptions"
+      [value]="direction()"
+      label="Damage direction"
+      compact
+      (valueChange)="direction.set($event)"
+    />
+    <app-segmented-toggle
+      [options]="typeOptions()"
+      [value]="damageType()"
+      label="Damage type"
+      compact
+      (valueChange)="damageType.set($event)"
+    />
+  </header>
+
+  <!-- ── Per-minute chart ─────────────────────────────────────────────────── -->
+  <section class="chart-block">
+    <div class="chart-head">
+      <h4>{{ directionLabel() }} per minute</h4>
+      @if (typeNotChartable()) {
+        <span class="chart-note">
+          Showing total — the per-minute split isn't recorded for damage taken
+        </span>
+      }
+    </div>
+
+    @if (series(); as data) {
+      <apx-chart
+        [series]="data"
+        [chart]="chartOptions().chart"
+        [colors]="chartOptions().colors"
+        [stroke]="chartOptions().stroke"
+        [xaxis]="chartOptions().xaxis"
+        [yaxis]="chartOptions().yaxis"
+        [grid]="chartOptions().grid"
+        [theme]="chartOptions().theme"
+        [tooltip]="chartOptions().tooltip"
+        [legend]="chartOptions().legend"
+        [dataLabels]="chartOptions().dataLabels"
+      />
+    } @else {
+      <app-empty-state
+        inline
+        icon="📉"
+        title="No per-minute damage available"
+        hint="This chart needs the match timeline. It is fetched when a card is opened — if it stays empty, Riot may not have timeline data for this game."
+      />
+    }
+  </section>
+
+  <!-- ── Per-player totals ────────────────────────────────────────────────── -->
+  <section class="totals">
+    <div class="totals-col">
+      <h4 class="totals-title ally">Your team</h4>
+      @for (row of myTeamRows(); track row.participant.puuid) {
+        <div class="dmg-row" [class.self]="row.isSelf">
+          <img
+            class="dmg-champ"
+            [src]="championIcon(row.participant.championName)"
+            [alt]="row.participant.championName"
+            loading="lazy"
+          />
+          <div class="dmg-body">
+            <div class="dmg-line">
+              <span class="dmg-name">{{ row.participant.riotIdGameName }}</span>
+              <span class="dmg-value">{{ row.value | number: '1.0-0' }}</span>
+            </div>
+            <div class="dmg-track">
+              <div class="dmg-fill ally" [style.width.%]="row.share"></div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="totals-col">
+      <h4 class="totals-title enemy">Enemy team</h4>
+      @for (row of enemyTeamRows(); track row.participant.puuid) {
+        <div class="dmg-row">
+          <img
+            class="dmg-champ"
+            [src]="championIcon(row.participant.championName)"
+            [alt]="row.participant.championName"
+            loading="lazy"
+          />
+          <div class="dmg-body">
+            <div class="dmg-line">
+              <span class="dmg-name">{{ row.participant.riotIdGameName }}</span>
+              <span class="dmg-value">{{ row.value | number: '1.0-0' }}</span>
+            </div>
+            <div class="dmg-track">
+              <div class="dmg-fill enemy" [style.width.%]="row.share"></div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+</div>

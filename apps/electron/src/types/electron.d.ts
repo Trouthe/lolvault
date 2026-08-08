@@ -420,4 +420,19 @@ export interface MatchCacheRow {
   lp_delta: number | null;
   queue_type: string | null;
   raw_json: unknown;
+
+  // ── Added by the analytics rebuild ─────────────────────────────────────────
+  /** Numeric Riot queue id (420 solo, 440 flex, …). Source of truth over queue_type. */
+  queue_id: number | null;
+  /** 1-10; join key into the timeline's participantFrames. */
+  participant_id: number | null;
+  team_id: number | null;
+  champion_id: number | null;
+  game_version: string | null;
+  has_detail: 0 | 1 | null;
+  has_timeline: 0 | 1 | null;
+  /** Differentials vs the lane opponent at 15 min; null when no timeline data. */
+  gold_diff_15: number | null;
+  cs_diff_15: number | null;
+  xp_diff_15: number | null;
 }
