@@ -76,8 +76,11 @@ function initDatabase(dataPath) {
 /**
  * Adds any columns that were introduced after the initial schema.
  * SQLite only supports ADD COLUMN, so each migration is idempotent.
+ *
+ * This runs before the versioned ladder below and covers databases created
+ * before `user_version` tracking existed.
  */
-function runMigrations() {
+function addMissingMatchCacheColumns() {
   const existingCols = db.pragma('table_info(match_cache)').map((r) => r.name);
   const columnsToAdd = [
     ['puuid', 'TEXT'],
@@ -96,11 +99,87 @@ function runMigrations() {
     ['lp_before', 'REAL'],
     ['lp_after', 'REAL'],
     ['queue_type', 'TEXT'],
+    // Analytics rebuild — richer match metadata
+    ['queue_id', 'INTEGER'],
+    ['participant_id', 'INTEGER'],
+    ['team_id', 'INTEGER'],
+    ['champion_id', 'INTEGER'],
+    ['game_version', 'TEXT'],
+    ['has_detail', 'INTEGER DEFAULT 0'],
+    ['has_timeline', 'INTEGER DEFAULT 0'],
+    ['gold_diff_15', 'INTEGER'],
+    ['cs_diff_15', 'INTEGER'],
+    ['xp_diff_15', 'INTEGER'],
   ];
   for (const [col, type] of columnsToAdd) {
     if (!existingCols.includes(col)) {
       db.exec(`ALTER TABLE match_cache ADD COLUMN ${col} ${type}`);
     }
+  }
+}
+
+/**
+ * Versioned schema migrations.
+ *
+ * Each entry migrates from version `index` to `index + 1` and runs exactly once,
+ * tracked via SQLite's built-in `PRAGMA user_version` (a free integer in the DB
+ * header — no bookkeeping table required). Append new steps to the end; never
+ * reorder or edit an existing one, since it may already have been applied.
+ */
+const MIGRATIONS = [
+  // v0 → v1: full match detail (bans, objectives, untrimmed participants).
+  // Kept out of match_cache because getMatchCache() SELECT *'s and JSON.parses
+  // every row — inlining blobs would parse megabytes on each list render.
+  (d) => {
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS match_detail (
+        match_id          TEXT PRIMARY KEY,
+        queue_id          INTEGER,
+        game_version      TEXT,
+        game_mode         TEXT,
+        game_duration     INTEGER,
+        teams_json        TEXT NOT NULL,
+        participants_json TEXT NOT NULL,
+        schema_version    INTEGER NOT NULL DEFAULT 1,
+        fetched_at        INTEGER NOT NULL
+      );
+    `);
+  },
+
+  // v1 → v2: compacted match timelines (positions, gold/xp curves, events).
+  (d) => {
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS match_timeline (
+        match_id       TEXT PRIMARY KEY,
+        frame_interval INTEGER NOT NULL,
+        frame_count    INTEGER NOT NULL,
+        participants   TEXT NOT NULL,
+        frames_json    TEXT NOT NULL,
+        events_json    TEXT NOT NULL,
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        fetched_at     INTEGER NOT NULL
+      );
+    `);
+  },
+
+  // v2 → v3: index supporting the Champions screen champion/matchup pools.
+  (d) => {
+    d.exec(`
+      CREATE INDEX IF NOT EXISTS idx_match_cache_champ
+        ON match_cache (account_id, champion, timestamp);
+    `);
+  },
+];
+
+function runMigrations() {
+  addMissingMatchCacheColumns();
+
+  const current = db.pragma('user_version', { simple: true }) ?? 0;
+  for (let v = current; v < MIGRATIONS.length; v++) {
+    db.transaction(() => MIGRATIONS[v](db))();
+    // user_version can't be parameterised — v is a loop integer, never user input.
+    db.pragma(`user_version = ${v + 1}`);
+    console.log(`[DB] Applied migration ${v} → ${v + 1}`);
   }
 }
 
