@@ -10,8 +10,7 @@
 
 const { LolApi, RiotApi } = require('twisted');
 const db = require('./database');
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const limiter = require('./rate-limiter');
 
 // ── Region routing ────────────────────────────────────────────────────────────
 
@@ -62,40 +61,39 @@ function createClients(overrideKey) {
   return { lol: new LolApi({ key }), riot: new RiotApi({ key }) };
 }
 
-// ── Retry wrapper ─────────────────────────────────────────────────────────────
+// ── Rate-limited dispatch ─────────────────────────────────────────────────────
 
-async function withRetry(fn) {
-  try {
-    return await fn();
-  } catch (err) {
-    const status = err?.status || (err?.message && Number(err.message));
-    if (status === 429) {
-      console.warn('[RiotAPI] Rate limited — retrying in 1 s');
-      await sleep(1000);
-      return fn();
-    }
-    throw err;
-  }
+/**
+ * Routes a Riot call through the global rate limiter, which paces requests
+ * against Riot's per-key windows and handles 429 backoff centrally.
+ * Pass `{ interactive: true }` for user-initiated work so it is served ahead of
+ * background backfill.
+ */
+function withRetry(fn, opts) {
+  return limiter.enqueue(fn, opts);
 }
 
-/** Fetch with API key + 429 retry. Returns parsed JSON or throws. */
-async function riotFetch(url, overrideKey) {
+/** Fetch with API key, paced by the shared limiter. Returns parsed JSON or throws. */
+async function riotFetch(url, overrideKey, opts) {
   const key = overrideKey || getApiKey();
   if (!key) throw Object.assign(new Error('No API key'), { code: 'NO_KEY' });
 
-  const doFetch = () =>
-    fetch(url, { headers: { 'X-Riot-Token': key, Accept: 'application/json' } }).then(
-      async (res) => {
-        if (!res.ok) {
-          const err = new Error(String(res.status));
-          err.status = res.status;
-          throw err;
-        }
-        return res.json();
-      }
-    );
+  const doFetch = async () => {
+    const res = await fetch(url, {
+      headers: { 'X-Riot-Token': key, Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      const err = new Error(String(res.status));
+      err.status = res.status;
+      // Surface Retry-After so the limiter can honour Riot's own backoff hint.
+      const retryAfter = res.headers.get('retry-after');
+      if (retryAfter) err.retryAfter = retryAfter;
+      throw err;
+    }
+    return res.json();
+  };
 
-  return withRetry(doFetch);
+  return withRetry(doFetch, opts);
 }
 
 // ── Summoner by Riot ID ───────────────────────────────────────────────────────
