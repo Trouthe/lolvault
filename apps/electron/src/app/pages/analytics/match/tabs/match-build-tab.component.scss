@@ -113,6 +113,56 @@
   color: var(--secondary-text);
 }
 
+// ── Runes & summoners ────────────────────────────────────────────────────────
+
+.runes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rune-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rune-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+}
+
+.rune-tree {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.rune {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: var(--muted);
+}
+
+// The keystone is the defining choice, so it reads larger.
+.rune.keystone {
+  width: 34px;
+  height: 34px;
+  background: color-mix(in oklch, var(--outline) 35%, transparent);
+}
+
+.spell {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 // ── Build path ───────────────────────────────────────────────────────────────
 
 .steps {

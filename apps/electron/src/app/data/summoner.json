@@ -1,0 +1,42 @@
+{
+  "version": "16.15.1",
+  "data": {
+    "1": { "name": "Cleanse", "image": "SummonerBoost.png" },
+    "3": { "name": "Exhaust", "image": "SummonerExhaust.png" },
+    "4": { "name": "Flash", "image": "SummonerFlash.png" },
+    "6": { "name": "Ghost", "image": "SummonerHaste.png" },
+    "7": { "name": "Heal", "image": "SummonerHeal.png" },
+    "11": { "name": "Smite", "image": "SummonerSmite.png" },
+    "12": { "name": "Teleport", "image": "SummonerTeleport.png" },
+    "13": { "name": "Clarity", "image": "SummonerMana.png" },
+    "14": { "name": "Ignite", "image": "SummonerDot.png" },
+    "21": { "name": "Barrier", "image": "SummonerBarrier.png" },
+    "30": { "name": "To the King!", "image": "SummonerPoroRecall.png" },
+    "31": { "name": "Poro Toss", "image": "SummonerPoroThrow.png" },
+    "32": { "name": "Mark", "image": "SummonerSnowball.png" },
+    "39": { "name": "Mark", "image": "SummonerSnowURFSnowball_Mark.png" },
+    "54": { "name": "Placeholder", "image": "Summoner_UltBookPlaceholder.png" },
+    "55": {
+      "name": "Placeholder and Attack-Smite",
+      "image": "Summoner_UltBookSmitePlaceholder.png"
+    },
+    "71": { "name": "Cleanse", "image": "SummonerBoost_Jade.png" },
+    "73": { "name": "Exhaust", "image": "SummonerExhaust_Jade.png" },
+    "74": { "name": "Flash", "image": "SummonerFlash_Jade.png" },
+    "75": { "name": "Clairvoyance", "image": "SummonerClairvoyance_Jade.png" },
+    "76": { "name": "Ghost", "image": "SummonerHaste_Jade.png" },
+    "77": { "name": "Heal", "image": "SummonerHeal_Jade.png" },
+    "705": { "name": "Fortify", "image": "SummonerFortify_Jade.png" },
+    "709": { "name": "Rally", "image": "SummonerRally_Jade.png" },
+    "711": { "name": "Smite", "image": "SummonerSmite_Jade.png" },
+    "712": { "name": "Teleport", "image": "SummonerTeleport_Jade.png" },
+    "713": { "name": "Clarity", "image": "SummonerMana_Jade.png" },
+    "714": { "name": "Ignite", "image": "SummonerDot_Jade.png" },
+    "716": { "name": "Surge", "image": "SummonerBattleCry_Jade.png" },
+    "720": { "name": "Promote", "image": "SummonerSpell_Promote_Jade.png" },
+    "721": { "name": "Barrier", "image": "SummonerBarrier_Jade.png" },
+    "777": { "name": "Revive", "image": "SummonerRevive_Jade.png" },
+    "2201": { "name": "Flee", "image": "SummonerCherryHold.png" },
+    "2202": { "name": "Flash", "image": "SummonerCherryFlash.png" }
+  }
+}

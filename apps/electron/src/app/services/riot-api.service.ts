@@ -155,4 +155,10 @@ export class RiotApiService {
     const v = this._ddragonVersion || '15.21.1';
     return `https://ddragon.leagueoflegends.com/cdn/${v}/img/item/${itemId}.png`;
   }
+
+  /** Summoner spell icon, e.g. 'SummonerFlash.png'. */
+  getSpellIconUrl(imageFile: string): string {
+    const v = this._ddragonVersion || '15.21.1';
+    return `https://ddragon.leagueoflegends.com/cdn/${v}/img/spell/${imageFile}`;
+  }
 }

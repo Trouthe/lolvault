@@ -1,0 +1,2244 @@
+{
+  "version": "16.15.1",
+  "data": {
+    "1001": { "name": "Boots", "image": "1001.png", "gold": 300 },
+    "1004": { "name": "Faerie Charm", "image": "1004.png", "gold": 200 },
+    "1006": { "name": "Rejuvenation Bead", "image": "1006.png", "gold": 300 },
+    "1011": { "name": "Giant's Belt", "image": "1011.png", "gold": 900, "from": ["1028"] },
+    "1018": { "name": "Cloak of Agility", "image": "1018.png", "gold": 600 },
+    "1026": { "name": "Blasting Wand", "image": "1026.png", "gold": 850 },
+    "1027": { "name": "Sapphire Crystal", "image": "1027.png", "gold": 300 },
+    "1028": { "name": "Ruby Crystal", "image": "1028.png", "gold": 400 },
+    "1029": { "name": "Cloth Armor", "image": "1029.png", "gold": 300 },
+    "1031": { "name": "Chain Vest", "image": "1031.png", "gold": 800, "from": ["1029"] },
+    "1033": { "name": "Null-Magic Mantle", "image": "1033.png", "gold": 400 },
+    "1035": { "name": "Emberknife", "image": "1035.png", "gold": 350 },
+    "1036": { "name": "Long Sword", "image": "1036.png", "gold": 350 },
+    "1037": { "name": "Pickaxe", "image": "1037.png", "gold": 875 },
+    "1038": { "name": "B. F. Sword", "image": "1038.png", "gold": 1300 },
+    "1039": { "name": "Hailblade", "image": "1039.png", "gold": 350 },
+    "1040": { "name": "Obsidian Edge", "image": "1040.png", "gold": 350 },
+    "1042": { "name": "Dagger", "image": "1042.png", "gold": 250 },
+    "1043": { "name": "Recurve Bow", "image": "1043.png", "gold": 700, "from": ["1042"] },
+    "1052": { "name": "Amplifying Tome", "image": "1052.png", "gold": 400 },
+    "1053": { "name": "Vampiric Scepter", "image": "1053.png", "gold": 900, "from": ["1036"] },
+    "1054": { "name": "Doran's Shield", "image": "1054.png", "gold": 450 },
+    "1055": { "name": "Doran's Blade", "image": "1055.png", "gold": 450 },
+    "1056": { "name": "Doran's Ring", "image": "1056.png", "gold": 400 },
+    "1057": { "name": "Negatron Cloak", "image": "1057.png", "gold": 850, "from": ["1033"] },
+    "1058": { "name": "Needlessly Large Rod", "image": "1058.png", "gold": 1200 },
+    "1082": { "name": "Dark Seal", "image": "1082.png", "gold": 350 },
+    "1083": { "name": "Cull", "image": "1083.png", "gold": 450 },
+    "1086": { "name": "Doran's Bow", "image": "1086.png", "gold": 400 },
+    "1090": { "name": "Quest: Top", "image": "1090.png", "gold": 0 },
+    "1091": { "name": "Quest: Mid", "image": "1091.png", "gold": 0 },
+    "1092": { "name": "Quest: Bot", "image": "1092.png", "gold": 0 },
+    "1093": { "name": "Quest: Support", "image": "1093.png", "gold": 0 },
+    "1094": { "name": "Quest: Jungle", "image": "1094.png", "gold": 0 },
+    "1101": { "name": "Scorchclaw Pup", "image": "1101.png", "gold": 450 },
+    "1102": { "name": "Gustwalker Hatchling", "image": "1102.png", "gold": 450 },
+    "1103": { "name": "Mosstomper Seedling", "image": "1103.png", "gold": 450 },
+    "1104": { "name": "Eye of the Herald", "image": "1104.png", "gold": 0 },
+    "1105": { "name": "Mosstomper Seedling", "image": "1105.png", "gold": 450 },
+    "1106": { "name": "Gustwalker Hatchling", "image": "1106.png", "gold": 450 },
+    "1107": { "name": "Scorchclaw Pup", "image": "1107.png", "gold": 450 },
+    "1111": { "name": "Jarvan I's", "image": "1111.png", "gold": 300 },
+    "1120": { "name": "Doran's Helm", "image": "1120.png", "gold": 450 },
+    "1200": { "name": "Top Lane Quest", "image": "1200.png", "gold": 0 },
+    "1201": { "name": "Mid Lane Quest", "image": "1201.png", "gold": 0 },
+    "1202": { "name": "Bot Lane Quest", "image": "1202.png", "gold": 0 },
+    "1203": { "name": "Support Quest", "image": "1203.png", "gold": 0 },
+    "1204": { "name": "Jungle Quest", "image": "1204.png", "gold": 0 },
+    "1205": { "name": "Jungle Quest Reward", "image": "1205.png", "gold": 0 },
+    "1206": { "name": "Mid Lane Quest Reward", "image": "1206.png", "gold": 0 },
+    "1207": { "name": "Bot Lane Quest Reward", "image": "1207.png", "gold": 0 },
+    "1208": { "name": "Support Quest Reward", "image": "1208.png", "gold": 0 },
+    "1209": { "name": "Jungle Quest Reward", "image": "1209.png", "gold": 0 },
+    "1210": { "name": "Jungle Quest Reward", "image": "1210.png", "gold": 0 },
+    "1211": { "name": "Jungle Quest Reward", "image": "1211.png", "gold": 0 },
+    "1220": {
+      "name": "Unleashed Teleport (Top Lane Quest Reward)",
+      "image": "1220.png",
+      "gold": 0
+    },
+    "1221": { "name": "Top Lane Quest Reward", "image": "1221.png", "gold": 0 },
+    "1222": { "name": "Top Lane Quest", "image": "1222.png", "gold": 0 },
+    "1500": { "name": "Penetrating Bullets", "image": "1500.png", "gold": 0 },
+    "1501": { "name": "Fortification", "image": "1501.png", "gold": 0 },
+    "1502": { "name": "Reinforced Armor", "image": "1502.png", "gold": 0 },
+    "1503": { "name": "Warden's Eye", "image": "1503.png", "gold": 0 },
+    "1504": { "name": "Vanguard", "image": "1504.png", "gold": 0 },
+    "1505": { "name": "Reinforced Armor", "image": "1505.png", "gold": 0 },
+    "1506": { "name": "Reinforced Armor", "image": "1506.png", "gold": 0 },
+    "1507": { "name": "Overcharged", "image": "1507.png", "gold": 0 },
+    "1508": { "name": "Anti-tower Socks", "image": "1508.png", "gold": 0 },
+    "1509": { "name": "Gusto", "image": "1509.png", "gold": 0 },
+    "1510": { "name": "Phreakish Gusto", "image": "1510.png", "gold": 0 },
+    "1511": { "name": "Super Mech Armor", "image": "1511.png", "gold": 0 },
+    "1512": { "name": "Super Mech Power Field", "image": "1512.png", "gold": 0 },
+    "1515": { "name": "Turret Plating", "image": "1515.png", "gold": 0 },
+    "1516": { "name": "Structure Bounty", "image": "1516.png", "gold": 0 },
+    "1517": { "name": "Structure Bounty", "image": "1517.png", "gold": 0 },
+    "1518": { "name": "Structure Bounty", "image": "1518.png", "gold": 0 },
+    "1519": { "name": "Structure Bounty", "image": "1519.png", "gold": 0 },
+    "1520": { "name": "OvererchargedHA", "image": "1520.png", "gold": 0 },
+    "1521": { "name": "Fortification", "image": "1521.png", "gold": 0 },
+    "1522": { "name": "Tower Power-Up", "image": "1522.png", "gold": 0 },
+    "1523": { "name": "Overcharged", "image": "1523.png", "gold": 0 },
+    "1524": { "name": "Overgrowth", "image": "1524.png", "gold": 0 },
+    "2001": { "name": "Recall", "image": "2001.png", "gold": 60 },
+    "2002": { "name": "Enhanced Recall", "image": "2002.png", "gold": 60 },
+    "2003": { "name": "Health Potion", "image": "2003.png", "gold": 50 },
+    "2007": { "name": "Disabled Recall", "image": "2007.png", "gold": 60 },
+    "2008": { "name": "", "image": "2008.png", "gold": 60 },
+    "2010": { "name": "Total Biscuit of Everlasting Will", "image": "2010.png", "gold": 50 },
+    "2015": { "name": "Kircheis Shard", "image": "2015.png", "gold": 700, "from": ["1036"] },
+    "2019": {
+      "name": "Steel Sigil",
+      "image": "2019.png",
+      "gold": 1100,
+      "from": ["1029", "1036", "1029"]
+    },
+    "2020": {
+      "name": "The Brutalizer",
+      "image": "2020.png",
+      "gold": 1337,
+      "from": ["2022", "1037"]
+    },
+    "2021": { "name": "Tunneler", "image": "2021.png", "gold": 1150, "from": ["1036", "1028"] },
+    "2022": { "name": "Glowing Mote", "image": "2022.png", "gold": 250 },
+    "2031": { "name": "Refillable Potion", "image": "2031.png", "gold": 150 },
+    "2033": { "name": "Corrupting Potion", "image": "2033.png", "gold": 500, "from": ["2031"] },
+    "2049": { "name": "Guardian's Amulet", "image": "2049.png", "gold": 500 },
+    "2050": { "name": "Guardian's Shroud", "image": "2050.png", "gold": 500 },
+    "2051": { "name": "Guardian's Horn", "image": "2051.png", "gold": 950 },
+    "2052": { "name": "Poro-Snax", "image": "2052.png", "gold": 0 },
+    "2055": { "name": "Control Ward", "image": "2055.png", "gold": 75 },
+    "2056": { "name": "Stealth Ward", "image": "2056.png", "gold": 40 },
+    "2065": {
+      "name": "Shurelya's Battlesong",
+      "image": "2065.png",
+      "gold": 2200,
+      "from": ["3113", "4642"]
+    },
+    "2138": { "name": "Elixir of Iron", "image": "2138.png", "gold": 500 },
+    "2139": { "name": "Elixir of Sorcery", "image": "2139.png", "gold": 500 },
+    "2140": { "name": "Elixir of Wrath", "image": "2140.png", "gold": 500 },
+    "2141": { "name": "Cappa Juice", "image": "2141.png", "gold": 300 },
+    "2142": { "name": "Juice of Power", "image": "2142.png", "gold": 500 },
+    "2143": { "name": "Juice of Vitality", "image": "2143.png", "gold": 500 },
+    "2144": { "name": "Juice of Haste", "image": "2144.png", "gold": 500 },
+    "2145": { "name": "Lucky Dice", "image": "2145.png", "gold": 0 },
+    "2146": { "name": "Enhanced Lucky Dice", "image": "2146.png", "gold": 0 },
+    "2147": { "name": "Augment Level", "image": "2147.png", "gold": 1250 },
+    "2150": { "name": "Elixir of Skill", "image": "2150.png", "gold": 0 },
+    "2151": { "name": "Elixir of Avarice", "image": "2151.png", "gold": 50 },
+    "2152": { "name": "Elixir of Force", "image": "2152.png", "gold": 50 },
+    "2161": { "name": "Bandle Juice of Power", "image": "2161.png", "gold": 1000 },
+    "2162": { "name": "Bandle Juice of Vitality", "image": "2162.png", "gold": 1000 },
+    "2163": { "name": "Bandle Juice of Haste", "image": "2163.png", "gold": 1000 },
+    "2403": { "name": "Minion Dematerializer", "image": "2403.png", "gold": 0 },
+    "2420": {
+      "name": "Seeker's Armguard",
+      "image": "2420.png",
+      "gold": 1600,
+      "from": ["1052", "1029", "1052"]
+    },
+    "2421": {
+      "name": "Shattered Armguard",
+      "image": "2421.png",
+      "gold": 1600,
+      "from": ["1052", "1029", "1052"]
+    },
+    "2422": { "name": "Slightly Magical Footwear", "image": "2422.png", "gold": 300 },
+    "2501": {
+      "name": "Overlord's Bloodmail",
+      "image": "2501.png",
+      "gold": 3300,
+      "from": ["2021", "2021"]
+    },
+    "2502": {
+      "name": "Unending Despair",
+      "image": "2502.png",
+      "gold": 2800,
+      "from": ["1031", "3067", "1028"]
+    },
+    "2503": {
+      "name": "Blackfire Torch",
+      "image": "2503.png",
+      "gold": 2800,
+      "from": ["3802", "2508"]
+    },
+    "2504": {
+      "name": "Kaenic Rookern",
+      "image": "2504.png",
+      "gold": 2900,
+      "from": ["3211", "1057"]
+    },
+    "2508": { "name": "Fated Ashes", "image": "2508.png", "gold": 900, "from": ["1052"] },
+    "2510": {
+      "name": "Dusk and Dawn",
+      "image": "2510.png",
+      "gold": 3100,
+      "from": ["3057", "1026", "3067", "1042"]
+    },
+    "2512": {
+      "name": "Fiendhunter Bolts",
+      "image": "2512.png",
+      "gold": 2650,
+      "from": ["3086", "3144"]
+    },
+    "2517": {
+      "name": "Endless Hunger",
+      "image": "2517.png",
+      "gold": 3100,
+      "from": ["3133", "1037", "1036"]
+    },
+    "2520": {
+      "name": "Bastionbreaker",
+      "image": "2520.png",
+      "gold": 3000,
+      "from": ["2020", "3134"]
+    },
+    "2522": { "name": "Actualizer", "image": "2522.png", "gold": 2800, "from": ["3802", "1026"] },
+    "2523": {
+      "name": "Hexoptics C44",
+      "image": "2523.png",
+      "gold": 2800,
+      "from": ["1037", "6670", "1036"]
+    },
+    "2524": {
+      "name": "Bandlepipes",
+      "image": "2524.png",
+      "gold": 2300,
+      "from": ["3067", "1029", "1033"]
+    },
+    "2525": {
+      "name": "Protoplasm Harness",
+      "image": "2525.png",
+      "gold": 2600,
+      "from": ["3067", "1011"]
+    },
+    "2526": {
+      "name": "Whispering Circlet",
+      "image": "2526.png",
+      "gold": 2250,
+      "from": ["3114", "1028", "3070"]
+    },
+    "2530": { "name": "Diadem of Songs", "image": "2530.png", "gold": 2250 },
+    "3001": { "name": "Evenshroud", "image": "3001.png", "gold": 2300, "from": ["3023", "1033"] },
+    "3002": { "name": "Trailblazer", "image": "3002.png", "gold": 2400, "from": ["3066", "1031"] },
+    "3003": {
+      "name": "Archangel's Staff",
+      "image": "3003.png",
+      "gold": 2900,
+      "from": ["3070", "3802", "3108"]
+    },
+    "3004": {
+      "name": "Manamune",
+      "image": "3004.png",
+      "gold": 2900,
+      "from": ["3070", "3133", "1036"]
+    },
+    "3005": { "name": "Ghostcrawlers", "image": "3005.png", "gold": 1000, "from": ["1001"] },
+    "3006": {
+      "name": "Berserker's Greaves",
+      "image": "3006.png",
+      "gold": 1100,
+      "from": ["1001", "1042", "1042"]
+    },
+    "3008": { "name": "Gluttonous Greaves", "image": "3008.png", "gold": 1000, "from": ["1001"] },
+    "3009": { "name": "Boots of Swiftness", "image": "3009.png", "gold": 1000, "from": ["1001"] },
+    "3010": { "name": "Symbiotic Soles", "image": "3010.png", "gold": 900, "from": ["1001"] },
+    "3011": {
+      "name": "Chemtech Putrifier",
+      "image": "3011.png",
+      "gold": 1900,
+      "from": ["3916", "3114"]
+    },
+    "3012": {
+      "name": "Chalice of Blessing",
+      "image": "3012.png",
+      "gold": 900,
+      "from": ["1028", "1004"]
+    },
+    "3013": { "name": "Synchronized Souls", "image": "3013.png", "gold": 900, "from": ["3010"] },
+    "3020": { "name": "Sorcerer's Shoes", "image": "3020.png", "gold": 1100, "from": ["1001"] },
+    "3023": {
+      "name": "Lifewell Pendant",
+      "image": "3023.png",
+      "gold": 1050,
+      "from": ["1028", "1029"]
+    },
+    "3024": {
+      "name": "Glacial Buckler",
+      "image": "3024.png",
+      "gold": 900,
+      "from": ["1029", "1027", "2022"]
+    },
+    "3026": {
+      "name": "Guardian Angel",
+      "image": "3026.png",
+      "gold": 3200,
+      "from": ["2019", "1038"]
+    },
+    "3031": {
+      "name": "Infinity Edge",
+      "image": "3031.png",
+      "gold": 3500,
+      "from": ["1038", "1037", "1018"]
+    },
+    "3032": {
+      "name": "Yun Tal Wildarrows",
+      "image": "3032.png",
+      "gold": 3000,
+      "from": ["1038", "3144", "1036"]
+    },
+    "3033": {
+      "name": "Mortal Reminder",
+      "image": "3033.png",
+      "gold": 3000,
+      "from": ["3123", "3035", "1018"]
+    },
+    "3035": { "name": "Last Whisper", "image": "3035.png", "gold": 1450, "from": ["1036", "1036"] },
+    "3036": {
+      "name": "Lord Dominik's Regards",
+      "image": "3036.png",
+      "gold": 3300,
+      "from": ["3035", "6670"]
+    },
+    "3039": {
+      "name": "Atma's Reckoning",
+      "image": "3039.png",
+      "gold": 2900,
+      "from": ["1011", "1018", "1011"]
+    },
+    "3040": { "name": "Seraph's Embrace", "image": "3040.png", "gold": 2900 },
+    "3041": { "name": "Mejai's Soulstealer", "image": "3041.png", "gold": 1500, "from": ["1082"] },
+    "3042": { "name": "Muramana", "image": "3042.png", "gold": 2900 },
+    "3044": { "name": "Phage", "image": "3044.png", "gold": 1100, "from": ["1028", "1036"] },
+    "3046": {
+      "name": "Phantom Dancer",
+      "image": "3046.png",
+      "gold": 2650,
+      "from": ["1042", "3086", "1042"]
+    },
+    "3047": {
+      "name": "Plated Steelcaps",
+      "image": "3047.png",
+      "gold": 1200,
+      "from": ["1001", "1029"]
+    },
+    "3050": {
+      "name": "Zeke's Convergence",
+      "image": "3050.png",
+      "gold": 2200,
+      "from": ["3067", "1029", "1033"]
+    },
+    "3051": {
+      "name": "Hearthbound Axe",
+      "image": "3051.png",
+      "gold": 1200,
+      "from": ["1036", "1042", "1036"]
+    },
+    "3053": {
+      "name": "Sterak's Gage",
+      "image": "3053.png",
+      "gold": 3200,
+      "from": ["1037", "2021", "1028"]
+    },
+    "3057": { "name": "Sheen", "image": "3057.png", "gold": 900, "from": ["2022"] },
+    "3065": {
+      "name": "Spirit Visage",
+      "image": "3065.png",
+      "gold": 2700,
+      "from": ["3211", "3067"]
+    },
+    "3066": { "name": "Winged Moonplate", "image": "3066.png", "gold": 800, "from": ["1028"] },
+    "3067": { "name": "Kindlegem", "image": "3067.png", "gold": 800, "from": ["1028", "2022"] },
+    "3068": {
+      "name": "Sunfire Aegis",
+      "image": "3068.png",
+      "gold": 2700,
+      "from": ["6660", "1031", "1028"]
+    },
+    "3070": { "name": "Tear of the Goddess", "image": "3070.png", "gold": 400 },
+    "3071": {
+      "name": "Black Cleaver",
+      "image": "3071.png",
+      "gold": 3000,
+      "from": ["3044", "3067", "1037"]
+    },
+    "3072": {
+      "name": "Bloodthirster",
+      "image": "3072.png",
+      "gold": 3400,
+      "from": ["1038", "1037", "1053"]
+    },
+    "3073": {
+      "name": "Experimental Hexplate",
+      "image": "3073.png",
+      "gold": 3000,
+      "from": ["2021", "1042", "3044"]
+    },
+    "3074": {
+      "name": "Ravenous Hydra",
+      "image": "3074.png",
+      "gold": 3300,
+      "from": ["3077", "1053", "3133"]
+    },
+    "3075": {
+      "name": "Thornmail",
+      "image": "3075.png",
+      "gold": 2450,
+      "from": ["3076", "1031", "1028"]
+    },
+    "3076": { "name": "Bramble Vest", "image": "3076.png", "gold": 800, "from": ["1029", "1029"] },
+    "3077": { "name": "Tiamat", "image": "3077.png", "gold": 1200, "from": ["1036", "1036"] },
+    "3078": {
+      "name": "Trinity Force",
+      "image": "3078.png",
+      "gold": 3333,
+      "from": ["3057", "3044", "3051"]
+    },
+    "3082": {
+      "name": "Warden's Mail",
+      "image": "3082.png",
+      "gold": 1000,
+      "from": ["1029", "1029"]
+    },
+    "3083": {
+      "name": "Warmog's Armor",
+      "image": "3083.png",
+      "gold": 3100,
+      "from": ["1011", "1011", "3801"]
+    },
+    "3084": {
+      "name": "Heartsteel",
+      "image": "3084.png",
+      "gold": 3000,
+      "from": ["1011", "3801", "1011"]
+    },
+    "3085": {
+      "name": "Runaan's Hurricane",
+      "image": "3085.png",
+      "gold": 2650,
+      "from": ["3086", "3144"]
+    },
+    "3086": { "name": "Zeal", "image": "3086.png", "gold": 1200, "from": ["1018", "1042"] },
+    "3087": {
+      "name": "Statikk Shiv",
+      "image": "3087.png",
+      "gold": 3000,
+      "from": ["3144", "3113", "1037"]
+    },
+    "3089": {
+      "name": "Rabadon's Deathcap",
+      "image": "3089.png",
+      "gold": 3500,
+      "from": ["1058", "1058"]
+    },
+    "3091": {
+      "name": "Wit's End",
+      "image": "3091.png",
+      "gold": 2800,
+      "from": ["1043", "1057", "1043"]
+    },
+    "3094": {
+      "name": "Rapid Firecannon",
+      "image": "3094.png",
+      "gold": 2650,
+      "from": ["3086", "3144"]
+    },
+    "3095": {
+      "name": "Deprecated item",
+      "image": "3095.png",
+      "gold": 3000,
+      "from": ["1038", "1018", "3144"]
+    },
+    "3097": {
+      "name": "Stormrazor",
+      "image": "3097.png",
+      "gold": 3200,
+      "from": ["1038", "1018", "3144"]
+    },
+    "3100": {
+      "name": "Lich Bane",
+      "image": "3100.png",
+      "gold": 2900,
+      "from": ["3057", "3113", "1026"]
+    },
+    "3102": {
+      "name": "Banshee's Veil",
+      "image": "3102.png",
+      "gold": 3000,
+      "from": ["1058", "4632"]
+    },
+    "3105": {
+      "name": "Aegis of the Legion",
+      "image": "3105.png",
+      "gold": 1100,
+      "from": ["1033", "1029"]
+    },
+    "3107": { "name": "Redemption", "image": "3107.png", "gold": 2300, "from": ["3108", "3114"] },
+    "3108": {
+      "name": "Fiendish Codex",
+      "image": "3108.png",
+      "gold": 850,
+      "from": ["1052", "2022"]
+    },
+    "3109": {
+      "name": "Knight's Vow",
+      "image": "3109.png",
+      "gold": 2300,
+      "from": ["3067", "1031", "1006"]
+    },
+    "3110": { "name": "Frozen Heart", "image": "3110.png", "gold": 2500, "from": ["3082", "3024"] },
+    "3111": {
+      "name": "Mercury's Treads",
+      "image": "3111.png",
+      "gold": 1250,
+      "from": ["1001", "1033"]
+    },
+    "3112": { "name": "Guardian's Orb", "image": "3112.png", "gold": 950 },
+    "3113": { "name": "Aether Wisp", "image": "3113.png", "gold": 900, "from": ["1052"] },
+    "3114": { "name": "Forbidden Idol", "image": "3114.png", "gold": 600, "from": ["1004"] },
+    "3115": {
+      "name": "Nashor's Tooth",
+      "image": "3115.png",
+      "gold": 2900,
+      "from": ["1043", "1026", "3108"]
+    },
+    "3116": {
+      "name": "Rylai's Crystal Scepter",
+      "image": "3116.png",
+      "gold": 2600,
+      "from": ["1026", "1011", "1052"]
+    },
+    "3117": { "name": "Mobility Boots", "image": "3117.png", "gold": 1000, "from": ["1001"] },
+    "3118": { "name": "Malignance", "image": "3118.png", "gold": 2700, "from": ["3802", "1026"] },
+    "3119": {
+      "name": "Winter's Approach",
+      "image": "3119.png",
+      "gold": 2400,
+      "from": ["3070", "1011", "3067"]
+    },
+    "3121": { "name": "Fimbulwinter", "image": "3121.png", "gold": 2400 },
+    "3123": { "name": "Executioner's Calling", "image": "3123.png", "gold": 800, "from": ["1036"] },
+    "3124": {
+      "name": "Guinsoo's Rageblade",
+      "image": "3124.png",
+      "gold": 3000,
+      "from": ["1052", "1043", "1037"]
+    },
+    "3128": {
+      "name": "Deathfire Grasp",
+      "image": "3128.png",
+      "gold": 2900,
+      "from": ["1058", "3108"]
+    },
+    "3131": {
+      "name": "Sword of the Divine",
+      "image": "3131.png",
+      "gold": 2300,
+      "from": ["3134", "1042", "1042"]
+    },
+    "3133": {
+      "name": "Caulfield's Warhammer",
+      "image": "3133.png",
+      "gold": 1050,
+      "from": ["1036", "2022", "1036"]
+    },
+    "3134": {
+      "name": "Serrated Dirk",
+      "image": "3134.png",
+      "gold": 1000,
+      "from": ["1036", "1036"]
+    },
+    "3135": { "name": "Void Staff", "image": "3135.png", "gold": 3000, "from": ["4630", "1026"] },
+    "3137": {
+      "name": "Cryptbloom",
+      "image": "3137.png",
+      "gold": 3000,
+      "from": ["4630", "3108", "3108"]
+    },
+    "3139": {
+      "name": "Mercurial Scimitar",
+      "image": "3139.png",
+      "gold": 3200,
+      "from": ["3140", "1037", "1053"]
+    },
+    "3140": { "name": "Quicksilver Sash", "image": "3140.png", "gold": 1300, "from": ["1033"] },
+    "3142": {
+      "name": "Youmuu's Ghostblade",
+      "image": "3142.png",
+      "gold": 2800,
+      "from": ["3134", "6690", "1036"]
+    },
+    "3143": {
+      "name": "Randuin's Omen",
+      "image": "3143.png",
+      "gold": 2700,
+      "from": ["3082", "1011"]
+    },
+    "3144": {
+      "name": "Scout's Slingshot",
+      "image": "3144.png",
+      "gold": 600,
+      "from": ["1042", "1042"]
+    },
+    "3145": {
+      "name": "Hextech Alternator",
+      "image": "3145.png",
+      "gold": 1100,
+      "from": ["1052", "1052"]
+    },
+    "3146": {
+      "name": "Hextech Gunblade",
+      "image": "3146.png",
+      "gold": 3000,
+      "from": ["1053", "3145", "1052"]
+    },
+    "3147": {
+      "name": "Haunting Guise",
+      "image": "3147.png",
+      "gold": 1300,
+      "from": ["1052", "1028"]
+    },
+    "3152": {
+      "name": "Hextech Rocketbelt",
+      "image": "3152.png",
+      "gold": 2650,
+      "from": ["3145", "3067", "1028"]
+    },
+    "3153": {
+      "name": "Blade of The Ruined King",
+      "image": "3153.png",
+      "gold": 3200,
+      "from": ["1053", "1043", "1037"]
+    },
+    "3155": {
+      "name": "Hexdrinker",
+      "image": "3155.png",
+      "gold": 1300,
+      "from": ["1036", "1033", "1036"]
+    },
+    "3156": {
+      "name": "Maw of Malmortius",
+      "image": "3156.png",
+      "gold": 3100,
+      "from": ["3155", "3133"]
+    },
+    "3157": {
+      "name": "Zhonya's Hourglass",
+      "image": "3157.png",
+      "gold": 3250,
+      "from": ["1058", "2420"]
+    },
+    "3158": {
+      "name": "Ionian Boots of Lucidity",
+      "image": "3158.png",
+      "gold": 900,
+      "from": ["1001", "2022"]
+    },
+    "3161": {
+      "name": "Spear of Shojin",
+      "image": "3161.png",
+      "gold": 3100,
+      "from": ["1037", "2021", "1028"]
+    },
+    "3165": {
+      "name": "Morellonomicon",
+      "image": "3165.png",
+      "gold": 2850,
+      "from": ["3916", "1026", "3067"]
+    },
+    "3168": { "name": "Immortal Path", "image": "3168.png", "gold": 1000, "from": ["3008"] },
+    "3170": { "name": "Swiftmarch", "image": "3170.png", "gold": 1000, "from": ["3009"] },
+    "3171": { "name": "Crimson Lucidity", "image": "3171.png", "gold": 900, "from": ["3158"] },
+    "3172": { "name": "Gunmetal Greaves", "image": "3172.png", "gold": 1100, "from": ["3006"] },
+    "3173": { "name": "Chainlaced Crushers", "image": "3173.png", "gold": 1250, "from": ["3111"] },
+    "3174": { "name": "Armored Advance", "image": "3174.png", "gold": 1200, "from": ["3047"] },
+    "3175": { "name": "Spellslinger's Shoes", "image": "3175.png", "gold": 1100, "from": ["3020"] },
+    "3176": { "name": "Forever Forward", "image": "3176.png", "gold": 900, "from": ["3013"] },
+    "3177": { "name": "Guardian's Blade", "image": "3177.png", "gold": 950 },
+    "3179": {
+      "name": "Umbral Glaive",
+      "image": "3179.png",
+      "gold": 2800,
+      "from": ["3134", "3133"]
+    },
+    "3181": {
+      "name": "Hullbreaker",
+      "image": "3181.png",
+      "gold": 3000,
+      "from": ["2021", "3066", "1037"]
+    },
+    "3184": { "name": "Guardian's Hammer", "image": "3184.png", "gold": 950 },
+    "3190": {
+      "name": "Locket of the Iron Solari",
+      "image": "3190.png",
+      "gold": 2200,
+      "from": ["3067", "1029", "1033"]
+    },
+    "3193": {
+      "name": "Gargoyle Stoneplate",
+      "image": "3193.png",
+      "gold": 3150,
+      "from": ["1029", "3105", "1033"]
+    },
+    "3211": {
+      "name": "Spectre's Cowl",
+      "image": "3211.png",
+      "gold": 1250,
+      "from": ["1028", "1033", "1006"]
+    },
+    "3222": {
+      "name": "Mikael's Blessing",
+      "image": "3222.png",
+      "gold": 2300,
+      "from": ["3067", "3114"]
+    },
+    "3302": { "name": "Terminus", "image": "3302.png", "gold": 3000, "from": ["3051", "1043"] },
+    "3330": { "name": "Scarecrow Effigy", "image": "3330.png", "gold": 0 },
+    "3340": { "name": "Stealth Ward", "image": "3340.png", "gold": 0 },
+    "3348": { "name": "Arcane Sweeper", "image": "3348.png", "gold": 0 },
+    "3349": { "name": "Lucent Singularity", "image": "3349.png", "gold": 0 },
+    "3363": { "name": "Farsight Alteration", "image": "3363.png", "gold": 0 },
+    "3364": { "name": "Oracle Lens", "image": "3364.png", "gold": 0 },
+    "3398": { "name": "Small Party Favor", "image": "3398.png", "gold": 0 },
+    "3399": { "name": "Party Favor", "image": "3399.png", "gold": 0 },
+    "3400": { "name": "Your Cut", "image": "3400.png", "gold": 0 },
+    "3430": { "name": "Rite Of Ruin", "image": "3430.png", "gold": 2500 },
+    "3504": {
+      "name": "Ardent Censer",
+      "image": "3504.png",
+      "gold": 2200,
+      "from": ["3113", "3114"]
+    },
+    "3508": {
+      "name": "Essence Reaver",
+      "image": "3508.png",
+      "gold": 3050,
+      "from": ["3057", "3133", "1018"]
+    },
+    "3513": { "name": "Eye of the Herald", "image": "3513.png", "gold": 0 },
+    "3599": { "name": "Kalista's Black Spear", "image": "3599.png", "gold": 0 },
+    "3600": { "name": "Kalista's Black Spear", "image": "3600.png", "gold": 0 },
+    "3742": {
+      "name": "Dead Man's Plate",
+      "image": "3742.png",
+      "gold": 2900,
+      "from": ["3066", "1028", "1031"]
+    },
+    "3748": {
+      "name": "Titanic Hydra",
+      "image": "3748.png",
+      "gold": 3300,
+      "from": ["3077", "2021", "1011"]
+    },
+    "3801": {
+      "name": "Crystalline Bracer",
+      "image": "3801.png",
+      "gold": 800,
+      "from": ["1028", "1006"]
+    },
+    "3802": {
+      "name": "Lost Chapter",
+      "image": "3802.png",
+      "gold": 1200,
+      "from": ["1052", "1027", "2022"]
+    },
+    "3803": {
+      "name": "Catalyst of Aeons",
+      "image": "3803.png",
+      "gold": 1300,
+      "from": ["1028", "1028", "1027"]
+    },
+    "3814": {
+      "name": "Edge of Night",
+      "image": "3814.png",
+      "gold": 3000,
+      "from": ["3134", "2021"]
+    },
+    "3850": { "name": "Spellthief's Edge", "image": "3850.png", "gold": 400 },
+    "3851": { "name": "Frostfang", "image": "3851.png", "gold": 400 },
+    "3853": { "name": "Shard of True Ice", "image": "3853.png", "gold": 400 },
+    "3854": { "name": "Steel Shoulderguards", "image": "3854.png", "gold": 400 },
+    "3855": { "name": "Runesteel Spaulders", "image": "3855.png", "gold": 400 },
+    "3857": { "name": "Pauldrons of Whiterock", "image": "3857.png", "gold": 400 },
+    "3858": { "name": "Relic Shield", "image": "3858.png", "gold": 400 },
+    "3859": { "name": "Targon's Buckler", "image": "3859.png", "gold": 400 },
+    "3860": { "name": "Bulwark of the Mountain", "image": "3860.png", "gold": 400 },
+    "3862": { "name": "Spectral Sickle", "image": "3862.png", "gold": 400 },
+    "3863": { "name": "Harrowing Crescent", "image": "3863.png", "gold": 400 },
+    "3864": { "name": "Black Mist Scythe", "image": "3864.png", "gold": 400 },
+    "3865": { "name": "World Atlas", "image": "3865.png", "gold": 400 },
+    "3866": { "name": "Runic Compass", "image": "3866.png", "gold": 400 },
+    "3867": { "name": "Bounty of Worlds", "image": "3867.png", "gold": 400 },
+    "3869": { "name": "Celestial Opposition", "image": "3869.png", "gold": 400, "from": ["3867"] },
+    "3870": { "name": "Dream Maker", "image": "3870.png", "gold": 400, "from": ["3867"] },
+    "3871": { "name": "Zaz'Zak's Realmspike", "image": "3871.png", "gold": 400, "from": ["3867"] },
+    "3876": { "name": "Solstice Sleigh", "image": "3876.png", "gold": 400, "from": ["3867"] },
+    "3877": { "name": "Bloodsong", "image": "3877.png", "gold": 400, "from": ["3867"] },
+    "3901": {
+      "name": "<rarityLegendary>Fire at Will</rarityLegendary><br><subtitleLeft><silver>500 Silver Serpents</silver></subtitleLeft>",
+      "image": "3901.png",
+      "gold": 0
+    },
+    "3902": {
+      "name": "<rarityLegendary>Death's Daughter</rarityLegendary><br><subtitleLeft><silver>500 Silver Serpents</silver></subtitleLeft>",
+      "image": "3902.png",
+      "gold": 0
+    },
+    "3903": {
+      "name": "<rarityLegendary>Raise Morale</rarityLegendary><br><subtitleLeft><silver>500 Silver Serpents</silver></subtitleLeft>",
+      "image": "3903.png",
+      "gold": 0
+    },
+    "3916": { "name": "Oblivion Orb", "image": "3916.png", "gold": 800, "from": ["1052"] },
+    "4003": { "name": "Lifeline", "image": "4003.png", "gold": 1600, "from": ["6690", "1036"] },
+    "4004": {
+      "name": "Spectral Cutlass",
+      "image": "4004.png",
+      "gold": 2800,
+      "from": ["4003", "3134"]
+    },
+    "4005": {
+      "name": "Imperial Mandate",
+      "image": "4005.png",
+      "gold": 2400,
+      "from": ["1052", "4642", "1052"]
+    },
+    "4010": { "name": "Bloodletter's Curse", "image": "4010.png", "gold": 2500 },
+    "4011": { "name": "Sword of Blossoming Dawn", "image": "4011.png", "gold": 2500 },
+    "4012": { "name": "Sin Eater", "image": "4012.png", "gold": 3000 },
+    "4013": { "name": "Lightning Braid", "image": "4013.png", "gold": 3000 },
+    "4014": { "name": "Frozen Mallet", "image": "4014.png", "gold": 3000 },
+    "4015": { "name": "Perplexity", "image": "4015.png", "gold": 2500 },
+    "4016": { "name": "Wordless Promise", "image": "4016.png", "gold": 2500 },
+    "4017": { "name": "Hellfire Hatchet", "image": "4017.png", "gold": 2500 },
+    "4401": {
+      "name": "Force of Nature",
+      "image": "4401.png",
+      "gold": 2800,
+      "from": ["1057", "1028", "3066"]
+    },
+    "4402": {
+      "name": "Innervating Locket",
+      "image": "4402.png",
+      "gold": 2950,
+      "from": ["3803", "3133"]
+    },
+    "4403": {
+      "name": "The Golden Spatula",
+      "image": "4403.png",
+      "gold": 7187,
+      "from": ["3086", "1038", "1053", "3067", "1058", "3105"]
+    },
+    "4628": {
+      "name": "Horizon Focus",
+      "image": "4628.png",
+      "gold": 2700,
+      "from": ["3108", "3108", "1052"]
+    },
+    "4629": {
+      "name": "Cosmic Drive",
+      "image": "4629.png",
+      "gold": 3000,
+      "from": ["3067", "3113", "3108"]
+    },
+    "4630": { "name": "Blighting Jewel", "image": "4630.png", "gold": 1100, "from": ["1052"] },
+    "4632": {
+      "name": "Verdant Barrier",
+      "image": "4632.png",
+      "gold": 1600,
+      "from": ["1052", "1033", "1052"]
+    },
+    "4633": { "name": "Riftmaker", "image": "4633.png", "gold": 3100, "from": ["3147", "3108"] },
+    "4635": {
+      "name": "Leeching Leer",
+      "image": "4635.png",
+      "gold": 1265,
+      "from": ["1028", "1052"]
+    },
+    "4636": {
+      "name": "Night Harvester",
+      "image": "4636.png",
+      "gold": 2765,
+      "from": ["3145", "3108"]
+    },
+    "4637": {
+      "name": "Demonic Embrace",
+      "image": "4637.png",
+      "gold": 3000,
+      "from": ["1026", "1011", "1052"]
+    },
+    "4638": { "name": "Watchful Wardstone", "image": "4638.png", "gold": 1100 },
+    "4641": { "name": "Stirring Wardstone", "image": "4641.png", "gold": 350 },
+    "4642": {
+      "name": "Bandleglass Mirror",
+      "image": "4642.png",
+      "gold": 900,
+      "from": ["1004", "1052", "2022"]
+    },
+    "4643": { "name": "Vigilant Wardstone", "image": "4643.png", "gold": 2300, "from": ["4638"] },
+    "4644": {
+      "name": "Crown of the Shattered Queen",
+      "image": "4644.png",
+      "gold": 2865,
+      "from": ["3067", "3802", "1052"]
+    },
+    "4645": { "name": "Shadowflame", "image": "4645.png", "gold": 3200, "from": ["3145", "1058"] },
+    "4646": { "name": "Stormsurge", "image": "4646.png", "gold": 2800, "from": ["3145", "3113"] },
+    "6029": { "name": "Ironspike Whip", "image": "6029.png", "gold": 1100, "from": ["1037"] },
+    "6032": { "name": "Stat Bonus", "image": "6032.png", "gold": 750 },
+    "6035": {
+      "name": "Silvermere Dawn",
+      "image": "6035.png",
+      "gold": 3000,
+      "from": ["3140", "1037", "1028"]
+    },
+    "6333": {
+      "name": "Death's Dance",
+      "image": "6333.png",
+      "gold": 3300,
+      "from": ["2019", "1037", "3133"]
+    },
+    "6609": {
+      "name": "Chempunk Chainsword",
+      "image": "6609.png",
+      "gold": 3000,
+      "from": ["3123", "1011", "3133"]
+    },
+    "6610": {
+      "name": "Sundered Sky",
+      "image": "6610.png",
+      "gold": 3100,
+      "from": ["2021", "3133", "1028"]
+    },
+    "6616": {
+      "name": "Staff of Flowing Water",
+      "image": "6616.png",
+      "gold": 2250,
+      "from": ["3108", "3114"]
+    },
+    "6617": {
+      "name": "Moonstone Renewer",
+      "image": "6617.png",
+      "gold": 2200,
+      "from": ["3067", "4642"]
+    },
+    "6620": {
+      "name": "Echoes of Helia",
+      "image": "6620.png",
+      "gold": 2200,
+      "from": ["3067", "4642"]
+    },
+    "6621": {
+      "name": "Dawncore",
+      "image": "6621.png",
+      "gold": 2500,
+      "from": ["1026", "3114", "3114"]
+    },
+    "6630": {
+      "name": "Goredrinker",
+      "image": "6630.png",
+      "gold": 3200,
+      "from": ["6029", "3044", "3067"]
+    },
+    "6631": {
+      "name": "Stridebreaker",
+      "image": "6631.png",
+      "gold": 3300,
+      "from": ["3077", "3044", "1042"]
+    },
+    "6632": {
+      "name": "Divine Sunderer",
+      "image": "6632.png",
+      "gold": 3450,
+      "from": ["3133", "3057", "3067"]
+    },
+    "6653": {
+      "name": "Liandry's Torment",
+      "image": "6653.png",
+      "gold": 3000,
+      "from": ["3147", "2508"]
+    },
+    "6655": { "name": "Luden's Echo", "image": "6655.png", "gold": 2750, "from": ["3802", "3145"] },
+    "6656": {
+      "name": "Everfrost",
+      "image": "6656.png",
+      "gold": 2865,
+      "from": ["3067", "3802", "1052"]
+    },
+    "6657": { "name": "Rod of Ages", "image": "6657.png", "gold": 2600, "from": ["1026", "3803"] },
+    "6660": { "name": "Bami's Cinder", "image": "6660.png", "gold": 900, "from": ["1028", "2022"] },
+    "6662": {
+      "name": "Iceborn Gauntlet",
+      "image": "6662.png",
+      "gold": 2900,
+      "from": ["3057", "1028", "1031"]
+    },
+    "6664": {
+      "name": "Hollow Radiance",
+      "image": "6664.png",
+      "gold": 2800,
+      "from": ["6660", "3211"]
+    },
+    "6665": {
+      "name": "Jak'Sho, The Protean",
+      "image": "6665.png",
+      "gold": 3200,
+      "from": ["1011", "1031", "1057"]
+    },
+    "6667": {
+      "name": "Radiant Virtue",
+      "image": "6667.png",
+      "gold": 2600,
+      "from": ["3105", "1011"]
+    },
+    "6670": { "name": "Noonquiver", "image": "6670.png", "gold": 1300, "from": ["1036", "1018"] },
+    "6671": {
+      "name": "Galeforce",
+      "image": "6671.png",
+      "gold": 3500,
+      "from": ["1038", "3086", "1036"]
+    },
+    "6672": {
+      "name": "Kraken Slayer",
+      "image": "6672.png",
+      "gold": 3000,
+      "from": ["6690", "3051", "1043"]
+    },
+    "6673": {
+      "name": "Immortal Shieldbow",
+      "image": "6673.png",
+      "gold": 3000,
+      "from": ["1037", "6670"]
+    },
+    "6675": {
+      "name": "Navori Flickerblade",
+      "image": "6675.png",
+      "gold": 2650,
+      "from": ["1042", "3086", "1042"]
+    },
+    "6676": {
+      "name": "The Collector",
+      "image": "6676.png",
+      "gold": 3000,
+      "from": ["1037", "3134", "1018"]
+    },
+    "6677": { "name": "Rageknife", "image": "6677.png", "gold": 1100, "from": ["1042", "1042"] },
+    "6690": { "name": "Rectrix", "image": "6690.png", "gold": 775, "from": ["1036"] },
+    "6691": {
+      "name": "Duskblade of Draktharr",
+      "image": "6691.png",
+      "gold": 2950,
+      "from": ["3134", "3133"]
+    },
+    "6692": {
+      "name": "Eclipse",
+      "image": "6692.png",
+      "gold": 2900,
+      "from": ["3133", "1037", "1036"]
+    },
+    "6693": {
+      "name": "Prowler's Claw",
+      "image": "6693.png",
+      "gold": 2850,
+      "from": ["3134", "3133"]
+    },
+    "6694": {
+      "name": "Serylda's Grudge",
+      "image": "6694.png",
+      "gold": 3000,
+      "from": ["3133", "3035"]
+    },
+    "6695": {
+      "name": "Serpent's Fang",
+      "image": "6695.png",
+      "gold": 2500,
+      "from": ["3134", "1037"]
+    },
+    "6696": { "name": "Axiom Arc", "image": "6696.png", "gold": 2750, "from": ["2020", "3133"] },
+    "6697": { "name": "Hubris", "image": "6697.png", "gold": 2800, "from": ["3134", "3133"] },
+    "6698": {
+      "name": "Profane Hydra",
+      "image": "6698.png",
+      "gold": 2850,
+      "from": ["3077", "2020"]
+    },
+    "6699": {
+      "name": "Voltaic Cyclosword",
+      "image": "6699.png",
+      "gold": 3000,
+      "from": ["2020", "1036", "1036"]
+    },
+    "6700": {
+      "name": "Shield of the Rakkor",
+      "image": "6700.png",
+      "gold": 2675,
+      "from": ["6690", "2019"]
+    },
+    "6701": {
+      "name": "Opportunity",
+      "image": "6701.png",
+      "gold": 2700,
+      "from": ["1037", "3134", "1036"]
+    },
+    "6702": { "name": "Scouting Ahead", "image": "6702.png", "gold": 0 },
+    "7050": { "name": "Gangplank Placeholder", "image": "7050.png", "gold": 0 },
+    "8001": {
+      "name": "Anathema's Chains",
+      "image": "8001.png",
+      "gold": 2500,
+      "from": ["3067", "1011"]
+    },
+    "8010": {
+      "name": "Bloodletter's Curse",
+      "image": "8010.png",
+      "gold": 2900,
+      "from": ["3147", "3108"]
+    },
+    "8020": { "name": "Abyssal Mask", "image": "8020.png", "gold": 2650, "from": ["3067", "1057"] },
+    "9168": { "name": "Locked Weapon Slot", "image": "9168.png", "gold": 0 },
+    "9171": { "name": "Cyclonic Slicers", "image": "9171.png", "gold": 0 },
+    "9172": { "name": "YuumiBot", "image": "9172.png", "gold": 0 },
+    "9173": { "name": "Radiant Field", "image": "9173.png", "gold": 0 },
+    "9174": { "name": "Statikk Sword", "image": "9174.png", "gold": 0 },
+    "9175": { "name": "Lioness's Lament", "image": "9175.png", "gold": 0 },
+    "9176": { "name": "Gatling Bunny-Guns", "image": "9176.png", "gold": 0 },
+    "9177": { "name": "Searing Shortbow", "image": "9177.png", "gold": 0 },
+    "9178": { "name": "The Annihilator", "image": "9178.png", "gold": 0 },
+    "9179": { "name": "Battle Bunny Crossbow", "image": "9179.png", "gold": 0 },
+    "9180": { "name": "UwU Blaster", "image": "9180.png", "gold": 0 },
+    "9181": { "name": "Vortex Glove", "image": "9181.png", "gold": 0 },
+    "9183": { "name": "Blade-o-rang", "image": "9183.png", "gold": 0 },
+    "9184": { "name": "Bunny Mega-Blast", "image": "9184.png", "gold": 0 },
+    "9185": { "name": "Anti-Shark Sea Mine", "image": "9185.png", "gold": 0 },
+    "9187": { "name": "T.I.B.B.E.R.S", "image": "9187.png", "gold": 0 },
+    "9188": { "name": "Ani-Mines", "image": "9188.png", "gold": 0 },
+    "9189": { "name": "Final City Transit", "image": "9189.png", "gold": 0 },
+    "9190": { "name": "Echoing Batblades", "image": "9190.png", "gold": 0 },
+    "9192": { "name": "Paw Print Poisoner", "image": "9192.png", "gold": 0 },
+    "9193": { "name": "Iceblast Armor", "image": "9193.png", "gold": 0 },
+    "9271": { "name": "Unceasing Cyclone", "image": "9271.png", "gold": 0 },
+    "9272": { "name": "YuumiBot_Final_FINAL", "image": "9272.png", "gold": 0 },
+    "9273": { "name": "Explosive Embrace", "image": "9273.png", "gold": 0 },
+    "9274": { "name": "Prumbis's Electrocarver", "image": "9274.png", "gold": 0 },
+    "9275": { "name": "Enveloping Light", "image": "9275.png", "gold": 0 },
+    "9276": { "name": "Double Bun-Bun Barrage", "image": "9276.png", "gold": 0 },
+    "9277": { "name": "Evolved Embershot", "image": "9277.png", "gold": 0 },
+    "9278": { "name": "Animapocalypse", "image": "9278.png", "gold": 0 },
+    "9279": { "name": "Bunny Prime Ballista", "image": "9279.png", "gold": 0 },
+    "9280": { "name": "OwO Blaster", "image": "9280.png", "gold": 0 },
+    "9281": { "name": "Tempest's Gauntlet", "image": "9281.png", "gold": 0 },
+    "9283": { "name": "Quad-o-rang", "image": "9283.png", "gold": 0 },
+    "9284": { "name": "Rapid Rabbit Raindown", "image": "9284.png", "gold": 0 },
+    "9285": { "name": "Neverending Mobstomper", "image": "9285.png", "gold": 0 },
+    "9287": { "name": "T.I.B.B.E.R.S (B.E.E.G Edition)", "image": "9287.png", "gold": 0 },
+    "9288": { "name": "Jinx's Tri-Namite", "image": "9288.png", "gold": 0 },
+    "9289": { "name": "FC Limited Express", "image": "9289.png", "gold": 0 },
+    "9290": { "name": "Vayne's Chromablades", "image": "9290.png", "gold": 0 },
+    "9292": { "name": "Bearfoot Chem-Dispenser", "image": "9292.png", "gold": 0 },
+    "9293": { "name": "Deep Freeze", "image": "9293.png", "gold": 0 },
+    "9300": { "name": "Meow Meow", "image": "9300.png", "gold": 0 },
+    "9301": { "name": "Shield Slam", "image": "9301.png", "gold": 0 },
+    "9302": { "name": "Sound Wave", "image": "9302.png", "gold": 0 },
+    "9303": { "name": "Pillory Swipe", "image": "9303.png", "gold": 0 },
+    "9304": { "name": "Steel Tempest", "image": "9304.png", "gold": 0 },
+    "9305": { "name": "Tentacle Slam", "image": "9305.png", "gold": 0 },
+    "9306": { "name": "Winged Dagger", "image": "9306.png", "gold": 0 },
+    "9307": { "name": "Guiding Hex", "image": "9307.png", "gold": 0 },
+    "9308": { "name": "Bunny Hop", "image": "9308.png", "gold": 0 },
+    "9400": { "name": "Battle Cat Barrage", "image": "9400.png", "gold": 0 },
+    "9401": { "name": "Light of the Lion", "image": "9401.png", "gold": 0 },
+    "9402": { "name": "Anima Echo", "image": "9402.png", "gold": 0 },
+    "9403": { "name": "Savage Slice", "image": "9403.png", "gold": 0 },
+    "9404": { "name": "Wandering Storms", "image": "9404.png", "gold": 0 },
+    "9405": { "name": "Grizzly Smash", "image": "9405.png", "gold": 0 },
+    "9406": { "name": "Lover's Ricochet", "image": "9406.png", "gold": 0 },
+    "9407": { "name": "Hopped-Up Hex", "image": "9407.png", "gold": 0 },
+    "9408": { "name": "Carrot Crash", "image": "9408.png", "gold": 0 },
+    "123430": {
+      "name": "Rite of Ruin",
+      "image": "123430.png",
+      "gold": 3000,
+      "from": ["1018", "3113", "3108"]
+    },
+    "124011": {
+      "name": "Sword of Blossoming Dawn",
+      "image": "124011.png",
+      "gold": 2350,
+      "from": ["3114", "1052", "3067"]
+    },
+    "126697": { "name": "Hubris", "image": "126697.png", "gold": 2950, "from": ["3134", "3133"] },
+    "220000": { "name": "Stat Bonus", "image": "220000.png", "gold": 750 },
+    "220001": { "name": "Legendary Fighter Item", "image": "220001.png", "gold": 2250 },
+    "220002": { "name": "Legendary Marksman Item", "image": "220002.png", "gold": 2250 },
+    "220003": { "name": "Legendary Assassin Item", "image": "220003.png", "gold": 2250 },
+    "220004": { "name": "Legendary Mage Item", "image": "220004.png", "gold": 2250 },
+    "220005": { "name": "Legendary Tank Item", "image": "220005.png", "gold": 2250 },
+    "220006": { "name": "Legendary Support Item", "image": "220006.png", "gold": 2250 },
+    "220007": { "name": "Prismatic Item", "image": "220007.png", "gold": 4000 },
+    "220008": { "name": "Anvil Voucher", "image": "220008.png", "gold": 750 },
+    "220009": { "name": "Gold Stat Anvil Voucher", "image": "220009.png", "gold": 750 },
+    "220010": { "name": "Prismatic Stat Voucher", "image": "220010.png", "gold": 750 },
+    "220011": { "name": "Bravery Voucher", "image": "220011.png", "gold": 750 },
+    "220012": { "name": "Shardblade", "image": "220012.png", "gold": 2500 },
+    "220013": { "name": "Poro-Snax", "image": "220013.png", "gold": 0 },
+    "221011": { "name": "Giant's Belt", "image": "221011.png", "gold": 500 },
+    "221026": { "name": "Blasting Wand", "image": "221026.png", "gold": 500 },
+    "221031": { "name": "Chain Vest", "image": "221031.png", "gold": 500 },
+    "221038": { "name": "B. F. Sword", "image": "221038.png", "gold": 1300 },
+    "221043": { "name": "Recurve Bow", "image": "221043.png", "gold": 500 },
+    "221053": { "name": "Vampiric Scepter", "image": "221053.png", "gold": 500 },
+    "221057": { "name": "Negatron Cloak", "image": "221057.png", "gold": 450 },
+    "221058": { "name": "Needlessly Large Rod", "image": "221058.png", "gold": 500 },
+    "222022": { "name": "Glowing Mote", "image": "222022.png", "gold": 250 },
+    "222051": { "name": "Guardian's Horn", "image": "222051.png", "gold": 500 },
+    "222065": { "name": "Shurelya's Battlesong", "image": "222065.png", "gold": 2500 },
+    "222141": { "name": "Cappa Juice", "image": "222141.png", "gold": 500 },
+    "222502": { "name": "Unending Despair", "image": "222502.png", "gold": 2500 },
+    "222503": { "name": "Blackfire Torch", "image": "222503.png", "gold": 2500 },
+    "222504": { "name": "Kaenic Rookern", "image": "222504.png", "gold": 2500 },
+    "222510": { "name": "Dusk and Dawn", "image": "222510.png", "gold": 2500 },
+    "222512": { "name": "Fiendhunter Bolts", "image": "222512.png", "gold": 2500 },
+    "222517": { "name": "Endless Hunger", "image": "222517.png", "gold": 2500 },
+    "222522": { "name": "Actualizer", "image": "222522.png", "gold": 2500 },
+    "222523": { "name": "Hexoptics C44", "image": "222523.png", "gold": 2500 },
+    "222524": { "name": "Bandlepipes", "image": "222524.png", "gold": 2500 },
+    "222525": { "name": "Protoplasm Harness", "image": "222525.png", "gold": 2500 },
+    "222526": { "name": "Whispering Circlet", "image": "222526.png", "gold": 2500 },
+    "222530": { "name": "Diadem of Songs", "image": "222530.png", "gold": 2500 },
+    "223001": { "name": "Evenshroud", "image": "223001.png", "gold": 2500 },
+    "223002": { "name": "Trailblazer", "image": "223002.png", "gold": 2500 },
+    "223003": { "name": "Archangel's Staff", "image": "223003.png", "gold": 2500 },
+    "223004": { "name": "Manamune", "image": "223004.png", "gold": 2500 },
+    "223005": { "name": "Ghostcrawlers", "image": "223005.png", "gold": 500 },
+    "223006": { "name": "Berserker's Greaves", "image": "223006.png", "gold": 500 },
+    "223008": { "name": "Gluttonous Greaves", "image": "223008.png", "gold": 500 },
+    "223009": { "name": "Boots of Swiftness", "image": "223009.png", "gold": 500 },
+    "223011": {
+      "name": "Chemtech Putrifier",
+      "image": "223011.png",
+      "gold": 1900,
+      "from": ["3916", "3114"]
+    },
+    "223020": { "name": "Sorcerer's Shoes", "image": "223020.png", "gold": 500 },
+    "223026": { "name": "Guardian Angel", "image": "223026.png", "gold": 2500 },
+    "223031": { "name": "Infinity Edge", "image": "223031.png", "gold": 2500 },
+    "223032": { "name": "Yun Tal Wildarrows", "image": "223032.png", "gold": 2500 },
+    "223033": { "name": "Mortal Reminder", "image": "223033.png", "gold": 2500 },
+    "223036": { "name": "Lord Dominik's Regards", "image": "223036.png", "gold": 2500 },
+    "223039": { "name": "Atma's Reckoning", "image": "223039.png", "gold": 2500 },
+    "223040": { "name": "Seraph's Embrace", "image": "223040.png", "gold": 2500 },
+    "223042": { "name": "Muramana", "image": "223042.png", "gold": 2500 },
+    "223046": { "name": "Phantom Dancer", "image": "223046.png", "gold": 2500 },
+    "223047": { "name": "Plated Steelcaps", "image": "223047.png", "gold": 500 },
+    "223050": { "name": "Zeke's Convergence", "image": "223050.png", "gold": 2500 },
+    "223053": { "name": "Sterak's Gage", "image": "223053.png", "gold": 2500 },
+    "223057": { "name": "Sheen", "image": "223057.png", "gold": 2500 },
+    "223065": { "name": "Spirit Visage", "image": "223065.png", "gold": 2500 },
+    "223067": { "name": "Kindlegem", "image": "223067.png", "gold": 500 },
+    "223068": { "name": "Sunfire Aegis", "image": "223068.png", "gold": 2500 },
+    "223069": { "name": "Void Immolation", "image": "223069.png", "gold": 6000 },
+    "223071": { "name": "Black Cleaver", "image": "223071.png", "gold": 2500 },
+    "223072": { "name": "Bloodthirster", "image": "223072.png", "gold": 2500 },
+    "223073": { "name": "Experimental Hexplate", "image": "223073.png", "gold": 2500 },
+    "223074": { "name": "Ravenous Hydra", "image": "223074.png", "gold": 2500 },
+    "223075": { "name": "Thornmail", "image": "223075.png", "gold": 2500 },
+    "223078": { "name": "Trinity Force", "image": "223078.png", "gold": 2500 },
+    "223084": { "name": "Heartsteel", "image": "223084.png", "gold": 2500 },
+    "223085": { "name": "Runaan's Hurricane", "image": "223085.png", "gold": 2500 },
+    "223087": { "name": "Statikk Shiv", "image": "223087.png", "gold": 2500 },
+    "223089": { "name": "Rabadon's Deathcap", "image": "223089.png", "gold": 2500 },
+    "223091": { "name": "Wit's End", "image": "223091.png", "gold": 2500 },
+    "223094": { "name": "Rapid Firecannon", "image": "223094.png", "gold": 2500 },
+    "223095": { "name": "Stormrazor", "image": "223095.png", "gold": 2500 },
+    "223100": { "name": "Lich Bane", "image": "223100.png", "gold": 2500 },
+    "223102": { "name": "Banshee's Veil", "image": "223102.png", "gold": 2500 },
+    "223105": { "name": "Aegis of the Legion", "image": "223105.png", "gold": 500 },
+    "223107": { "name": "Redemption", "image": "223107.png", "gold": 2500 },
+    "223109": { "name": "Knight's Vow", "image": "223109.png", "gold": 2500 },
+    "223110": { "name": "Frozen Heart", "image": "223110.png", "gold": 2500 },
+    "223111": { "name": "Mercury's Treads", "image": "223111.png", "gold": 500 },
+    "223112": { "name": "Guardian's Orb", "image": "223112.png", "gold": 500 },
+    "223115": { "name": "Nashor's Tooth", "image": "223115.png", "gold": 2500 },
+    "223116": { "name": "Rylai's Crystal Scepter", "image": "223116.png", "gold": 2500 },
+    "223118": { "name": "Malignance", "image": "223118.png", "gold": 2500 },
+    "223119": { "name": "Winter's Approach", "image": "223119.png", "gold": 2500 },
+    "223121": { "name": "Fimbulwinter", "image": "223121.png", "gold": 2500 },
+    "223124": { "name": "Guinsoo's Rageblade", "image": "223124.png", "gold": 2500 },
+    "223135": { "name": "Void Staff", "image": "223135.png", "gold": 2500 },
+    "223137": { "name": "Cryptbloom", "image": "223137.png", "gold": 2500 },
+    "223139": { "name": "Mercurial Scimitar", "image": "223139.png", "gold": 2500 },
+    "223142": { "name": "Youmuu's Ghostblade", "image": "223142.png", "gold": 2500 },
+    "223143": { "name": "Randuin's Omen", "image": "223143.png", "gold": 2500 },
+    "223146": { "name": "Hextech Gunblade", "image": "223146.png", "gold": 2500 },
+    "223152": { "name": "Hextech Rocketbelt", "image": "223152.png", "gold": 2500 },
+    "223153": { "name": "Blade of The Ruined King", "image": "223153.png", "gold": 2500 },
+    "223156": { "name": "Maw of Malmortius", "image": "223156.png", "gold": 2500 },
+    "223157": { "name": "Zhonya's Hourglass", "image": "223157.png", "gold": 2500 },
+    "223158": { "name": "Ionian Boots of Lucidity", "image": "223158.png", "gold": 500 },
+    "223161": { "name": "Spear of Shojin", "image": "223161.png", "gold": 2500 },
+    "223165": { "name": "Morellonomicon", "image": "223165.png", "gold": 2500 },
+    "223172": { "name": "Zephyr", "image": "223172.png", "gold": 2500 },
+    "223177": { "name": "Guardian's Blade", "image": "223177.png", "gold": 500 },
+    "223181": { "name": "Hullbreaker", "image": "223181.png", "gold": 2500 },
+    "223184": { "name": "Guardian's Hammer", "image": "223184.png", "gold": 500 },
+    "223185": { "name": "Guardian's Dirk", "image": "223185.png", "gold": 500 },
+    "223190": { "name": "Locket of the Iron Solari", "image": "223190.png", "gold": 2500 },
+    "223193": { "name": "Gargoyle Stoneplate", "image": "223193.png", "gold": 2500 },
+    "223222": { "name": "Mikael's Blessing", "image": "223222.png", "gold": 2500 },
+    "223302": { "name": "Terminus", "image": "223302.png", "gold": 2500 },
+    "223504": { "name": "Ardent Censer", "image": "223504.png", "gold": 2500 },
+    "223508": { "name": "Essence Reaver", "image": "223508.png", "gold": 2500 },
+    "223742": { "name": "Dead Man's Plate", "image": "223742.png", "gold": 2500 },
+    "223748": { "name": "Titanic Hydra", "image": "223748.png", "gold": 2500 },
+    "223814": { "name": "Edge of Night", "image": "223814.png", "gold": 2500 },
+    "224004": { "name": "Spectral Cutlass", "image": "224004.png", "gold": 2500 },
+    "224005": { "name": "Imperial Mandate", "image": "224005.png", "gold": 2500 },
+    "224401": { "name": "Force of Nature", "image": "224401.png", "gold": 2500 },
+    "224403": { "name": "The Golden Spatula", "image": "224403.png", "gold": 2500 },
+    "224628": { "name": "Horizon Focus", "image": "224628.png", "gold": 2500 },
+    "224629": { "name": "Cosmic Drive", "image": "224629.png", "gold": 2500 },
+    "224633": { "name": "Riftmaker", "image": "224633.png", "gold": 2500 },
+    "224636": { "name": "Night Harvester", "image": "224636.png", "gold": 2500 },
+    "224637": { "name": "Demonic Embrace", "image": "224637.png", "gold": 2500 },
+    "224644": { "name": "Crown of the Shattered Queen", "image": "224644.png", "gold": 2500 },
+    "224645": { "name": "Shadowflame", "image": "224645.png", "gold": 2500 },
+    "224646": { "name": "Stormsurge", "image": "224646.png", "gold": 2500 },
+    "226035": { "name": "Silvermere Dawn", "image": "226035.png", "gold": 2500 },
+    "226333": { "name": "Death's Dance", "image": "226333.png", "gold": 2500 },
+    "226609": { "name": "Chempunk Chainsword", "image": "226609.png", "gold": 2500 },
+    "226610": { "name": "Sundered Sky", "image": "226610.png", "gold": 2500 },
+    "226616": { "name": "Staff of Flowing Water", "image": "226616.png", "gold": 2500 },
+    "226617": { "name": "Moonstone Renewer", "image": "226617.png", "gold": 2500 },
+    "226620": { "name": "Echoes of Helia", "image": "226620.png", "gold": 2500 },
+    "226621": { "name": "Dawncore", "image": "226621.png", "gold": 2500 },
+    "226630": { "name": "Goredrinker", "image": "226630.png", "gold": 2750 },
+    "226631": { "name": "Stridebreaker", "image": "226631.png", "gold": 2500 },
+    "226632": { "name": "Divine Sunderer", "image": "226632.png", "gold": 2500 },
+    "226653": { "name": "Liandry's Anguish", "image": "226653.png", "gold": 2500 },
+    "226655": { "name": "Luden's Echo", "image": "226655.png", "gold": 2500 },
+    "226656": { "name": "Everfrost", "image": "226656.png", "gold": 2500 },
+    "226657": { "name": "Rod of Ages", "image": "226657.png", "gold": 2500 },
+    "226660": { "name": "", "image": "226660.png", "gold": 0 },
+    "226662": { "name": "Iceborn Gauntlet", "image": "226662.png", "gold": 2500 },
+    "226664": { "name": "Hollow Radiance", "image": "226664.png", "gold": 2500 },
+    "226665": { "name": "Jak'Sho, The Protean", "image": "226665.png", "gold": 2500 },
+    "226667": { "name": "Radiant Virtue", "image": "226667.png", "gold": 2500 },
+    "226671": { "name": "Galeforce", "image": "226671.png", "gold": 2500 },
+    "226672": { "name": "Kraken Slayer", "image": "226672.png", "gold": 2500 },
+    "226673": { "name": "Immortal Shieldbow", "image": "226673.png", "gold": 2500 },
+    "226675": { "name": "Navori Flickerblades", "image": "226675.png", "gold": 2500 },
+    "226676": { "name": "The Collector", "image": "226676.png", "gold": 2500 },
+    "226691": { "name": "Duskblade of Draktharr", "image": "226691.png", "gold": 2500 },
+    "226692": { "name": "Eclipse", "image": "226692.png", "gold": 2500 },
+    "226693": { "name": "Prowler's Claw", "image": "226693.png", "gold": 2750 },
+    "226694": { "name": "Serylda's Grudge", "image": "226694.png", "gold": 2500 },
+    "226695": { "name": "Serpent's Fang", "image": "226695.png", "gold": 2500 },
+    "226696": { "name": "Axiom Arc", "image": "226696.png", "gold": 2500 },
+    "226697": { "name": "Hubris", "image": "226697.png", "gold": 2500 },
+    "226698": { "name": "Profane Hydra", "image": "226698.png", "gold": 2500 },
+    "226699": { "name": "Voltaic Cyclosword", "image": "226699.png", "gold": 2500 },
+    "226701": { "name": "Opportunity", "image": "226701.png", "gold": 2500 },
+    "228001": { "name": "Anathema's Chains", "image": "228001.png", "gold": 2500 },
+    "228002": { "name": "Wooglet's Witchcap", "image": "228002.png", "gold": 6000 },
+    "228003": { "name": "Deathblade", "image": "228003.png", "gold": 9000 },
+    "228004": { "name": "Adaptive Helm", "image": "228004.png", "gold": 6000 },
+    "228005": { "name": "Obsidian Cleaver", "image": "228005.png", "gold": 3000 },
+    "228006": { "name": "Sanguine Blade", "image": "228006.png", "gold": 3000 },
+    "228008": { "name": "Runeglaive", "image": "228008.png", "gold": 9000 },
+    "228009": { "name": "Multitool", "image": "228009.png", "gold": 2500 },
+    "228020": { "name": "Abyssal Mask", "image": "228020.png", "gold": 2500 },
+    "322065": {
+      "name": "Shurelya's Battlesong",
+      "image": "322065.png",
+      "gold": 2600,
+      "from": ["3113", "4642"]
+    },
+    "322526": {
+      "name": "Whispering Circlet",
+      "image": "322526.png",
+      "gold": 2250,
+      "from": ["3114", "1028", "323070"]
+    },
+    "322530": { "name": "Diadem of Songs", "image": "322530.png", "gold": 2250 },
+    "323002": {
+      "name": "Trailblazer",
+      "image": "323002.png",
+      "gold": 2600,
+      "from": ["3066", "1031"]
+    },
+    "323003": {
+      "name": "Archangel's Staff",
+      "image": "323003.png",
+      "gold": 2900,
+      "from": ["323070", "3802", "3108"]
+    },
+    "323004": {
+      "name": "Manamune",
+      "image": "323004.png",
+      "gold": 2900,
+      "from": ["323070", "3133", "1036"]
+    },
+    "323040": { "name": "Seraph's Embrace", "image": "323040.png", "gold": 2900 },
+    "323042": { "name": "Muramana", "image": "323042.png", "gold": 2900 },
+    "323050": {
+      "name": "Zeke's Convergence",
+      "image": "323050.png",
+      "gold": 2300,
+      "from": ["1029", "3067", "1033"]
+    },
+    "323070": { "name": "Tear of the Goddess", "image": "323070.png", "gold": 400 },
+    "323075": {
+      "name": "Thornmail",
+      "image": "323075.png",
+      "gold": 2650,
+      "from": ["3076", "1031", "1028"]
+    },
+    "323107": {
+      "name": "Redemption",
+      "image": "323107.png",
+      "gold": 2800,
+      "from": ["3067", "1028", "3114"]
+    },
+    "323109": {
+      "name": "Knight's Vow",
+      "image": "323109.png",
+      "gold": 2900,
+      "from": ["3067", "1031", "1006"]
+    },
+    "323110": {
+      "name": "Frozen Heart",
+      "image": "323110.png",
+      "gold": 2700,
+      "from": ["3082", "3024"]
+    },
+    "323119": {
+      "name": "Winter's Approach",
+      "image": "323119.png",
+      "gold": 2400,
+      "from": ["323070", "1011", "3067"]
+    },
+    "323121": { "name": "Fimbulwinter", "image": "323121.png", "gold": 2400 },
+    "323190": {
+      "name": "Locket of the Iron Solari",
+      "image": "323190.png",
+      "gold": 2600,
+      "from": ["3067", "1029", "1033"]
+    },
+    "323222": {
+      "name": "Mikael's Blessing",
+      "image": "323222.png",
+      "gold": 2800,
+      "from": ["3067", "1028", "3114"]
+    },
+    "323504": {
+      "name": "Ardent Censer",
+      "image": "323504.png",
+      "gold": 2600,
+      "from": ["3113", "1052", "3114"]
+    },
+    "324005": {
+      "name": "Imperial Mandate",
+      "image": "324005.png",
+      "gold": 2400,
+      "from": ["1026", "4642"]
+    },
+    "326616": {
+      "name": "Staff of Flowing Water",
+      "image": "326616.png",
+      "gold": 2600,
+      "from": ["3108", "1052", "3114"]
+    },
+    "326617": {
+      "name": "Moonstone Renewer",
+      "image": "326617.png",
+      "gold": 2900,
+      "from": ["3067", "1028", "4642"]
+    },
+    "326620": {
+      "name": "Echoes of Helia",
+      "image": "326620.png",
+      "gold": 2600,
+      "from": ["3067", "4642"]
+    },
+    "326621": {
+      "name": "Dawncore",
+      "image": "326621.png",
+      "gold": 2900,
+      "from": ["1026", "3114", "3114"]
+    },
+    "326657": {
+      "name": "Rod of Ages",
+      "image": "326657.png",
+      "gold": 2600,
+      "from": ["1026", "3803"]
+    },
+    "328020": {
+      "name": "Abyssal Mask",
+      "image": "328020.png",
+      "gold": 2850,
+      "from": ["3067", "1057"]
+    },
+    "443054": { "name": "Darksteel Talons", "image": "443054.png", "gold": 2750 },
+    "443055": { "name": "Fulmination", "image": "443055.png", "gold": 2750 },
+    "443056": { "name": "Demon King's Crown", "image": "443056.png", "gold": 2750 },
+    "443058": { "name": "Shield of Molten Stone", "image": "443058.png", "gold": 2750 },
+    "443059": { "name": "Cloak of Starry Night", "image": "443059.png", "gold": 2750 },
+    "443060": { "name": "Sword of the Divine", "image": "443060.png", "gold": 2750 },
+    "443061": { "name": "Force Of Entropy", "image": "443061.png", "gold": 2750 },
+    "443062": { "name": "Sanguine Gift", "image": "443062.png", "gold": 2750 },
+    "443063": { "name": "Eleisa's Miracle", "image": "443063.png", "gold": 2750 },
+    "443064": { "name": "Talisman Of Ascension", "image": "443064.png", "gold": 2750 },
+    "443069": { "name": "Hamstringer", "image": "443069.png", "gold": 2750 },
+    "443079": { "name": "Turbo Chemtank", "image": "443079.png", "gold": 2750 },
+    "443080": { "name": "Twin Mask", "image": "443080.png", "gold": 2750 },
+    "443081": { "name": "Hexbolt Companion", "image": "443081.png", "gold": 2750 },
+    "443083": { "name": "Warmog's Armor", "image": "443083.png", "gold": 2750 },
+    "443090": { "name": "Reaper's Toll", "image": "443090.png", "gold": 2750 },
+    "443193": { "name": "Gargoyle Stoneplate", "image": "443193.png", "gold": 2750 },
+    "444636": { "name": "Night Harvester", "image": "444636.png", "gold": 2750 },
+    "444637": { "name": "Demonic Embrace", "image": "444637.png", "gold": 2750 },
+    "444644": { "name": "Crown of the Shattered Queen", "image": "444644.png", "gold": 2750 },
+    "446632": { "name": "Divine Sunderer", "image": "446632.png", "gold": 2750 },
+    "446656": { "name": "Everfrost", "image": "446656.png", "gold": 2750 },
+    "446667": { "name": "Radiant Virtue", "image": "446667.png", "gold": 2750 },
+    "446671": { "name": "Galeforce", "image": "446671.png", "gold": 2750 },
+    "446691": { "name": "Duskblade of Draktharr", "image": "446691.png", "gold": 2750 },
+    "446693": { "name": "Prowler's Claw", "image": "446693.png", "gold": 1000 },
+    "447100": { "name": "Mirage Blade", "image": "447100.png", "gold": 2750 },
+    "447101": { "name": "Gambler's Blade", "image": "447101.png", "gold": 2750 },
+    "447102": { "name": "Reality Fracture", "image": "447102.png", "gold": 2750 },
+    "447103": { "name": "Hemomancer's Helm", "image": "447103.png", "gold": 2750 },
+    "447104": { "name": "Innervating Locket", "image": "447104.png", "gold": 2750 },
+    "447105": { "name": "Empyrean Promise", "image": "447105.png", "gold": 2750 },
+    "447106": { "name": "Dragonheart", "image": "447106.png", "gold": 2750 },
+    "447107": { "name": "Decapitator", "image": "447107.png", "gold": 2750 },
+    "447108": { "name": "Runecarver", "image": "447108.png", "gold": 2750 },
+    "447109": { "name": "Cruelty", "image": "447109.png", "gold": 2750 },
+    "447110": { "name": "Moonflair Spellblade", "image": "447110.png", "gold": 2750 },
+    "447111": { "name": "Overlord's Bloodmail", "image": "447111.png", "gold": 2500 },
+    "447112": { "name": "Flesheater", "image": "447112.png", "gold": 2750 },
+    "447113": { "name": "Detonation Orb", "image": "447113.png", "gold": 2750 },
+    "447114": { "name": "Reverberation", "image": "447114.png", "gold": 2750 },
+    "447115": { "name": "Regicide", "image": "447115.png", "gold": 2750 },
+    "447116": { "name": "Kinkou Jitte", "image": "447116.png", "gold": 2750 },
+    "447118": { "name": "Pyromancer's Cloak", "image": "447118.png", "gold": 2750 },
+    "447119": { "name": "Lightning Rod", "image": "447119.png", "gold": 2750 },
+    "447120": { "name": "Diamond-Tipped Spear", "image": "447120.png", "gold": 2750 },
+    "447121": { "name": "Twilight's Edge", "image": "447121.png", "gold": 2750 },
+    "447122": { "name": "Black Hole Gauntlet", "image": "447122.png", "gold": 2750 },
+    "447123": { "name": "Puppeteer", "image": "447123.png", "gold": 2750 },
+    "550001": { "name": "Healthbar Splash: Blue", "image": "550001.png", "gold": 0 },
+    "550002": { "name": "Healthbar Splash: Orange", "image": "550002.png", "gold": 0 },
+    "550003": { "name": "Healthbar Splash: Green", "image": "550003.png", "gold": 0 },
+    "550004": { "name": "Healthbar Splash: Pink", "image": "550004.png", "gold": 0 },
+    "550005": { "name": "Healthbar Cleanup: Reset Color", "image": "550005.png", "gold": 0 },
+    "550006": { "name": "Healthbar Splash: Rainbow", "image": "550006.png", "gold": 0 },
+    "550007": { "name": "Party Favor", "image": "550007.png", "gold": 10 },
+    "663039": { "name": "Atma's Reckoning", "image": "663039.png", "gold": 2500 },
+    "663056": { "name": "Demon King's Crown", "image": "663056.png", "gold": 2500 },
+    "663058": { "name": "Shield of Molten Stone", "image": "663058.png", "gold": 2500 },
+    "663059": { "name": "Cloak of Starry Night", "image": "663059.png", "gold": 2500 },
+    "663060": { "name": "Sword of the Divine", "image": "663060.png", "gold": 2500 },
+    "663064": { "name": "Veigar's Talisman of Ascension", "image": "663064.png", "gold": 900 },
+    "663146": { "name": "Hextech Gunblade", "image": "663146.png", "gold": 2500 },
+    "663172": { "name": "Zephyr", "image": "663172.png", "gold": 2500 },
+    "663193": { "name": "Gargoyle Stoneplate", "image": "663193.png", "gold": 2500 },
+    "664011": { "name": "Sword of Blossoming Dawn", "image": "664011.png", "gold": 2500 },
+    "664403": { "name": "The Golden Spatula", "image": "664403.png", "gold": 2500 },
+    "664644": { "name": "Crown of the Shattered Queen", "image": "664644.png", "gold": 2500 },
+    "667101": { "name": "Gambler's Blade", "image": "667101.png", "gold": 2500 },
+    "667109": { "name": "Cruelty", "image": "667109.png", "gold": 2500 },
+    "667112": { "name": "Flesheater", "image": "667112.png", "gold": 2500 },
+    "667666": {
+      "name": "The Collector",
+      "image": "667666.png",
+      "gold": 3000,
+      "from": ["1037", "3134", "1018"]
+    },
+    "771001": { "name": "Boots of Speed", "image": "771001.png", "gold": 325 },
+    "771004": { "name": "Faerie Charm", "image": "771004.png", "gold": 180 },
+    "771006": { "name": "Rejuvenation Bead", "image": "771006.png", "gold": 180 },
+    "771011": { "name": "Giant's Belt", "image": "771011.png", "gold": 1000 },
+    "771018": { "name": "Cloak of Agility", "image": "771018.png", "gold": 730 },
+    "771026": { "name": "Blasting Wand", "image": "771026.png", "gold": 860 },
+    "771027": { "name": "Sapphire Crystal", "image": "771027.png", "gold": 400 },
+    "771028": { "name": "Ruby Crystal", "image": "771028.png", "gold": 475 },
+    "771029": { "name": "Cloth Armor", "image": "771029.png", "gold": 300 },
+    "771031": { "name": "Chain Vest", "image": "771031.png", "gold": 720 },
+    "771033": { "name": "Null-Magic Mantle", "image": "771033.png", "gold": 400 },
+    "771036": { "name": "Long Sword", "image": "771036.png", "gold": 400 },
+    "771037": { "name": "Pickaxe", "image": "771037.png", "gold": 875 },
+    "771038": { "name": "B. F. Sword", "image": "771038.png", "gold": 1550 },
+    "771039": { "name": "Hunter's Machete", "image": "771039.png", "gold": 300 },
+    "771042": { "name": "Dagger", "image": "771042.png", "gold": 400 },
+    "771043": { "name": "Recurve Bow", "image": "771043.png", "gold": 900 },
+    "771051": { "name": "Brawler's Gloves", "image": "771051.png", "gold": 400 },
+    "771052": { "name": "Amplifying Tome", "image": "771052.png", "gold": 435 },
+    "771053": {
+      "name": "Vampiric Scepter",
+      "image": "771053.png",
+      "gold": 800,
+      "from": ["771036"]
+    },
+    "771054": { "name": "Doran's Shield", "image": "771054.png", "gold": 440 },
+    "771055": { "name": "Doran's Blade", "image": "771055.png", "gold": 475 },
+    "771056": { "name": "Doran's Ring", "image": "771056.png", "gold": 400 },
+    "771057": { "name": "Negatron Cloak", "image": "771057.png", "gold": 720 },
+    "771058": { "name": "Needlessly Large Rod", "image": "771058.png", "gold": 1600 },
+    "771080": {
+      "name": "Spirit Stone",
+      "image": "771080.png",
+      "gold": 700,
+      "from": ["771039", "771006", "771004"]
+    },
+    "771500": { "name": "Penetrating Bullets", "image": "771500.png", "gold": 0 },
+    "772001": { "name": "Recall", "image": "772001.png", "gold": 60 },
+    "772003": { "name": "Health Potion", "image": "772003.png", "gold": 35 },
+    "772004": { "name": "Mana Potion", "image": "772004.png", "gold": 35 },
+    "772009": { "name": "Total Biscuit of Rejuvenation", "image": "772009.png", "gold": 35 },
+    "772037": { "name": "Elixir of Fortitude", "image": "772037.png", "gold": 350 },
+    "772038": { "name": "Elixir of Agility", "image": "772038.png", "gold": 250 },
+    "772039": { "name": "Elixir of Brilliance", "image": "772039.png", "gold": 250 },
+    "772041": { "name": "Crystalline Flask", "image": "772041.png", "gold": 345 },
+    "772042": { "name": "Oracle's Elixir", "image": "772042.png", "gold": 400 },
+    "772043": { "name": "Vision Ward", "image": "772043.png", "gold": 125 },
+    "772044": { "name": "Sight Ward", "image": "772044.png", "gold": 75 },
+    "772045": {
+      "name": "Ruby Sightstone",
+      "image": "772045.png",
+      "gold": 1700,
+      "from": ["772049", "773132"]
+    },
+    "772049": { "name": "Sightstone", "image": "772049.png", "gold": 800, "from": ["771028"] },
+    "772050": { "name": "Explorer's Ward", "image": "772050.png", "gold": 75 },
+    "772139": { "name": "", "image": "772139.png", "gold": 0 },
+    "772140": { "name": "", "image": "772140.png", "gold": 0 },
+    "773001": {
+      "name": "Abyssal Scepter",
+      "image": "773001.png",
+      "gold": 2560,
+      "from": ["771026", "771057"]
+    },
+    "773003": {
+      "name": "Archangel's Staff",
+      "image": "773003.png",
+      "gold": 2700,
+      "from": ["773070", "771026"]
+    },
+    "773004": {
+      "name": "Manamune",
+      "image": "773004.png",
+      "gold": 2100,
+      "from": ["773070", "771036"]
+    },
+    "773005": {
+      "name": "Atma's Impaler",
+      "image": "773005.png",
+      "gold": 2300,
+      "from": ["771031", "773093"]
+    },
+    "773006": {
+      "name": "Berserker's Greaves",
+      "image": "773006.png",
+      "gold": 900,
+      "from": ["771001", "771042"]
+    },
+    "773009": {
+      "name": "Boots of Swiftness",
+      "image": "773009.png",
+      "gold": 1000,
+      "from": ["771001"]
+    },
+    "773010": {
+      "name": "Catalyst the Protector",
+      "image": "773010.png",
+      "gold": 1200,
+      "from": ["771028", "771027"]
+    },
+    "773020": {
+      "name": "Sorcerer's Shoes",
+      "image": "773020.png",
+      "gold": 1100,
+      "from": ["771001"]
+    },
+    "773022": {
+      "name": "Frozen Mallet",
+      "image": "773022.png",
+      "gold": 3300,
+      "from": ["771028", "771011", "771037"]
+    },
+    "773023": {
+      "name": "Twin Shadows",
+      "image": "773023.png",
+      "gold": 1900,
+      "from": ["773098", "771033"]
+    },
+    "773024": {
+      "name": "Glacial Shroud",
+      "image": "773024.png",
+      "gold": 1350,
+      "from": ["771031", "771027"]
+    },
+    "773025": {
+      "name": "Iceborn Gauntlet",
+      "image": "773025.png",
+      "gold": 3250,
+      "from": ["773057", "773024"]
+    },
+    "773026": {
+      "name": "Guardian Angel",
+      "image": "773026.png",
+      "gold": 2750,
+      "from": ["771057", "771031"]
+    },
+    "773027": {
+      "name": "Rod of Ages",
+      "image": "773027.png",
+      "gold": 2800,
+      "from": ["773010", "771026"]
+    },
+    "773028": {
+      "name": "Chalice of Harmony",
+      "image": "773028.png",
+      "gold": 880,
+      "from": ["771004", "771033", "771004"]
+    },
+    "773031": {
+      "name": "Infinity Edge",
+      "image": "773031.png",
+      "gold": 3800,
+      "from": ["771038", "771037", "771018"]
+    },
+    "773035": {
+      "name": "Last Whisper",
+      "image": "773035.png",
+      "gold": 2300,
+      "from": ["771036", "771037"]
+    },
+    "773037": {
+      "name": "Mana Manipulator",
+      "image": "773037.png",
+      "gold": 300,
+      "from": ["771004"]
+    },
+    "773040": { "name": "Seraph's Embrace", "image": "773040.png", "gold": 2700 },
+    "773041": {
+      "name": "Mejai's Soulstealer",
+      "image": "773041.png",
+      "gold": 1235,
+      "from": ["771052"]
+    },
+    "773042": { "name": "Muramana", "image": "773042.png", "gold": 2100 },
+    "773044": {
+      "name": "Phage",
+      "image": "773044.png",
+      "gold": 1250,
+      "from": ["771028", "771036"]
+    },
+    "773046": {
+      "name": "Phantom Dancer",
+      "image": "773046.png",
+      "gold": 2800,
+      "from": ["771018", "773086", "771042"]
+    },
+    "773047": {
+      "name": "Ninja Tabi",
+      "image": "773047.png",
+      "gold": 1000,
+      "from": ["771001", "771029"]
+    },
+    "773050": {
+      "name": "Stark's Fervor",
+      "image": "773050.png",
+      "gold": 2550,
+      "from": ["773067", "771053"]
+    },
+    "773052": {
+      "name": "Emblem of Valor",
+      "image": "773052.png",
+      "gold": 650,
+      "from": ["771029", "771006"]
+    },
+    "773056": {
+      "name": "Ohmwrecker",
+      "image": "773056.png",
+      "gold": 2835,
+      "from": ["771028", "773096", "771026"]
+    },
+    "773057": {
+      "name": "Sheen",
+      "image": "773057.png",
+      "gold": 1200,
+      "from": ["771052", "771027"]
+    },
+    "773060": {
+      "name": "Banner of Command",
+      "image": "773060.png",
+      "gold": 2360,
+      "from": ["773108", "773052"]
+    },
+    "773063": {
+      "name": "Soul Shroud",
+      "image": "773063.png",
+      "gold": 2285,
+      "from": ["773037", "773067", "771028"]
+    },
+    "773064": {
+      "name": "Force of Nature",
+      "image": "773064.png",
+      "gold": 2610,
+      "from": ["771006", "771006", "771033", "771057"]
+    },
+    "773065": {
+      "name": "Spirit Visage",
+      "image": "773065.png",
+      "gold": 2750,
+      "from": ["773211", "773067"]
+    },
+    "773067": { "name": "Kindlegem", "image": "773067.png", "gold": 850, "from": ["771028"] },
+    "773068": {
+      "name": "Sunfire Cape",
+      "image": "773068.png",
+      "gold": 2650,
+      "from": ["771031", "771011"]
+    },
+    "773069": {
+      "name": "Shurelya's Reverie",
+      "image": "773069.png",
+      "gold": 2100,
+      "from": ["773067", "773096"]
+    },
+    "773070": {
+      "name": "Tear of the Goddess",
+      "image": "773070.png",
+      "gold": 700,
+      "from": ["771027", "771004"]
+    },
+    "773071": {
+      "name": "The Black Cleaver",
+      "image": "773071.png",
+      "gold": 3000,
+      "from": ["773134", "771028"]
+    },
+    "773072": {
+      "name": "The Bloodthirster",
+      "image": "773072.png",
+      "gold": 3200,
+      "from": ["771038", "771053"]
+    },
+    "773073": {
+      "name": "Stack of Sunfire Capes",
+      "image": "773073.png",
+      "gold": 3000,
+      "from": ["771031", "771011"]
+    },
+    "773074": {
+      "name": "Ravenous Hydra",
+      "image": "773074.png",
+      "gold": 3300,
+      "from": ["773077", "771053"]
+    },
+    "773075": {
+      "name": "Thornmail",
+      "image": "773075.png",
+      "gold": 2200,
+      "from": ["771029", "771031"]
+    },
+    "773077": {
+      "name": "Tiamat",
+      "image": "773077.png",
+      "gold": 1900,
+      "from": ["771037", "771036", "771006", "771006"]
+    },
+    "773078": {
+      "name": "Trinity Force",
+      "image": "773078.png",
+      "gold": 3628,
+      "from": ["773086", "773057", "773044"]
+    },
+    "773082": {
+      "name": "Warden's Mail",
+      "image": "773082.png",
+      "gold": 1000,
+      "from": ["771029", "771029"]
+    },
+    "773083": {
+      "name": "Warmog's Armor",
+      "image": "773083.png",
+      "gold": 3000,
+      "from": ["771011", "773132", "771006"]
+    },
+    "773084": {
+      "name": "Innervating Locket",
+      "image": "773084.png",
+      "gold": 2650,
+      "from": ["773096", "773010"]
+    },
+    "773085": {
+      "name": "Runaan's Hurricane",
+      "image": "773085.png",
+      "gold": 2400,
+      "from": ["771042", "771043", "771042"]
+    },
+    "773086": { "name": "Zeal", "image": "773086.png", "gold": 1175, "from": ["771051", "771042"] },
+    "773087": {
+      "name": "Statikk Shiv",
+      "image": "773087.png",
+      "gold": 2500,
+      "from": ["773086", "773093"]
+    },
+    "773089": {
+      "name": "Rabadon's Deathcap",
+      "image": "773089.png",
+      "gold": 3300,
+      "from": ["771058", "771026"]
+    },
+    "773091": {
+      "name": "Wit's End",
+      "image": "773091.png",
+      "gold": 2150,
+      "from": ["771043", "771033"]
+    },
+    "773092": {
+      "name": "Shard of True Ice",
+      "image": "773092.png",
+      "gold": 1600,
+      "from": ["773098", "773037"]
+    },
+    "773093": { "name": "Avarice Blade", "image": "773093.png", "gold": 800, "from": ["771051"] },
+    "773096": {
+      "name": "Philosopher's Stone",
+      "image": "773096.png",
+      "gold": 700,
+      "from": ["771004", "771006"]
+    },
+    "773098": { "name": "Lucky Pick", "image": "773098.png", "gold": 765, "from": ["771052"] },
+    "773100": {
+      "name": "Lich Bane",
+      "image": "773100.png",
+      "gold": 3000,
+      "from": ["773057", "771026"]
+    },
+    "773101": {
+      "name": "Stinger",
+      "image": "773101.png",
+      "gold": 1250,
+      "from": ["771042", "771042"]
+    },
+    "773102": {
+      "name": "Banshee's Veil",
+      "image": "773102.png",
+      "gold": 2750,
+      "from": ["773211", "771028"]
+    },
+    "773105": {
+      "name": "Aegis of the Legion",
+      "image": "773105.png",
+      "gold": 2150,
+      "from": ["773132", "771029", "771033"]
+    },
+    "773106": {
+      "name": "Madred's Razors",
+      "image": "773106.png",
+      "gold": 700,
+      "from": ["771039", "771029"]
+    },
+    "773107": {
+      "name": "Runic Bulwark",
+      "image": "773107.png",
+      "gold": 2950,
+      "from": ["771033", "773105"]
+    },
+    "773108": { "name": "Fiendish Codex", "image": "773108.png", "gold": 820, "from": ["771052"] },
+    "773109": {
+      "name": "Madred's Bloodrazor",
+      "image": "773109.png",
+      "gold": 3800,
+      "from": ["773106", "771037", "771043"]
+    },
+    "773110": {
+      "name": "Frozen Heart",
+      "image": "773110.png",
+      "gold": 2900,
+      "from": ["773024", "773082"]
+    },
+    "773111": {
+      "name": "Mercury's Treads",
+      "image": "773111.png",
+      "gold": 1200,
+      "from": ["771001", "771033"]
+    },
+    "773114": {
+      "name": "Malady",
+      "image": "773114.png",
+      "gold": 2035,
+      "from": ["771042", "771042", "771052"]
+    },
+    "773115": {
+      "name": "Nashor's Tooth",
+      "image": "773115.png",
+      "gold": 2500,
+      "from": ["773101", "773108"]
+    },
+    "773116": {
+      "name": "Rylai's Crystal Scepter",
+      "image": "773116.png",
+      "gold": 2900,
+      "from": ["771026", "771052", "771011"]
+    },
+    "773117": {
+      "name": "Boots of Mobility",
+      "image": "773117.png",
+      "gold": 1000,
+      "from": ["771001"]
+    },
+    "773123": {
+      "name": "Executioner's Calling",
+      "image": "773123.png",
+      "gold": 1900,
+      "from": ["773093", "771036"]
+    },
+    "773124": {
+      "name": "Guinsoo's Rageblade",
+      "image": "773124.png",
+      "gold": 2600,
+      "from": ["771026", "771037"]
+    },
+    "773128": {
+      "name": "Deathfire Grasp",
+      "image": "773128.png",
+      "gold": 3100,
+      "from": ["771058", "773108"]
+    },
+    "773131": {
+      "name": "Sword of the Divine",
+      "image": "773131.png",
+      "gold": 2150,
+      "from": ["771043", "771042"]
+    },
+    "773132": { "name": "Heart of Gold", "image": "773132.png", "gold": 825, "from": ["771028"] },
+    "773134": {
+      "name": "The Brutalizer",
+      "image": "773134.png",
+      "gold": 1337,
+      "from": ["771036", "771036"]
+    },
+    "773135": {
+      "name": "Void Staff",
+      "image": "773135.png",
+      "gold": 2295,
+      "from": ["771026", "771052"]
+    },
+    "773136": {
+      "name": "Haunting Guise",
+      "image": "773136.png",
+      "gold": 1485,
+      "from": ["771028", "771052"]
+    },
+    "773138": { "name": "Leviathan", "image": "773138.png", "gold": 1275, "from": ["771028"] },
+    "773139": {
+      "name": "Mercurial Scimitar",
+      "image": "773139.png",
+      "gold": 3700,
+      "from": ["773140", "771038"]
+    },
+    "773140": {
+      "name": "Quicksilver Sash",
+      "image": "773140.png",
+      "gold": 1550,
+      "from": ["771057"]
+    },
+    "773141": {
+      "name": "Sword of the Occult",
+      "image": "773141.png",
+      "gold": 1200,
+      "from": ["771036"]
+    },
+    "773142": {
+      "name": "Youmuu's Ghostblade",
+      "image": "773142.png",
+      "gold": 2700,
+      "from": ["773093", "773134"]
+    },
+    "773143": {
+      "name": "Randuin's Omen",
+      "image": "773143.png",
+      "gold": 3125,
+      "from": ["773132", "773082", "771029"]
+    },
+    "773144": {
+      "name": "Bilgewater Cutlass",
+      "image": "773144.png",
+      "gold": 1400,
+      "from": ["771053", "771036"]
+    },
+    "773145": {
+      "name": "Hextech Revolver",
+      "image": "773145.png",
+      "gold": 1200,
+      "from": ["771052", "771052"]
+    },
+    "773146": {
+      "name": "Hextech Gunblade",
+      "image": "773146.png",
+      "gold": 3400,
+      "from": ["773145", "773144"]
+    },
+    "773151": {
+      "name": "Liandry's Torment",
+      "image": "773151.png",
+      "gold": 2900,
+      "from": ["773136", "771052"]
+    },
+    "773152": {
+      "name": "Will of the Ancients",
+      "image": "773152.png",
+      "gold": 2550,
+      "from": ["773098", "773145"]
+    },
+    "773153": {
+      "name": "Blade of The Ruined King",
+      "image": "773153.png",
+      "gold": 3200,
+      "from": ["771042", "773144", "771042"]
+    },
+    "773154": {
+      "name": "Wriggle's Lantern",
+      "image": "773154.png",
+      "gold": 2000,
+      "from": ["773106", "771053"]
+    },
+    "773155": {
+      "name": "Hexdrinker",
+      "image": "773155.png",
+      "gold": 1350,
+      "from": ["771036", "771033"]
+    },
+    "773156": {
+      "name": "Maw of Malmortius",
+      "image": "773156.png",
+      "gold": 3200,
+      "from": ["773155", "771037"]
+    },
+    "773157": {
+      "name": "Zhonya's Hourglass",
+      "image": "773157.png",
+      "gold": 3260,
+      "from": ["773191", "771058"]
+    },
+    "773158": {
+      "name": "Ionian Boots of Lucidity",
+      "image": "773158.png",
+      "gold": 1000,
+      "from": ["771001"]
+    },
+    "773160": { "name": "Feral Flare", "image": "773160.png", "gold": 2000 },
+    "773165": {
+      "name": "Morellonomicon",
+      "image": "773165.png",
+      "gold": 2200,
+      "from": ["773098", "771004", "773108"]
+    },
+    "773172": {
+      "name": "Zephyr",
+      "image": "773172.png",
+      "gold": 2850,
+      "from": ["773101", "771037"]
+    },
+    "773173": {
+      "name": "Eleisa's Miracle",
+      "image": "773173.png",
+      "gold": 1100,
+      "from": ["773096"]
+    },
+    "773174": {
+      "name": "Shushei's Mana Jug",
+      "image": "773174.png",
+      "gold": 2600,
+      "from": ["773108", "773028"]
+    },
+    "773178": {
+      "name": "Ionic Spark",
+      "image": "773178.png",
+      "gold": 1950,
+      "from": ["771043", "771028"]
+    },
+    "773190": {
+      "name": "Locket of the Iron Solari",
+      "image": "773190.png",
+      "gold": 2225,
+      "from": ["773052", "773132"]
+    },
+    "773191": {
+      "name": "Seeker's Armguard",
+      "image": "773191.png",
+      "gold": 1160,
+      "from": ["771029", "771052", "771029"]
+    },
+    "773206": {
+      "name": "Spirit of the Spectral Wraith",
+      "image": "773206.png",
+      "gold": 2000,
+      "from": ["771080", "773145"]
+    },
+    "773207": {
+      "name": "Spirit of the Ancient Golem",
+      "image": "773207.png",
+      "gold": 2000,
+      "from": ["771080", "773067"]
+    },
+    "773209": {
+      "name": "Spirit of the Elder Lizard",
+      "image": "773209.png",
+      "gold": 2000,
+      "from": ["771080", "771036", "771036"]
+    },
+    "773211": {
+      "name": "Spectre's Cowl",
+      "image": "773211.png",
+      "gold": 1400,
+      "from": ["771028", "771057"]
+    },
+    "773222": {
+      "name": "Mikael's Crucible",
+      "image": "773222.png",
+      "gold": 2500,
+      "from": ["773096", "773028"]
+    },
+    "773340": { "name": "Yellow Trinket", "image": "773340.png", "gold": 0 },
+    "773348": { "name": "Red Trinket", "image": "773348.png", "gold": 0 },
+    "773504": {
+      "name": "Ardent Censer",
+      "image": "773504.png",
+      "gold": 2200,
+      "from": ["771004", "771004", "771004", "773098"]
+    },
+    "773512": {
+      "name": "Zz'Rot Portal",
+      "image": "773512.png",
+      "gold": 2700,
+      "from": ["771057", "771031", "771006"]
+    },
+    "773513": { "name": "Prototype Hex Core", "image": "773513.png", "gold": 750 },
+    "773514": { "name": "Hex Core mk-1", "image": "773514.png", "gold": 1500, "from": ["773513"] },
+    "773515": { "name": "Hex Core mk-2", "image": "773515.png", "gold": 2250, "from": ["773514"] },
+    "773516": {
+      "name": "Perfect Hex Core",
+      "image": "773516.png",
+      "gold": 3000,
+      "from": ["773515"]
+    },
+    "773517": { "name": "Eggnog", "image": "773517.png", "gold": 35 },
+    "773518": { "name": "Bag of Tea", "image": "773518.png", "gold": 35 },
+    "773519": { "name": "Candy Corn", "image": "773519.png", "gold": 35 },
+    "773521": { "name": "Health Potion", "image": "773521.png", "gold": 35 },
+    "994403": { "name": "Golden Spatula", "image": "994403.png", "gold": 2500 }
+  }
+}

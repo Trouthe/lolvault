@@ -7,7 +7,18 @@ import {
   MatchDetailParticipant,
 } from '../../../../../types/electron';
 import { RiotApiService } from '../../../../services/riot-api.service';
+import { GameDataService } from '../../../../services/game-data.service';
 import { EmptyStateComponent } from '../../widgets/empty-state.component';
+
+/** Riot's `perks` payload, typed only as far as we read it. */
+interface PerksPayload {
+  statPerks?: Record<string, number>;
+  styles?: {
+    description?: string;
+    style?: number;
+    selections?: { perk: number }[];
+  }[];
+}
 
 /** One minute-bucket of item purchases. */
 interface BuildStep {
@@ -26,6 +37,7 @@ const SKILL_KEYS = ['Q', 'W', 'E', 'R'];
 })
 export class MatchBuildTabComponent {
   private riotApi = inject(RiotApiService);
+  private gameData = inject(GameDataService);
 
   match = input.required<MatchCacheRow>();
   detail = input.required<MatchDetail>();
@@ -132,6 +144,54 @@ export class MatchBuildTabComponent {
   /** Final items from the match record, for players without timeline data. */
   readonly finalItems = computed(() => this.activePlayer()?.items?.filter((i) => i > 0) ?? []);
 
+  /** The two summoner spells taken, resolved to names and icons. */
+  readonly summonerSpells = computed(() => {
+    const p = this.activePlayer();
+    if (!p) return [];
+    return [p.summoner1Id, p.summoner2Id]
+      .filter((id) => id > 0)
+      .map((id) => ({
+        id,
+        name: this.gameData.getSummonerSpell(id)?.name ?? '',
+        icon: this.gameData.getSummonerSpellIconUrl(id),
+      }))
+      .filter((s) => s.icon);
+  });
+
+  /**
+   * Rune selections split into the primary tree (keystone first) and secondary.
+   * Returns null when the match record carries no perks.
+   */
+  readonly runes = computed(() => {
+    const perks = this.activePlayer()?.perks as PerksPayload | null | undefined;
+    const styles = perks?.styles;
+    if (!styles?.length) return null;
+
+    const resolve = (perkId: number) => {
+      const rune = this.gameData.getRune(perkId);
+      return {
+        id: perkId,
+        name: rune?.name ?? '',
+        icon: this.gameData.getRuneIconUrl(perkId),
+      };
+    };
+
+    const primary = styles.find((s) => s.description === 'primaryStyle') ?? styles[0];
+    const secondary = styles.find((s) => s.description === 'subStyle') ?? styles[1];
+
+    const primaryRunes = (primary?.selections ?? []).map((s) => resolve(s.perk));
+    const secondaryRunes = (secondary?.selections ?? []).map((s) => resolve(s.perk));
+
+    if (!primaryRunes.length && !secondaryRunes.length) return null;
+
+    return {
+      primaryTree: primary?.style ? resolve(primary.style) : null,
+      secondaryTree: secondary?.style ? resolve(secondary.style) : null,
+      primary: primaryRunes,
+      secondary: secondaryRunes,
+    };
+  });
+
   selectPlayer(pid: number): void {
     this.selectedPid.set(pid);
   }
@@ -142,6 +202,17 @@ export class MatchBuildTabComponent {
 
   itemIcon(id: number): string {
     return this.riotApi.getItemIconUrl(id);
+  }
+
+  /** Item name for tooltips; empty when the id is newer than the bundled data. */
+  itemName(id: number): string {
+    return this.gameData.getItemName(id);
+  }
+
+  itemTitle(id: number, sold: boolean): string {
+    const name = this.itemName(id);
+    if (!name) return sold ? 'Sold later in the game' : '';
+    return sold ? `${name} — sold later in the game` : name;
   }
 
   isActive(p: MatchDetailParticipant): boolean {

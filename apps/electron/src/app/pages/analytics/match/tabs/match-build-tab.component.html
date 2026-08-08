@@ -47,6 +47,78 @@
       </div>
     </header>
 
+    <!-- ── Runes & summoner spells ────────────────────────────────────────── -->
+    @if (runes(); as r) {
+      <section class="block">
+        <h4 class="block-title">Runes &amp; summoners</h4>
+        <div class="runes">
+          <div class="rune-group">
+            @if (r.primaryTree?.icon) {
+              <img
+                class="rune-tree"
+                [src]="r.primaryTree!.icon"
+                [alt]="r.primaryTree!.name"
+                [title]="r.primaryTree!.name"
+                loading="lazy"
+              />
+            }
+            @for (rune of r.primary; track $index; let first = $first) {
+              @if (rune.icon) {
+                <img
+                  class="rune"
+                  [class.keystone]="first"
+                  [src]="rune.icon"
+                  [alt]="rune.name"
+                  [title]="rune.name"
+                  loading="lazy"
+                />
+              }
+            }
+          </div>
+
+          <span class="rune-divider" aria-hidden="true"></span>
+
+          <div class="rune-group">
+            @if (r.secondaryTree?.icon) {
+              <img
+                class="rune-tree"
+                [src]="r.secondaryTree!.icon"
+                [alt]="r.secondaryTree!.name"
+                [title]="r.secondaryTree!.name"
+                loading="lazy"
+              />
+            }
+            @for (rune of r.secondary; track $index) {
+              @if (rune.icon) {
+                <img
+                  class="rune"
+                  [src]="rune.icon"
+                  [alt]="rune.name"
+                  [title]="rune.name"
+                  loading="lazy"
+                />
+              }
+            }
+          </div>
+
+          @if (summonerSpells().length) {
+            <span class="rune-divider" aria-hidden="true"></span>
+            <div class="rune-group">
+              @for (spell of summonerSpells(); track spell.id) {
+                <img
+                  class="spell"
+                  [src]="spell.icon"
+                  [alt]="spell.name"
+                  [title]="spell.name"
+                  loading="lazy"
+                />
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
     <!-- ── Build path ─────────────────────────────────────────────────────── -->
     <section class="block">
       <h4 class="block-title">Build path</h4>
@@ -62,8 +134,8 @@
                     class="step-item"
                     [class.sold]="item.sold"
                     [src]="itemIcon(item.itemId)"
-                    [alt]="item.sold ? 'Sold item' : 'Item'"
-                    [title]="item.sold ? 'Sold later in the game' : ''"
+                    [alt]="itemName(item.itemId) || 'Item'"
+                    [title]="itemTitle(item.itemId, item.sold)"
                     loading="lazy"
                   />
                 }
