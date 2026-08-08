@@ -235,6 +235,11 @@ function saveMatchCache(matchId, accountId, computed = {}, rawJson) {
     lpAfter = null,
     lpDelta = null,
     queueType = null,
+    queueId = null,
+    championId = null,
+    participantId = null,
+    teamId = null,
+    gameVersion = null,
     timestamp = null,
   } = computed;
 
@@ -244,8 +249,16 @@ function saveMatchCache(matchId, accountId, computed = {}, rawJson) {
          (match_id, account_id, timestamp, puuid, champion, position, win,
           kills, deaths, assists, cs, cs_per_min, damage_dealt, damage_share,
           gold, vision_score, duration_seconds, items,
-          lp_before, lp_after, lp_delta, queue_type, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          lp_before, lp_after, lp_delta, queue_type, raw_json,
+          queue_id, champion_id, participant_id, team_id, game_version,
+          has_detail, has_timeline, gold_diff_15, cs_diff_15, xp_diff_15)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?,
+               COALESCE((SELECT has_detail   FROM match_cache WHERE match_id = ?), 0),
+               COALESCE((SELECT has_timeline FROM match_cache WHERE match_id = ?), 0),
+               COALESCE((SELECT gold_diff_15 FROM match_cache WHERE match_id = ?), NULL),
+               COALESCE((SELECT cs_diff_15   FROM match_cache WHERE match_id = ?), NULL),
+               COALESCE((SELECT xp_diff_15   FROM match_cache WHERE match_id = ?), NULL))`
     )
     .run(
       matchId,
@@ -270,8 +283,25 @@ function saveMatchCache(matchId, accountId, computed = {}, rawJson) {
       lpAfter ?? null,
       lpDelta ?? null,
       queueType,
-      typeof rawJson === 'string' ? rawJson : JSON.stringify(rawJson)
+      typeof rawJson === 'string' ? rawJson : JSON.stringify(rawJson),
+      queueId,
+      championId,
+      participantId,
+      teamId,
+      gameVersion,
+      // INSERT OR REPLACE deletes the old row, so previously-derived flags and
+      // diffs must be carried forward explicitly or a re-fetch would clear them.
+      matchId,
+      matchId,
+      matchId,
+      matchId,
+      matchId
     );
+}
+
+/** Single cached match row (raw columns, no JSON parsing). */
+function getMatchCacheRow(matchId) {
+  return getDb().prepare('SELECT * FROM match_cache WHERE match_id = ?').get(matchId) ?? null;
 }
 
 function getMatchCache(accountId, limit = 20) {
@@ -293,6 +323,137 @@ function getMatchCache(accountId, limit = 20) {
 
 function hasMatchInCache(matchId) {
   return !!getDb().prepare('SELECT 1 FROM match_cache WHERE match_id = ?').get(matchId);
+}
+
+// ── Match Detail (bans, objectives, full participants) ────────────────────────
+
+function saveMatchDetail(matchId, detail = {}) {
+  const {
+    queueId = null,
+    gameVersion = null,
+    gameMode = null,
+    gameDuration = null,
+    teams = [],
+    participants = [],
+  } = detail;
+
+  getDb()
+    .prepare(
+      `INSERT OR REPLACE INTO match_detail
+         (match_id, queue_id, game_version, game_mode, game_duration,
+          teams_json, participants_json, schema_version, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`
+    )
+    .run(
+      matchId,
+      queueId,
+      gameVersion,
+      gameMode,
+      gameDuration,
+      JSON.stringify(teams),
+      JSON.stringify(participants),
+      Date.now()
+    );
+
+  getDb().prepare('UPDATE match_cache SET has_detail = 1 WHERE match_id = ?').run(matchId);
+}
+
+function getMatchDetail(matchId) {
+  const row = getDb().prepare('SELECT * FROM match_detail WHERE match_id = ?').get(matchId);
+  if (!row) return null;
+  return {
+    matchId: row.match_id,
+    queueId: row.queue_id,
+    gameVersion: row.game_version,
+    gameMode: row.game_mode,
+    gameDuration: row.game_duration,
+    teams: safeParse(row.teams_json, []),
+    participants: safeParse(row.participants_json, []),
+    schemaVersion: row.schema_version,
+    fetchedAt: row.fetched_at,
+  };
+}
+
+// ── Match Timeline ────────────────────────────────────────────────────────────
+
+function saveMatchTimeline(matchId, compact) {
+  getDb()
+    .prepare(
+      `INSERT OR REPLACE INTO match_timeline
+         (match_id, frame_interval, frame_count, participants,
+          frames_json, events_json, schema_version, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      matchId,
+      compact.frameInterval,
+      compact.frameCount,
+      JSON.stringify(compact.participants),
+      JSON.stringify(compact.frames),
+      JSON.stringify(compact.events),
+      compact.schemaVersion ?? 1,
+      Date.now()
+    );
+
+  getDb().prepare('UPDATE match_cache SET has_timeline = 1 WHERE match_id = ?').run(matchId);
+}
+
+function getMatchTimeline(matchId) {
+  const row = getDb().prepare('SELECT * FROM match_timeline WHERE match_id = ?').get(matchId);
+  if (!row) return null;
+  return {
+    matchId: row.match_id,
+    frameInterval: row.frame_interval,
+    frameCount: row.frame_count,
+    participants: safeParse(row.participants, []),
+    frames: safeParse(row.frames_json, []),
+    events: safeParse(row.events_json, []),
+    schemaVersion: row.schema_version,
+    fetchedAt: row.fetched_at,
+  };
+}
+
+function hasMatchTimeline(matchId) {
+  return !!getDb().prepare('SELECT 1 FROM match_timeline WHERE match_id = ?').get(matchId);
+}
+
+function hasMatchDetail(matchId) {
+  return !!getDb().prepare('SELECT 1 FROM match_detail WHERE match_id = ?').get(matchId);
+}
+
+/** Match ids for an account still missing detail and/or timeline, newest first. */
+function getMatchesNeedingBackfill(accountId, limit = 500) {
+  return getDb()
+    .prepare(
+      `SELECT m.match_id, m.puuid, m.participant_id,
+              (d.match_id IS NOT NULL) AS has_detail,
+              (t.match_id IS NOT NULL) AS has_timeline
+         FROM match_cache m
+         LEFT JOIN match_detail   d ON d.match_id = m.match_id
+         LEFT JOIN match_timeline t ON t.match_id = m.match_id
+        WHERE m.account_id = ?
+          AND (d.match_id IS NULL OR t.match_id IS NULL)
+        ORDER BY m.timestamp DESC
+        LIMIT ?`
+    )
+    .all(accountId, limit);
+}
+
+/** Persists denormalised @15 differentials so the Champions table stays a single query. */
+function updateMatchDiffs(matchId, { goldDiff = null, csDiff = null, xpDiff = null } = {}) {
+  getDb()
+    .prepare(
+      'UPDATE match_cache SET gold_diff_15 = ?, cs_diff_15 = ?, xp_diff_15 = ? WHERE match_id = ?'
+    )
+    .run(goldDiff, csDiff, xpDiff, matchId);
+}
+
+function safeParse(value, fallback) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
 }
 
 // ── App Settings ──────────────────────────────────────────────────────────────
@@ -343,7 +504,18 @@ module.exports = {
   // Match cache
   saveMatchCache,
   getMatchCache,
+  getMatchCacheRow,
   hasMatchInCache,
+  updateMatchDiffs,
+  // Match detail
+  saveMatchDetail,
+  getMatchDetail,
+  hasMatchDetail,
+  // Match timeline
+  saveMatchTimeline,
+  getMatchTimeline,
+  hasMatchTimeline,
+  getMatchesNeedingBackfill,
   // App settings
   getSetting,
   setSetting,
