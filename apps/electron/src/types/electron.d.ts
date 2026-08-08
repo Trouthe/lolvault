@@ -42,6 +42,29 @@ export interface GoogleSystemSignInResult {
   error?: string;
 }
 
+export interface LeagueConfigFile {
+  path: string;
+  name: string;
+  readOnly: boolean;
+}
+
+export interface InspectLeagueConfigResult {
+  success: boolean;
+  error?: string;
+  exists?: boolean;
+  files?: LeagueConfigFile[];
+  readOnly?: boolean;
+}
+
+export interface SetLeagueConfigReadOnlyResult {
+  success: boolean;
+  error?: string;
+  warning?: string;
+  readOnly?: boolean;
+  files?: string[];
+  failed?: string[];
+}
+
 export interface ElectronAPI {
   launchAccount: (accountData: LaunchAccountData) => Promise<LaunchResult>;
   captureAccountSession: (
@@ -56,11 +79,22 @@ export interface ElectronAPI {
     title?: string;
     defaultPath?: string;
   }) => Promise<{ canceled: boolean; filePaths: string[] }>;
+  openDirectoryPicker: (options?: {
+    title?: string;
+    defaultPath?: string;
+  }) => Promise<{ canceled: boolean; filePaths: string[] }>;
   openExternal: (url: string) => void;
   getPlatform: () => Promise<string>;
   startGoogleSystemSignIn: (
     options: GoogleSystemSignInOptions
   ) => Promise<GoogleSystemSignInResult>;
+
+  // Persistent game settings (League config read-only lock)
+  inspectLeagueConfig: (payload: { configPath: string }) => Promise<InspectLeagueConfigResult>;
+  setLeagueConfigReadOnly: (payload: {
+    configPath: string;
+    readOnly: boolean;
+  }) => Promise<SetLeagueConfigReadOnlyResult>;
 
   // Auto-update
   onUpdateAvailable: (callback: (version: string) => void) => void;

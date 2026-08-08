@@ -1,13 +1,25 @@
 import { Injectable, signal } from '@angular/core';
 
+export type CardLayout = 'list' | 'grid';
+
 export interface AppSettings {
   riotClientPath: string;
   showMasteryBackground: boolean;
   syncWithWeb: boolean;
+  /** Account card presentation on the dashboard. */
+  cardLayout: CardLayout;
+  /** When true, the League config files are held read-only so Riot cannot rewrite them. */
+  persistentGameSettings: boolean;
+  /** Folder holding League's config files. Empty means "derive from the Riot Client path". */
+  leagueConfigPath: string;
+}
+
+function isMacPlatform(): boolean {
+  return navigator.userAgent.toLowerCase().includes('mac');
 }
 
 function getDefaultRiotClientPath(): string {
-  if (navigator.userAgent.toLowerCase().includes('mac')) return '/Applications/Riot Client.app';
+  if (isMacPlatform()) return '/Applications/Riot Client.app';
   return 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe';
 }
 
@@ -15,6 +27,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   riotClientPath: getDefaultRiotClientPath(),
   showMasteryBackground: false,
   syncWithWeb: false,
+  cardLayout: 'list',
+  persistentGameSettings: false,
+  leagueConfigPath: '',
 };
 
 @Injectable({
@@ -49,10 +64,14 @@ export class SettingsService {
     }
   }
 
-  updateRiotClientPath(path: string): void {
-    const newSettings = { ...this.settings(), riotClientPath: path };
+  private update(patch: Partial<AppSettings>): void {
+    const newSettings = { ...this.settings(), ...patch };
     this.settings.set(newSettings);
     this.saveSettings(newSettings);
+  }
+
+  updateRiotClientPath(path: string): void {
+    this.update({ riotClientPath: path });
   }
 
   getRiotClientPath(): string {
@@ -60,15 +79,11 @@ export class SettingsService {
   }
 
   toggleMasteryBackground(show: boolean): void {
-    const newSettings = { ...this.settings(), showMasteryBackground: show };
-    this.settings.set(newSettings);
-    this.saveSettings(newSettings);
+    this.update({ showMasteryBackground: show });
   }
 
   toggleSyncWithWeb(enabled: boolean): void {
-    const newSettings = { ...this.settings(), syncWithWeb: enabled };
-    this.settings.set(newSettings);
-    this.saveSettings(newSettings);
+    this.update({ syncWithWeb: enabled });
   }
 
   getSyncWithWeb(): boolean {
@@ -77,6 +92,70 @@ export class SettingsService {
 
   getShowMasteryBackground(): boolean {
     return this.settings().showMasteryBackground;
+  }
+
+  // ── Card layout ─────────────────────────────────────────────────────────────
+
+  getCardLayout(): CardLayout {
+    return this.settings().cardLayout;
+  }
+
+  setCardLayout(layout: CardLayout): void {
+    this.update({ cardLayout: layout });
+  }
+
+  toggleCardLayout(): CardLayout {
+    const next: CardLayout = this.getCardLayout() === 'grid' ? 'list' : 'grid';
+    this.setCardLayout(next);
+    return next;
+  }
+
+  // ── Persistent game settings ────────────────────────────────────────────────
+
+  getPersistentGameSettings(): boolean {
+    return this.settings().persistentGameSettings;
+  }
+
+  setPersistentGameSettings(enabled: boolean): void {
+    this.update({ persistentGameSettings: enabled });
+  }
+
+  setLeagueConfigPath(path: string): void {
+    this.update({ leagueConfigPath: path });
+  }
+
+  /**
+   * Configured League config folder, falling back to the location derived from
+   * the Riot Client path (…/Riot Games/League of Legends/Config).
+   */
+  getLeagueConfigPath(): string {
+    const configured = this.settings().leagueConfigPath?.trim();
+    if (configured) return configured;
+    return this.deriveLeagueConfigPath();
+  }
+
+  /** True when the folder in use is derived rather than explicitly chosen. */
+  isLeagueConfigPathDerived(): boolean {
+    return !this.settings().leagueConfigPath?.trim();
+  }
+
+  private deriveLeagueConfigPath(): string {
+    const clientPath = this.settings().riotClientPath?.trim();
+
+    if (isMacPlatform()) {
+      return '/Applications/League of Legends.app/Contents/LoL/Config';
+    }
+
+    if (!clientPath) return 'C:\\Riot Games\\League of Legends\\Config';
+
+    // C:\Riot Games\Riot Client\RiotClientServices.exe → C:\Riot Games
+    const segments = clientPath.replace(/\//g, '\\').split('\\').filter(Boolean);
+    if (segments.length >= 3) {
+      const gamesRoot = segments.slice(0, segments.length - 2).join('\\');
+      return `${gamesRoot}\\League of Legends\\Config`;
+    }
+
+    return 'C:\\Riot Games\\League of Legends\\Config';
   }
 
   resetToDefaults(): void {

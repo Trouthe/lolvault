@@ -119,6 +119,8 @@
     </div>
 
     <div class="sidebar-buttons">
+      <app-ad-slot variant="sidebar" />
+
       <app-update-banner />
 
       <button title="Settings" class="btn-icon-outlined settings-btn" (click)="openSettings()">
@@ -186,6 +188,8 @@
         </div>
       </div>
 
+      <app-ad-slot variant="banner" />
+
       <div class="search-section">
         <div class="search-container">
           <img src="assets/icons/search.svg" alt="Search" class="icon search-icon" width="20" />
@@ -236,12 +240,15 @@
             }
           </div>
           <button
-            title="Open Clean Riot Login (Test)"
-            class="btn-icon-outlined"
-            (click)="openCleanRiotClientTest()"
-            [disabled]="isOpeningCleanRiotClient()"
+            [title]="isGridLayout() ? 'Switch to list view' : 'Switch to grid view'"
+            class="btn-icon-outlined layout-toggle-btn"
+            (click)="toggleCardLayout()"
           >
-            <img src="assets/icons/database.svg" class="icon" alt="Clean Add Test" width="16" />
+            @if (isGridLayout()) {
+              <img src="assets/icons/rows.svg" class="icon" alt="List view" width="16" />
+            } @else {
+              <img src="assets/icons/grid.svg" class="icon" alt="Grid view" width="16" />
+            }
           </button>
           <button title="Add Account" class="btn-icon-outlined" (click)="addAccount()">
             <img src="assets/icons/plus.svg" class="icon" alt="Add" width="16" />
@@ -251,36 +258,45 @@
 
       <div
         class="accounts-list"
+        [class.accounts-list--grid]="isGridLayout()"
         (dragover)="onAccountsListDragOver($event)"
         (drop)="onAccountsListDrop($event)"
       >
-        @for (account of displayedAccounts(); track account.id; let i = $index) {
-          <div
-            class="account-drag-wrapper"
-            [class.dragging]="draggingAccountId() === account.id.toString()"
-            [class.hovered]="hoveredAccountId() === account.id.toString()"
-            (mouseenter)="onAccountMouseEnter(account.id.toString())"
-            (mouseleave)="onAccountMouseLeave()"
-          >
+        @for (row of accountFeed(); track row.id) {
+          @if (row.account; as account) {
             <div
-              class="account-drag-handle"
-              draggable="true"
-              [attr.data-account-id]="account.id"
-              [attr.data-account-index]="i"
+              class="account-drag-wrapper"
+              [class.dragging]="draggingAccountId() === account.id.toString()"
+              [class.hovered]="hoveredAccountId() === account.id.toString()"
+              (mouseenter)="onAccountMouseEnter(account.id.toString())"
+              (mouseleave)="onAccountMouseLeave()"
             >
-              <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+              <div
+                class="account-drag-handle"
+                draggable="true"
+                [attr.data-account-id]="account.id"
+                [attr.data-account-index]="row.index"
+              >
+                <img src="assets/icons/grip.svg" alt="Drag" width="16" class="icon" />
+              </div>
+              <app-acc-card
+                [account]="account"
+                [layout]="cardLayout()"
+                [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
+                (dragover)="onAccountDragOver($event, row.index)"
+                (drop)="onAccountDrop($event)"
+                (editRequested)="openEditModal($event)"
+                (deleteRequested)="openDeleteModal($event)"
+                (removeFromFolderRequested)="onRemoveFromFolder($event)"
+                (refreshRequested)="onAccountRefreshed($event)"
+                (activityRecorded)="onAccountActivity($event)"
+              />
             </div>
-            <app-acc-card
-              [account]="account"
-              [showRemoveFromFolder]="boardService.getSelectedBoardId()() !== null"
-              (dragover)="onAccountDragOver($event, i)"
-              (drop)="onAccountDrop($event)"
-              (editRequested)="openEditModal($event)"
-              (deleteRequested)="openDeleteModal($event)"
-              (removeFromFolderRequested)="onRemoveFromFolder($event)"
-              (refreshRequested)="onAccountRefreshed($event)"
-            />
-          </div>
+          } @else {
+            <div class="ad-row">
+              <app-ad-slot variant="inline" />
+            </div>
+          }
         }
 
         @if (displayedAccounts().length === 0) {
@@ -290,6 +306,10 @@
           </div>
         }
       </div>
+
+      @if (displayedAccounts().length > 0) {
+        <app-ad-slot variant="footer" />
+      }
 
       <!-- Add Account Modal -->
       <app-add-account-modal
@@ -314,13 +334,13 @@
         (accountDeleted)="onAccountDeleted($event)"
       />
 
-      <!-- Settings Modal -->
-      <app-settings-modal
+      <!-- Settings (fullscreen page overlay) -->
+      <app-settings-page
         [isOpen]="isSettingsOpen()"
         [isSyncToggleBusy]="isSyncToggleBusy()"
         [accounts]="accounts()"
         (syncWithWebToggleRequested)="onSyncWithWebToggleRequested($event)"
-        (closeModal)="closeSettings()"
+        (closePage)="closeSettings()"
       />
 
       @if (isSyncConflictModalOpen()) {

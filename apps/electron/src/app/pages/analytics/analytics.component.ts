@@ -286,7 +286,6 @@ export class AnalyticsComponent implements OnInit {
     for (let col = 0; col < 12; col++) {
       grid[col] = [];
       for (let row = 0; row < 7; row++) {
-        const daysBack = (11 - col) * 7 + (6 - row); // col 11 = this week
         const cellDate = new Date(weekStart);
         cellDate.setDate(weekStart.getDate() + row - (11 - col) * 7);
         const key = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
@@ -402,7 +401,6 @@ export class AnalyticsComponent implements OnInit {
 
   topChampsLast30 = computed(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recent = this.champStats().filter(() => true); // already aggregated from matchHistory
     // Use all matches but filter by timestamp
     const map = new Map<string, { wins: number; games: number }>();
     for (const m of this.matchHistory()) {

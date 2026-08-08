@@ -8,16 +8,17 @@ import { Router } from '@angular/router';
 import type { User } from 'firebase/auth';
 import { Unsubscribe, doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { AccCardComponent } from '../../components/acc-card/acc-card.component';
+import { AdSlotComponent } from '../../components/ad-slot/ad-slot.component';
 import { AddAccountModalComponent } from '../../components/modals/add-account-modal/add-account-modal.component';
 import { EditAccountModalComponent } from '../../components/modals/edit-account-modal/edit-account-modal.component';
 import { DeleteAccountModalComponent } from '../../components/modals/delete-account-modal/delete-account-modal.component';
-import { SettingsModalComponent } from '../../components/modals/settings-modal/settings-modal.component';
 import { UpdateBannerComponent } from '../../components/update-banner/update-banner.component';
+import { SettingsPageComponent } from '../settings/settings.component';
 import { AuthService } from '../../services/auth.service';
 import { Account } from '../../models/interfaces/Account';
 import { Board } from '../../models/interfaces/Board';
 import { RiotApiService } from '../../services/riot-api.service';
-import { SettingsService } from '../../services/settings.service';
+import { CardLayout, SettingsService } from '../../services/settings.service';
 import { BoardService } from '../../services/board.service';
 import { LOL_DATA } from '../../models/constants';
 import { VERSION, BUILD_LABEL } from '../../../environments/version';
@@ -74,8 +75,17 @@ interface PendingSyncConflictSnapshot {
   settings: CloudSyncSettings;
 }
 
+/** A dashboard list row — an account card, or an ad slot when `account` is absent. */
+interface FeedRow {
+  id: string;
+  index: number;
+  account?: Account;
+}
+
 const CLOUD_SYNC_COLLECTION = 'dashboardAccounts';
 const CLOUD_SYNC_SCHEMA_VERSION = 3;
+/** How many account cards to render before dropping an ad slot into the feed. */
+const AD_EVERY_N_CARDS = 4;
 
 @Component({
   selector: 'app-dashboard',
@@ -84,11 +94,12 @@ const CLOUD_SYNC_SCHEMA_VERSION = 3;
     CommonModule,
     FormsModule,
     AccCardComponent,
+    AdSlotComponent,
     AddAccountModalComponent,
     EditAccountModalComponent,
     DeleteAccountModalComponent,
-    SettingsModalComponent,
     UpdateBannerComponent,
+    SettingsPageComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -112,7 +123,6 @@ export class DashboardComponent implements OnDestroy {
   public isSortMenuOpen = signal(false);
   public isProfileMenuOpen = signal(false);
   public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
-  public isOpeningCleanRiotClient = signal(false);
   public isSyncToggleBusy = signal(false);
   public isSyncConflictModalOpen = signal(false);
   public syncConflictResolution = signal<'electron' | 'web'>('electron');
@@ -207,6 +217,36 @@ export class DashboardComponent implements OnDestroy {
 
   public totalAccountCount = computed(() => this.accounts().length);
 
+  // ── Layout + ad feed ────────────────────────────────────────────────────────
+
+  public cardLayout = computed<CardLayout>(() => this.settingsService.settings().cardLayout);
+  public isGridLayout = computed(() => this.cardLayout() === 'grid');
+
+  /**
+   * Accounts with ad slots interleaved, so the list renders in a single pass.
+   * `index` is the account's position among accounts only — the drag/reorder
+   * handlers depend on that, not on the row position.
+   */
+  public accountFeed = computed<FeedRow[]>(() => {
+    const accounts = this.displayedAccounts();
+    const rows: FeedRow[] = [];
+
+    accounts.forEach((account, index) => {
+      rows.push({ id: `account-${account.id}`, account, index });
+
+      const isLast = index === accounts.length - 1;
+      if (!isLast && (index + 1) % AD_EVERY_N_CARDS === 0) {
+        rows.push({ id: `ad-${index}`, index });
+      }
+    });
+
+    return rows;
+  });
+
+  toggleCardLayout(): void {
+    this.settingsService.toggleCardLayout();
+  }
+
   public getAccountCountForBoard(boardId: string | null): number {
     return boardId === null
       ? this.accounts().length
@@ -253,6 +293,12 @@ export class DashboardComponent implements OnDestroy {
 
     window.addEventListener('dragend', this.onGlobalDragEnd, true);
     document.addEventListener('dragstart', this.onGlobalDragStart, true);
+
+    // LoL Vault's own "last active" signal: the LCU telling us which account is
+    // currently signed in. Riot's own login history is deliberately not used.
+    this.lcuService.accountIdentified$.pipe(takeUntilDestroyed()).subscribe((event) => {
+      void this.stampLastActive(event.vaultId);
+    });
 
     // When a game ends, update the account's displayed rank in memory.
     // Do NOT persist — the user can refresh manually to sync back to Riot API.
@@ -1169,6 +1215,14 @@ export class DashboardComponent implements OnDestroy {
         name: cloudAccount.name,
         username: existing?.username,
         password: existing?.password,
+        // Locally-derived data is never synced, so carry it across from the
+        // record we already hold rather than dropping it on every snapshot.
+        puuid: existing?.puuid,
+        topChampionIds: existing?.topChampionIds,
+        recentResults: existing?.recentResults,
+        lpTrend: existing?.lpTrend,
+        mainLane: existing?.mainLane,
+        lastActiveAt: existing?.lastActiveAt,
         game: cloudAccount.game || 'League of Legends',
         server: cloudAccount.server,
         rank: cloudAccount.rank,
@@ -1265,12 +1319,15 @@ export class DashboardComponent implements OnDestroy {
   }
 
   private async updateMasteryBackground(): Promise<void> {
-    const account = this.accounts().find((acc) => acc.topChampionId);
-    if (!account?.topChampionId) return;
+    // topChampionId is not persisted, so fall back to the stored top-3 list —
+    // that keeps the background alive across restarts.
+    const account = this.accounts().find((acc) => acc.topChampionId || acc.topChampionIds?.length);
+    const championKey = account?.topChampionId || account?.topChampionIds?.[0];
+    if (!championKey) return;
 
     try {
       const { data } = await import('../../data/champions.json');
-      const entry = Object.entries(data).find(([, c]) => c.key === account.topChampionId);
+      const entry = Object.entries(data).find(([, c]) => c.key === championKey);
       if (entry) this.championId.set(entry[1].id);
     } catch (error) {
       console.error('Error loading champion data:', error);
@@ -1279,30 +1336,6 @@ export class DashboardComponent implements OnDestroy {
 
   addAccount(): void {
     this.isModalOpen.set(true);
-  }
-
-  async openCleanRiotClientTest(): Promise<void> {
-    if (this.isOpeningCleanRiotClient()) {
-      return;
-    }
-
-    this.isOpeningCleanRiotClient.set(true);
-
-    try {
-      const result = await window.electronAPI.openCleanRiotClient({
-        riotClientPath: this.settingsService.getRiotClientPath(),
-      });
-
-      if (result.success) {
-        console.log('Opened clean Riot login window.');
-      } else {
-        console.error(result.error || 'Failed to open clean Riot login.');
-      }
-    } catch (error) {
-      console.error('Failed to open clean Riot login window:', error);
-    } finally {
-      this.isOpeningCleanRiotClient.set(false);
-    }
   }
 
   closeModal(): void {
@@ -1359,6 +1392,26 @@ export class DashboardComponent implements OnDestroy {
     await this.updateAccountsAndSave((accounts) =>
       accounts.map((acc) =>
         this.isSameAccount(acc, account) ? { ...acc, boardId: undefined } : acc
+      )
+    );
+  }
+
+  /** Card told us the user just drove this account (launch / session capture). */
+  async onAccountActivity(account: Account): Promise<void> {
+    await this.stampLastActive(account.syncId || String(account.id));
+  }
+
+  /** Records that LoL Vault itself saw this account in use, and persists it. */
+  private async stampLastActive(vaultId: string): Promise<void> {
+    if (!vaultId) return;
+
+    const known = this.accounts().some((acc) => (acc.syncId || String(acc.id)) === vaultId);
+    if (!known) return;
+
+    const now = Date.now();
+    await this.updateAccountsAndSave((accounts) =>
+      accounts.map((acc) =>
+        (acc.syncId || String(acc.id)) === vaultId ? { ...acc, lastActiveAt: now } : acc
       )
     );
   }

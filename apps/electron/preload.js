@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadBoards: () => ipcRenderer.invoke('load-boards'),
   saveBoards: (boards) => ipcRenderer.invoke('save-boards', boards),
   openFilePicker: (options) => ipcRenderer.invoke('open-file-dialog', options),
+  openDirectoryPicker: (options) => ipcRenderer.invoke('open-directory-dialog', options),
   openExternal: (url) => ipcRenderer.send('open-external-url', url),
   getPlatform: () => ipcRenderer.invoke('get-platform'),
   startGoogleSystemSignIn: (options) => ipcRenderer.invoke('start-google-system-sign-in', options),
@@ -23,6 +24,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startUpdateDownload: () => ipcRenderer.invoke('start-update-download'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  // Persistent game settings (League config read-only lock)
+  inspectLeagueConfig: (payload) => ipcRenderer.invoke('settings:inspect-league-config', payload),
+  setLeagueConfigReadOnly: (payload) =>
+    ipcRenderer.invoke('settings:set-league-config-readonly', payload),
 
   // SQLite — App Settings
   getApiKey: () => ipcRenderer.invoke('db-get-api-key'),

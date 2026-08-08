@@ -1586,3 +1586,153 @@ ipcMain.handle('riot:get-ddragon-version', async () => {
     return '15.21.1';
   }
 });
+
+// ── Persistent game settings ─────────────────────────────────────────────────
+//
+// League rewrites its Config files whenever the client signs a different
+// account in. Flipping the well-known settings files to read-only keeps the
+// user's own configuration in place across account switches.
+
+const LEAGUE_PERSISTENT_SETTINGS_FILES = [
+  'PersistedSettings.json',
+  'game.cfg',
+  'input.ini',
+];
+
+function resolveLeagueConfigFiles(configPath) {
+  return LEAGUE_PERSISTENT_SETTINGS_FILES.map((name) => path.join(configPath, name)).filter(
+    (filePath) => {
+      try {
+        return fs.statSync(filePath).isFile();
+      } catch {
+        return false;
+      }
+    }
+  );
+}
+
+function isFileReadOnly(filePath) {
+  try {
+    // Windows maps the read-only attribute onto the owner-write permission bit.
+    return (fs.statSync(filePath).mode & 0o200) === 0;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.handle('settings:inspect-league-config', async (_event, { configPath } = {}) => {
+  try {
+    if (!configPath) {
+      return { success: false, error: 'No League config folder provided.' };
+    }
+
+    let exists = false;
+    try {
+      exists = fs.statSync(configPath).isDirectory();
+    } catch {
+      exists = false;
+    }
+
+    if (!exists) {
+      return { success: true, exists: false, files: [], readOnly: false };
+    }
+
+    const files = resolveLeagueConfigFiles(configPath);
+    return {
+      success: true,
+      exists: true,
+      files: files.map((filePath) => ({
+        path: filePath,
+        name: path.basename(filePath),
+        readOnly: isFileReadOnly(filePath),
+      })),
+      readOnly: files.length > 0 && files.every((filePath) => isFileReadOnly(filePath)),
+    };
+  } catch (error) {
+    console.error('settings:inspect-league-config error:', error?.message);
+    return { success: false, error: error?.message || 'Failed to inspect League config folder.' };
+  }
+});
+
+ipcMain.handle('settings:set-league-config-readonly', async (_event, payload = {}) => {
+  const { configPath, readOnly } = payload;
+
+  try {
+    if (!configPath) {
+      return { success: false, error: 'No League config folder provided.' };
+    }
+
+    let isDirectory = false;
+    try {
+      isDirectory = fs.statSync(configPath).isDirectory();
+    } catch {
+      isDirectory = false;
+    }
+
+    if (!isDirectory) {
+      return {
+        success: false,
+        error: `League config folder not found at "${configPath}". Pick the correct folder in Settings.`,
+      };
+    }
+
+    const files = resolveLeagueConfigFiles(configPath);
+
+    if (files.length === 0) {
+      return {
+        success: false,
+        error:
+          'No League settings files found in that folder. Launch League once so it writes its config, then try again.',
+      };
+    }
+
+    const changed = [];
+    const failed = [];
+
+    for (const filePath of files) {
+      try {
+        fs.chmodSync(filePath, readOnly ? 0o444 : 0o666);
+        changed.push(path.basename(filePath));
+      } catch (error) {
+        console.error(`Failed to update read-only flag for ${filePath}:`, error?.message);
+        failed.push(path.basename(filePath));
+      }
+    }
+
+    if (changed.length === 0) {
+      return {
+        success: false,
+        error: `Could not change the read-only flag on ${failed.join(', ')}. Try running LoL Vault as administrator.`,
+      };
+    }
+
+    return {
+      success: true,
+      readOnly: !!readOnly,
+      files: changed,
+      failed,
+      warning: failed.length ? `Skipped ${failed.join(', ')} — permission denied.` : undefined,
+    };
+  } catch (error) {
+    console.error('settings:set-league-config-readonly error:', error?.message);
+    return { success: false, error: error?.message || 'Failed to update League config files.' };
+  }
+});
+
+// Directory picker — used to locate the League config folder
+ipcMain.handle('open-directory-dialog', async (_event, options = {}) => {
+  try {
+    const win = BrowserWindow.getFocusedWindow();
+    const result = await dialog.showOpenDialog(win, {
+      title: options.title || 'Select folder',
+      defaultPath: options.defaultPath || undefined,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+
+    if (result.canceled) return { canceled: true, filePaths: [] };
+    return { canceled: false, filePaths: result.filePaths };
+  } catch (error) {
+    console.error('Error opening directory dialog:', error);
+    return { canceled: true, filePaths: [] };
+  }
+});

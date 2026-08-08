@@ -73,7 +73,10 @@ section:first-of-type > div:first-of-type {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
+      // Left padding grows on hover to open the grip gutter — one animated
+      // property on a box that never moves, so the row can't slide out from
+      // under the cursor and retrigger hover mid-animation.
+      padding: 10px 12px 10px 12px;
       min-width: 0;
       border-radius: 8px;
       cursor: pointer;
@@ -81,29 +84,29 @@ section:first-of-type > div:first-of-type {
         background-color 0.15s ease,
         border-color 0.15s ease,
         opacity 0.15s ease,
-        transform 0.15s ease,
-        margin-right 0.15s ease;
+        padding-left 0.15s ease;
       border: 2px solid transparent;
       position: relative;
 
+      // Hover target sits over the row's own left edge, where the gutter opens
       &::before {
         content: '';
         position: absolute;
-        left: -48px;
+        left: 0;
         top: 0;
         bottom: 0;
-        width: 48px;
+        width: 26px;
       }
 
       .folder-drag-handle {
         position: absolute;
-        left: -28px;
+        left: 0;
         top: 50%;
         transform: translateY(-50%);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 12px 8px;
+        padding: 12px 6px;
         cursor: grab;
         opacity: 0;
         transition: opacity 0.15s ease;
@@ -120,8 +123,7 @@ section:first-of-type > div:first-of-type {
 
       &.draggable.hovered:not(.dragging) {
         background-color: var(--card);
-        transform: translateX(24px);
-        margin-right: 24px;
+        padding-left: 30px;
 
         .folder-drag-handle {
           opacity: 1;
@@ -268,6 +270,9 @@ section:first-of-type > div:nth-of-type(2) {
   width: 75%;
   overflow-y: auto;
   height: calc(100vh - 32px);
+  // Named container so the account grid can pick its column count from the
+  // pane's real width rather than the viewport's.
+  container: accounts / inline-size;
 
   &::-webkit-scrollbar {
     display: none;
@@ -298,6 +303,68 @@ section:first-of-type > div:nth-of-type(2) {
     flex-direction: column;
     gap: 16px;
     flex: 1 1 auto;
+
+    // Grid variant — cards tile instead of stacking.
+    // Column count is restricted to powers of two (1 / 2 / 4) rather than
+    // auto-fill, which would happily produce 3 or 5 and look lopsided.
+    // Breakpoints are container-relative so they track the actual list width
+    // instead of the viewport (the list only occupies the 75% right pane).
+    &.accounts-list--grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: stretch;
+      align-content: start;
+
+      // The grip gutter only opens on hover, so it costs no permanent width
+      // and the thresholds size against the card alone.
+      @container accounts (min-width: 700px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      // 4 × ~370px card + 3 × 16px gap
+      @container accounts (min-width: 1530px) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .ad-row {
+        grid-column: 1 / -1;
+      }
+
+      .empty-state {
+        grid-column: 1 / -1;
+      }
+
+      // The hover-to-open-gutter mechanic is inherited from the base
+      // .account-drag-wrapper rules; only the grid-specific box model differs.
+      .account-drag-wrapper {
+        min-width: 0;
+        // Grid items default to stretch, but the card needs a definite height
+        // to resolve its own `height: 100%` against.
+        display: flex;
+        flex-direction: column;
+
+        > app-acc-card {
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        // Slightly tighter gutter than the list — grid cells are narrower
+        &::before {
+          width: 26px;
+        }
+
+        &.hovered:not(.dragging) {
+          padding-left: 26px;
+        }
+
+        .account-drag-handle {
+          padding: 16px 5px;
+          z-index: 12;
+        }
+      }
+    }
   }
 
   .dash-header {
@@ -414,18 +481,20 @@ section:first-of-type > div:nth-of-type(2) {
 
   .account-drag-wrapper {
     position: relative;
-    transition:
-      transform 0.15s ease-in-out,
-      margin-right 0.15s ease-in-out;
-    will-change: transform, margin-right;
+    // The grip gutter opens by insetting the card from the left, animating one
+    // property on a stable box. The card never moves out from under the
+    // cursor, so hover can't retrigger mid-animation.
+    padding-left: 0;
+    transition: padding-left 0.15s ease-in-out;
 
+    // Hover target covers the card's left edge, where the gutter will open
     &::before {
       content: '';
       position: absolute;
-      left: -56px;
+      left: 0;
       top: 0;
       bottom: 0;
-      width: 56px;
+      width: 32px;
     }
 
     &.dragging {
@@ -434,13 +503,13 @@ section:first-of-type > div:nth-of-type(2) {
 
     .account-drag-handle {
       position: absolute;
-      left: -32px;
+      left: 0;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px 10px;
+      padding: 16px 8px;
       cursor: grab;
       opacity: 0;
       transition: opacity 0.15s ease;
@@ -453,8 +522,7 @@ section:first-of-type > div:nth-of-type(2) {
     }
 
     &.hovered:not(.dragging) {
-      transform: translateX(24px);
-      margin-right: 24px;
+      padding-left: 32px;
 
       .account-drag-handle {
         opacity: 1;

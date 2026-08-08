@@ -1,7 +1,7 @@
 .acc-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   border: 2px solid var(--border-color);
   border-radius: 12px;
@@ -420,10 +420,260 @@
   .launch-btn-mobile {
     display: none;
   }
+
+  // The inline launch button is icon-only in list mode; the grid variant
+  // widens it and reveals the label.
+  .launch-btn-inline .launch-label {
+    display: none;
+  }
+
+  // ── Stat strip ──────────────────────────────────────────────────────────────
+
+  .stat-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 10px;
+    height: 30px;
+    border-top: 1px solid var(--border-color);
+    min-width: 0;
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 14px;
+      background-color: var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--secondary-text);
+      white-space: nowrap;
+    }
+
+    .stat-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-text);
+      white-space: nowrap;
+    }
+
+    .lane-icon {
+      width: 16px;
+      height: 16px;
+      filter: var(--icon-filter, none);
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    .form-dots {
+      display: flex;
+      gap: 3px;
+    }
+
+    .form-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 2px;
+      flex-shrink: 0;
+
+      &.win {
+        background-color: #22c55e;
+      }
+
+      &.loss {
+        background-color: #ef4444;
+      }
+    }
+
+    .mastery-champs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mastery-champ {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    // The whole trend block is tinted by `color`, which the SVG picks up via
+    // currentColor for the stroke, the gradient stops and the end dot.
+    .lp-trend {
+      gap: 8px;
+      padding: 3px 8px 3px 9px;
+      border-radius: 8px;
+
+      .spark {
+        overflow: visible;
+        flex-shrink: 0;
+        display: block;
+      }
+
+      .spark-baseline {
+        stroke: currentColor;
+        stroke-width: 1;
+        stroke-dasharray: 2 3;
+        opacity: 0.3;
+      }
+
+      .spark-line {
+        filter: drop-shadow(0 1px 2px color-mix(in srgb, currentColor 45%, transparent));
+      }
+
+      .spark-dot {
+        fill: currentColor;
+        stroke: var(--card);
+        stroke-width: 1.5;
+      }
+
+      .spark-dot-halo {
+        fill: currentColor;
+        opacity: 0.22;
+      }
+
+      .lp-trend-delta {
+        font-size: 12.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        color: currentColor;
+        letter-spacing: 0.01em;
+      }
+
+      &.up {
+        color: #22c55e;
+      }
+
+      &.down {
+        color: #ef4444;
+      }
+    }
+
+    .last-active {
+      margin-left: auto;
+      opacity: 0.9;
+
+      .last-active-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--outline);
+        flex-shrink: 0;
+      }
+
+      .stat-value {
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--secondary-text);
+      }
+    }
+  }
+}
+
+// ── Grid variant ──────────────────────────────────────────────────────────────
+
+.acc-card.acc-card--grid {
+  padding: 16px;
+  height: 100%;
+  // Push the stat strip to the bottom so cards in a row line up
+  justify-content: flex-start;
+
+  .card-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    flex: 0 0 auto;
+  }
+
+  .account-info {
+    flex-direction: column;
+    align-items: stretch;
+    margin-right: 0;
+    gap: 10px;
+
+    .account-details {
+      width: 100%;
+    }
+
+    .stats-container {
+      width: 100%;
+      height: auto;
+      padding: 10px 12px;
+      justify-content: space-between;
+      box-sizing: border-box;
+
+      // Equal columns so LP/rank line up across cards in a row
+      .stats-group {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .stats-divider {
+        flex: 0 0 auto;
+        height: 32px;
+      }
+    }
+  }
+
+  .button-collection {
+    width: 100%;
+    height: 44px;
+    justify-content: space-between;
+    gap: 4px;
+    box-sizing: border-box;
+
+    hr {
+      display: none;
+    }
+
+    .launch-btn-inline {
+      flex: 1 1 auto;
+      width: auto;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-text);
+
+      .launch-label {
+        display: inline;
+      }
+    }
+  }
+
+  // Never show the mobile launch/live rows in grid mode — the inline
+  // button and badge in .button-collection already cover both states.
+  .launch-btn-mobile,
+  .live-mobile-row {
+    display: none;
+  }
+
+  .stat-strip {
+    gap: 10px;
+    margin-top: auto;
+
+    .last-active {
+      margin-left: auto;
+    }
+  }
 }
 
 @media (max-width: 1000px) {
-  .acc-card {
+  // Grid cards are already stacked internally; the mobile rules below are for
+  // the list variant only and would otherwise fight the grid variant.
+  .acc-card:not(.acc-card--grid) {
     flex-direction: column;
     align-items: stretch;
     padding: 12px;
