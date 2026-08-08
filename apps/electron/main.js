@@ -8,6 +8,7 @@ const fs = require('fs');
 const db = require('./database');
 const { startLcuMonitor, stopLcuMonitor, getLcuState } = require('./lcu-monitor');
 const riotApi = require('./riot-api.service');
+const rateLimiter = require('./rate-limiter');
 
 const GOOGLE_SYSTEM_AUTH_TIMEOUT_MS = 3 * 60 * 1000;
 const GOOGLE_SYSTEM_AUTH_CALLBACK_HOST = 'localhost';
@@ -1584,6 +1585,74 @@ ipcMain.handle('riot:get-ddragon-version', async () => {
   } catch (err) {
     console.error('riot:get-ddragon-version error:', err?.message);
     return '15.21.1';
+  }
+});
+
+ipcMain.handle('riot:get-match-timeline', async (_event, { matchId, platform }) => {
+  try {
+    return await riotApi.getMatchTimeline(matchId, platform, { interactive: true });
+  } catch (err) {
+    console.error('riot:get-match-timeline error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-match-detail', async (_event, { matchId, accountId, puuid, platform }) => {
+  try {
+    return await riotApi.getMatchDetailCached(matchId, accountId, puuid, platform);
+  } catch (err) {
+    console.error('riot:get-match-detail error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+// Backfill runs for minutes, so progress is pushed to the renderer as it goes
+// and cancellation is a flag the loop checks between matches.
+const backfillCancelled = new Set();
+
+ipcMain.handle('riot:cancel-backfill', (_event, { accountId }) => {
+  backfillCancelled.add(accountId);
+  return { success: true };
+});
+
+ipcMain.handle(
+  'riot:backfill-match-data',
+  async (event, { accountId, puuid, platform, limit }) => {
+    backfillCancelled.delete(accountId);
+    try {
+      return await riotApi.backfillMatchData(accountId, puuid, platform, {
+        limit,
+        shouldCancel: () => backfillCancelled.has(accountId),
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('riot:backfill-progress', { accountId, ...progress });
+          }
+        },
+      });
+    } catch (err) {
+      console.error('riot:backfill-match-data error:', err?.message);
+      return { error: err?.message || 'unknown' };
+    } finally {
+      backfillCancelled.delete(accountId);
+    }
+  }
+);
+
+ipcMain.handle('riot:get-backfill-status', (_event, { accountId }) => {
+  try {
+    const pending = db.getMatchesNeedingBackfill(accountId, 500);
+    const requests = pending.reduce(
+      (n, m) => n + (m.has_detail ? 0 : 1) + (m.has_timeline ? 0 : 1),
+      0
+    );
+    return {
+      pendingMatches: pending.length,
+      pendingRequests: requests,
+      etaSeconds: rateLimiter.estimateSeconds(requests),
+    };
+  } catch (err) {
+    console.error('riot:get-backfill-status error:', err?.message);
+    return { pendingMatches: 0, pendingRequests: 0, etaSeconds: 0 };
   }
 });
 

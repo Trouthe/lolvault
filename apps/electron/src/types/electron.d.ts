@@ -193,6 +193,39 @@ export interface ElectronAPI {
 
   riotGetDDragonVersion: () => Promise<string>;
 
+  /** Compacted match timeline; fetched and cached on first request. */
+  riotGetMatchTimeline: (args: {
+    matchId: string;
+    platform: string;
+  }) => Promise<CompactTimeline | { error: string }>;
+
+  /** Full match detail (bans, objectives, untrimmed participants). */
+  riotGetMatchDetail: (args: {
+    matchId: string;
+    accountId: string;
+    puuid: string;
+    platform: string;
+  }) => Promise<MatchDetail | { error: string }>;
+
+  riotBackfillMatchData: (args: {
+    accountId: string;
+    puuid: string;
+    platform: string;
+    limit?: number;
+  }) => Promise<
+    { processed: number; total: number; failed: number; cancelled: boolean } | { error: string }
+  >;
+
+  riotCancelBackfill: (args: { accountId: string }) => Promise<{ success: boolean }>;
+
+  riotGetBackfillStatus: (args: { accountId: string }) => Promise<{
+    pendingMatches: number;
+    pendingRequests: number;
+    etaSeconds: number;
+  }>;
+
+  onBackfillProgress: (callback: (data: BackfillProgress) => void) => void;
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
     activeVaultId: string | null;
@@ -229,6 +262,138 @@ export interface LpSnapshot {
   division: string;
   lp: number;
   absolute_lp: number;
+}
+
+export interface BackfillProgress {
+  accountId: string;
+  processed: number;
+  total: number;
+  failed: number;
+  etaSeconds: number;
+  done: boolean;
+}
+
+/**
+ * One participant's stats for a single timeline frame.
+ *
+ * Stored positionally rather than as an object — key names would otherwise
+ * dominate the payload. Decode with `TIMELINE_FRAME_FIELDS`, never by literal
+ * index. Mirrors `FRAME_FIELDS` in apps/electron/timeline-compact.js.
+ */
+export type TimelineParticipantFrame = number[];
+
+export interface TimelineEvent {
+  /** Milliseconds from game start. */
+  t: number;
+  type: string;
+  x?: number;
+  y?: number;
+  killerId?: number;
+  victimId?: number;
+  creatorId?: number;
+  participantId?: number;
+  assists?: number[];
+  itemId?: number;
+  beforeId?: number;
+  afterId?: number;
+  skillSlot?: number;
+  levelUpType?: string;
+  level?: number;
+  teamId?: number;
+  killerTeamId?: number;
+  buildingType?: string;
+  towerType?: string;
+  laneType?: string;
+  monsterType?: string;
+  monsterSubType?: string;
+  wardType?: string;
+  killType?: string;
+  multiKill?: number;
+  bounty?: number;
+}
+
+export interface CompactTimeline {
+  matchId: string;
+  /** Milliseconds between frames — 60000 in practice. */
+  frameInterval: number;
+  frameCount: number;
+  participants: { participantId: number; puuid: string }[];
+  /** `frames[frameIndex][participantId - 1]` → positional stat array. */
+  frames: TimelineParticipantFrame[][];
+  events: TimelineEvent[];
+  schemaVersion: number;
+  fetchedAt: number;
+}
+
+export interface MatchTeam {
+  teamId: number;
+  win: boolean;
+  bans: { championId: number; pickTurn: number }[];
+  objectives: Record<string, { first?: boolean; kills?: number }>;
+}
+
+export interface MatchDetailParticipant {
+  puuid: string;
+  participantId: number;
+  riotIdGameName: string;
+  riotIdTagline: string;
+  championName: string;
+  championId: number;
+  teamId: number;
+  teamPosition: string;
+  win: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  champLevel: number;
+  summoner1Id: number;
+  summoner2Id: number;
+  goldEarned: number;
+  goldSpent: number;
+  visionScore: number;
+  items: number[];
+  totalDamageDealtToChampions: number;
+  physicalDamageDealtToChampions: number;
+  magicDamageDealtToChampions: number;
+  trueDamageDealtToChampions: number;
+  totalDamageTaken: number;
+  physicalDamageTaken: number;
+  magicDamageTaken: number;
+  trueDamageTaken: number;
+  damageSelfMitigated: number;
+  totalHeal: number;
+  totalHealsOnTeammates: number;
+  totalDamageShieldedOnTeammates: number;
+  damageDealtToTurrets: number;
+  damageDealtToObjectives: number;
+  totalMinionsKilled: number;
+  neutralMinionsKilled: number;
+  wardsPlaced: number;
+  wardsKilled: number;
+  visionWardsBoughtInGame: number;
+  firstBloodKill: boolean;
+  doubleKills: number;
+  tripleKills: number;
+  quadraKills: number;
+  pentaKills: number;
+  timeCCingOthers: number;
+  totalTimeSpentDead: number;
+  perks: unknown;
+  gameEndedInSurrender: boolean;
+  gameEndedInEarlySurrender: boolean;
+}
+
+export interface MatchDetail {
+  matchId: string;
+  queueId: number | null;
+  gameVersion: string | null;
+  gameMode: string | null;
+  gameDuration: number | null;
+  teams: MatchTeam[];
+  participants: MatchDetailParticipant[];
+  schemaVersion: number;
+  fetchedAt: number;
 }
 
 export interface MatchCacheRow {

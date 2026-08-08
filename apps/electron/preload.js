@@ -54,6 +54,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   riotValidateKey: (args) => ipcRenderer.invoke('riot:validate-key', args),
   riotSaveKey: (args) => ipcRenderer.invoke('riot:save-key', args),
   riotGetDDragonVersion: () => ipcRenderer.invoke('riot:get-ddragon-version'),
+  riotGetMatchTimeline: (args) => ipcRenderer.invoke('riot:get-match-timeline', args),
+  riotGetMatchDetail: (args) => ipcRenderer.invoke('riot:get-match-detail', args),
+  riotBackfillMatchData: (args) => ipcRenderer.invoke('riot:backfill-match-data', args),
+  riotCancelBackfill: (args) => ipcRenderer.invoke('riot:cancel-backfill', args),
+  riotGetBackfillStatus: (args) => ipcRenderer.invoke('riot:get-backfill-status', args),
+  onBackfillProgress: (cb) => ipcRenderer.on('riot:backfill-progress', (_e, data) => cb(data)),
 
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => ipcRenderer.invoke('lcu:get-state'),
