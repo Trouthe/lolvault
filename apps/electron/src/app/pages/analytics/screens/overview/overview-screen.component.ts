@@ -17,6 +17,7 @@ import { RolePerformanceComponent } from '../../widgets/role-performance.compone
 import { MostPlayedChampionsComponent } from '../../widgets/most-played-champions.component';
 import { PlayedWithPanelComponent } from '../../widgets/played-with-panel.component';
 import { MatchCardComponent } from '../../match/match-card.component';
+import { BackfillControlComponent } from '../../widgets/backfill-control.component';
 
 @Component({
   selector: 'app-overview-screen',
@@ -30,6 +31,7 @@ import { MatchCardComponent } from '../../match/match-card.component';
     MostPlayedChampionsComponent,
     PlayedWithPanelComponent,
     MatchCardComponent,
+    BackfillControlComponent,
   ],
   templateUrl: './overview-screen.component.html',
   styleUrl: './overview-screen.component.scss',
