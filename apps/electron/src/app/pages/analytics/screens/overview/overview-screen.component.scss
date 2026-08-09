@@ -279,3 +279,36 @@
     color: var(--primary-text);
   }
 }
+
+// Background history refresh indicator in the match-history header.
+.refreshing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  color: var(--secondary-text);
+}
+
+.refreshing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--outline);
+  animation: refreshing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes refreshing-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshing-dot {
+    animation: none;
+  }
+}

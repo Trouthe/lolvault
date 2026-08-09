@@ -72,6 +72,9 @@ export class AnalyticsDataService {
   /** True when viewing somebody else's profile rather than a vault account. */
   readonly external = signal(false);
 
+  /** A history refresh is running behind an already-painted page. */
+  readonly refreshing = signal(false);
+
   readonly backfill = signal<BackfillProgress | null>(null);
   readonly backfillRunning = signal(false);
 
@@ -92,15 +95,41 @@ export class AnalyticsDataService {
    */
   private cacheKey = '';
 
-  /** Loads everything for a vault entry. Safe to call repeatedly. */
-  async load(vaultId: string): Promise<void> {
+  /** Incremented per load; stale loads check it before touching any signal. */
+  private loadToken = 0;
+
+  /**
+   * Marks the start of a load and invalidates any still in flight.
+   *
+   * This service is a singleton shared by every analytics screen, and a load is
+   * a long chain of awaits — a history refresh alone can run for minutes. Click
+   * through to another player and back and the first load's remaining awaits
+   * would still resolve and write *its* account, matches and rank over the
+   * newer ones. That is how you end up looking at someone else's stats on your
+   * own profile. Every write past an await is gated on still being current.
+   */
+  private beginLoad(): number {
+    this.loadToken++;
     this.loading.set(true);
+    this.refreshing.set(false);
     this.failure.set(null);
     this.errorMessage.set(null);
+    return this.loadToken;
+  }
+
+  private isCurrent(token: number): boolean {
+    return token === this.loadToken;
+  }
+
+  /** Loads everything for a vault entry. Safe to call repeatedly. */
+  async load(vaultId: string): Promise<void> {
+    const token = this.beginLoad();
     this.external.set(false);
 
     try {
       const accounts: Account[] = await window.electronAPI.loadAccounts();
+      if (!this.isCurrent(token)) return;
+
       const account = accounts.find((a) => (a.syncId || String(a.id)) === vaultId) ?? null;
       if (!account) {
         this.failure.set('no-account');
@@ -109,7 +138,9 @@ export class AnalyticsDataService {
       this.account.set(account);
       this.cacheKey = vaultId;
 
-      if (!(await this.hasApiKey())) return;
+      const hasKey = await this.hasApiKey();
+      if (!this.isCurrent(token)) return;
+      if (!hasKey) return;
 
       const platform = this.riotApi.serverToPlatform(account.server || 'EUW');
       this.platform.set(platform);
@@ -123,6 +154,7 @@ export class AnalyticsDataService {
             tagLine,
             platform,
           });
+          if (!this.isCurrent(token)) return;
           if (summoner && 'puuid' in summoner) puuid = summoner.puuid;
         }
       }
@@ -133,13 +165,14 @@ export class AnalyticsDataService {
       this.puuid.set(puuid);
 
       const lpResult = await window.electronAPI.getLpSnapshots(vaultId);
+      if (!this.isCurrent(token)) return;
       this.lpSnapshots.set(lpResult?.snapshots ?? []);
 
-      await this.loadRiotData(vaultId, puuid, platform);
+      await this.loadRiotData(token, vaultId, puuid, platform, 30);
     } catch (err: unknown) {
-      this.fail(err);
+      if (this.isCurrent(token)) this.fail(err);
     } finally {
-      this.loading.set(false);
+      if (this.isCurrent(token)) this.loading.set(false);
     }
   }
 
@@ -153,9 +186,7 @@ export class AnalyticsDataService {
    * heatmap reads from games rather than from LP.
    */
   async loadPlayer(puuid: string, platform: string, displayName?: string): Promise<void> {
-    this.loading.set(true);
-    this.failure.set(null);
-    this.errorMessage.set(null);
+    const token = this.beginLoad();
     this.external.set(true);
     this.lpSnapshots.set([]);
 
@@ -179,9 +210,12 @@ export class AnalyticsDataService {
         puuid,
       } as Account);
 
-      if (!(await this.hasApiKey())) return;
+      const hasKey = await this.hasApiKey();
+      if (!this.isCurrent(token)) return;
+      if (!hasKey) return;
 
       const profile = await window.electronAPI.riotGetSummonerByPuuid({ puuid, platform });
+      if (!this.isCurrent(token)) return;
       if (profile && !hasError(profile)) {
         this.account.update((current) =>
           current
@@ -194,30 +228,52 @@ export class AnalyticsDataService {
         );
       }
 
-      await this.loadRiotData(this.cacheKey, puuid, platform);
+      // A profile we have never seen has nothing cached, so every game in the
+      // first page is a fresh request. Ten per queue is enough to fill the
+      // opening screen; the heatmap's own control pulls the rest on demand.
+      await this.loadRiotData(token, this.cacheKey, puuid, platform, 10);
     } catch (err: unknown) {
-      this.fail(err);
+      if (this.isCurrent(token)) this.fail(err);
     } finally {
-      this.loading.set(false);
+      if (this.isCurrent(token)) this.loading.set(false);
     }
   }
 
   /**
-   * The half of a load that only needs a puuid: cached games first so the page
-   * paints, then rank, mastery and a history refresh from Riot.
+   * The half of a load that only needs a puuid.
+   *
+   * Everything cheap happens before `loading` clears — identity, rank, mastery
+   * and whatever is already cached. The history refresh is deliberately left
+   * running afterwards: it costs one Riot request per uncached game, which for
+   * a new profile is minutes, and holding a spinner over the whole page for
+   * that long reads as a hang.
    */
-  private async loadRiotData(accountId: string, puuid: string, platform: string): Promise<void> {
+  private async loadRiotData(
+    token: number,
+    accountId: string,
+    puuid: string,
+    platform: string,
+    historyCount: number
+  ): Promise<void> {
+    // Any row filed under this account but belonging to someone else is not
+    // ours to show. Rows like that should no longer be created, but a cache
+    // written before the key was fixed can still hold them.
+    await window.electronAPI.riotPurgeForeignMatches({ accountId, puuid });
+    if (!this.isCurrent(token)) return;
+
     const cached = await window.electronAPI.riotGetCachedMatches({
       accountId,
       limit: MATCH_CACHE_LIMIT,
     });
-    if (Array.isArray(cached) && cached.length) this.matches.set(cached);
+    if (!this.isCurrent(token)) return;
+    this.matches.set(Array.isArray(cached) ? cached : []);
 
     const [ranked, mastery] = await Promise.all([
       window.electronAPI.riotGetRankedByPuuid({ puuid, platform }),
       window.electronAPI.riotGetTopMastery({ puuid, platform }),
       this.riotApi.getDDragonVersion(),
     ]);
+    if (!this.isCurrent(token)) return;
 
     if (hasError(ranked)) throw new Error(ranked.error);
     this.ranked.set(Array.isArray(ranked) ? (ranked as RankedEntry[]) : []);
@@ -225,21 +281,45 @@ export class AnalyticsDataService {
     // leaves the panel empty rather than failing the whole load.
     this.mastery.set(Array.isArray(mastery) ? mastery : []);
 
-    const fresh = await window.electronAPI.riotGetMatchHistory({
-      accountId,
-      puuid,
-      platform,
-      count: 30,
-    });
-    if (hasError(fresh)) {
-      // Keep whatever was cached — a refresh failure shouldn't blank the page.
-      if (!this.matches().length) throw new Error(fresh.error);
-    } else if (Array.isArray(fresh)) {
+    this.loading.set(false);
+    void this.refreshHistory(token, accountId, puuid, platform, historyCount);
+  }
+
+  /** Background history refresh. Never blocks the page, never fails it. */
+  private async refreshHistory(
+    token: number,
+    accountId: string,
+    puuid: string,
+    platform: string,
+    count: number
+  ): Promise<void> {
+    this.refreshing.set(true);
+    try {
+      const fresh = await window.electronAPI.riotGetMatchHistory({
+        accountId,
+        puuid,
+        platform,
+        count,
+      });
+      if (!this.isCurrent(token)) return;
+
+      if (hasError(fresh)) {
+        // Cached rows are still on screen; a refresh failure only matters when
+        // there was nothing to show in the first place.
+        if (!this.matches().length) this.fail(new Error(fresh.error));
+        return;
+      }
+
       const all = await window.electronAPI.riotGetCachedMatches({
         accountId,
         limit: MATCH_CACHE_LIMIT,
       });
-      this.matches.set(Array.isArray(all) && all.length ? all : fresh);
+      if (!this.isCurrent(token)) return;
+      this.matches.set(Array.isArray(all) && all.length ? all : (fresh as MatchCacheRow[]));
+    } catch (err: unknown) {
+      if (this.isCurrent(token) && !this.matches().length) this.fail(err);
+    } finally {
+      if (this.isCurrent(token)) this.refreshing.set(false);
     }
   }
 
@@ -382,6 +462,8 @@ export class AnalyticsDataService {
 
   /** Clears per-account state when navigating to a different profile. */
   reset(): void {
+    this.loadToken++;
+    this.refreshing.set(false);
     this.cacheKey = '';
     this.external.set(false);
     this.yearHistory.set(null);

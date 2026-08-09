@@ -226,6 +226,12 @@ export interface ElectronAPI {
 
   onBackfillProgress: (callback: (data: BackfillProgress) => void) => void;
 
+  /** Drops rows filed under an account that record a different player's game. */
+  riotPurgeForeignMatches: (args: {
+    accountId: string;
+    puuid: string;
+  }) => Promise<{ removed: number }>;
+
   /** Pulls one calendar year of match ids and caches whatever is missing. */
   riotFetchYearHistory: (args: {
     accountId: string;

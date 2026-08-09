@@ -244,6 +244,18 @@ const MIGRATIONS = [
         ON match_cache (account_id, champion, timestamp);
     `);
   },
+
+  // v4 → v5: drop the non-vault profile caches.
+  //
+  // These were written while match_cache was still keyed by match_id alone, so
+  // every game they shared with a tracked account overwrote that account's own
+  // row — the vault account lost the game and the row was re-filed under the
+  // other player. Deleting them removes the misfiled copies; the affected
+  // accounts then re-fetch their own rows on the next refresh, now that a
+  // shared game can be held by both. Nothing is lost that Riot cannot re-serve.
+  (d) => {
+    d.exec(`DELETE FROM match_cache WHERE account_id LIKE 'player:%';`);
+  },
 ];
 
 function runMigrations() {
@@ -409,6 +421,25 @@ function hasMatchForAccount(matchId, accountId) {
   return !!getDb()
     .prepare('SELECT 1 FROM match_cache WHERE match_id = ? AND account_id = ?')
     .get(matchId, accountId);
+}
+
+/**
+ * Removes rows filed under an account that record somebody else's game.
+ *
+ * A row is one player's view of a match, so `account_id` and `puuid` must agree.
+ * They could disagree while match_cache was keyed by match_id alone: caching a
+ * shared game for a second player rewrote the first player's row in place. The
+ * key is fixed, but caches written before it was are still out there, and a
+ * single wrong row means someone else's champion and KDA showing up in your
+ * history. Cheap to check on every load, and the rows come back correctly on
+ * the next refresh.
+ */
+function purgeForeignMatchRows(accountId, puuid) {
+  if (!accountId || !puuid) return 0;
+  const result = getDb()
+    .prepare('DELETE FROM match_cache WHERE account_id = ? AND puuid IS NOT NULL AND puuid <> ?')
+    .run(accountId, puuid);
+  return result.changes;
 }
 
 /** Every cached perspective on one match, one row per account holding it. */
@@ -602,6 +633,7 @@ module.exports = {
   getMatchCache,
   getMatchCacheRow,
   getMatchCacheRows,
+  purgeForeignMatchRows,
   hasMatchInCache,
   hasMatchForAccount,
   updateMatchDiffs,

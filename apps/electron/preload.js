@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   riotGetTopMastery: (args) => ipcRenderer.invoke('riot:get-top-mastery', args),
   riotGetMatchHistory: (args) => ipcRenderer.invoke('riot:get-match-history', args),
   riotGetCachedMatches: (args) => ipcRenderer.invoke('riot:get-cached-matches', args),
+  riotPurgeForeignMatches: (args) => ipcRenderer.invoke('riot:purge-foreign-matches', args),
   riotValidateKey: (args) => ipcRenderer.invoke('riot:validate-key', args),
   riotSaveKey: (args) => ipcRenderer.invoke('riot:save-key', args),
   riotGetDDragonVersion: () => ipcRenderer.invoke('riot:get-ddragon-version'),

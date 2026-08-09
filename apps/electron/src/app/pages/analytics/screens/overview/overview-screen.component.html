@@ -155,17 +155,33 @@
       <h3>Match History</h3>
       <span class="section-note">
         {{ matches().length }} {{ matches().length === 1 ? 'Game' : 'Games' }}
+        <!-- The refresh runs behind an already-usable page, so it says so here
+             rather than holding a spinner over the whole screen. -->
+        @if (data.refreshing()) {
+          <span class="refreshing">
+            <span class="refreshing-dot" aria-hidden="true"></span>
+            Fetching from Riot…
+          </span>
+        }
       </span>
     </header>
 
     <app-backfill-control />
 
     @if (matches().length === 0) {
-      <app-empty-state
-        icon="inbox"
-        title="No matches in this queue"
-        hint="Match history is fetched from Riot when this account is opened. If nothing appears at all, check your API key in Settings."
-      />
+      @if (data.refreshing()) {
+        <app-empty-state
+          icon="inbox"
+          title="Fetching match history…"
+          hint="Riot is rate limited to under one request a second, so a profile we have never seen can take a couple of minutes to fill in. You can keep browsing while it runs."
+        />
+      } @else {
+        <app-empty-state
+          icon="inbox"
+          title="No matches in this queue"
+          hint="Match history is fetched from Riot when this account is opened. If nothing appears at all, check your API key in Settings."
+        />
+      }
     } @else {
       <div class="match-list">
         @for (match of visibleMatches(); track match.match_id) {

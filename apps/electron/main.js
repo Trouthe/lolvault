@@ -1551,6 +1551,15 @@ ipcMain.handle('riot:get-match-history', async (_event, { accountId, puuid, plat
   }
 });
 
+ipcMain.handle('riot:purge-foreign-matches', (_event, { accountId, puuid }) => {
+  try {
+    return { removed: db.purgeForeignMatchRows(accountId, puuid) };
+  } catch (err) {
+    console.error('riot:purge-foreign-matches error:', err?.message);
+    return { removed: 0 };
+  }
+});
+
 ipcMain.handle('riot:get-cached-matches', (_event, { accountId, limit }) => {
   try {
     return db.getMatchCache(accountId, limit);
