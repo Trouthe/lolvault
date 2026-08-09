@@ -47,6 +47,26 @@ export function externalCacheKey(puuid: string): string {
 }
 
 /**
+ * Runs an optional main-process call, swallowing the case where the handler is
+ * not there.
+ *
+ * The main process is a separate process with its own lifetime: a dev rebuild
+ * reloads the renderer while `main.js` keeps running the code it started with,
+ * and a packaged build can be older still. A renderer that hard-depends on a
+ * freshly added IPC channel therefore fails against a main process that has
+ * never heard of it. Housekeeping calls opt out of that — better to skip the
+ * cleanup than to take the page down with "No handler registered".
+ */
+async function optionalIpc<T>(call: () => Promise<T>): Promise<T | null> {
+  try {
+    return await call();
+  } catch (err) {
+    console.warn('[analytics] optional IPC unavailable:', err);
+    return null;
+  }
+}
+
+/**
  * Loads and caches everything the analytics screens read for one account.
  *
  * Timelines and match detail are fetched lazily (on card expand) rather than up
@@ -257,8 +277,9 @@ export class AnalyticsDataService {
   ): Promise<void> {
     // Any row filed under this account but belonging to someone else is not
     // ours to show. Rows like that should no longer be created, but a cache
-    // written before the key was fixed can still hold them.
-    await window.electronAPI.riotPurgeForeignMatches({ accountId, puuid });
+    // written before the key was fixed can still hold them. Housekeeping, so it
+    // is skipped rather than fatal if the running main process predates it.
+    await optionalIpc(() => window.electronAPI.riotPurgeForeignMatches({ accountId, puuid }));
     if (!this.isCurrent(token)) return;
 
     const cached = await window.electronAPI.riotGetCachedMatches({
@@ -425,20 +446,32 @@ export class AnalyticsDataService {
     if (!puuid || !accountId || this.yearHistoryRunning()) return;
 
     if (!this.yearHistoryListenerBound) {
-      window.electronAPI.onYearHistoryProgress((progress) => {
-        if (progress.accountId === accountId) this.yearHistory.set(progress);
-      });
+      // Subscribing to a channel the running main process does not publish is
+      // harmless; invoking a handler it lacks is not.
+      void optionalIpc(async () =>
+        window.electronAPI.onYearHistoryProgress((progress) => {
+          if (progress.accountId === accountId) this.yearHistory.set(progress);
+        })
+      );
       this.yearHistoryListenerBound = true;
     }
 
     this.yearHistoryRunning.set(true);
     try {
-      await window.electronAPI.riotFetchYearHistory({
-        accountId,
-        puuid,
-        platform: this.platform(),
-        year,
-      });
+      const result = await optionalIpc(() =>
+        window.electronAPI.riotFetchYearHistory({
+          accountId,
+          puuid,
+          platform: this.platform(),
+          year,
+        })
+      );
+      if (result === null) {
+        this.errorMessage.set(
+          'Loading a full year needs a newer app version than the one currently running. Restart LoL Vault and try again.'
+        );
+        return;
+      }
       const refreshed = await window.electronAPI.riotGetCachedMatches({
         accountId,
         limit: MATCH_CACHE_LIMIT,
@@ -452,7 +485,9 @@ export class AnalyticsDataService {
 
   async cancelYearHistory(): Promise<void> {
     if (!this.cacheKey) return;
-    await window.electronAPI.riotCancelYearHistory({ accountId: this.cacheKey });
+    await optionalIpc(() =>
+      window.electronAPI.riotCancelYearHistory({ accountId: this.cacheKey })
+    );
   }
 
   async cancelBackfill(): Promise<void> {
