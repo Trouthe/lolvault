@@ -9,8 +9,11 @@ import {
 } from '../../../../../types/electron';
 import { RiotApiService } from '../../../../services/riot-api.service';
 import { ChampionCatalogService } from '../../../../services/champion-catalog.service';
+import { GameDataService } from '../../../../services/game-data.service';
 import { ChartThemeService } from '../../services/chart-theme.service';
+import { MatchScoreService, fromDetail } from '../../services/match-score.service';
 import { TF } from '../../models/analytics.types';
+import { OBJECTIVE_ROWS, objectiveIcon, roleIcon } from '../../services/game-assets';
 
 interface TeamView {
   teamId: number;
@@ -18,7 +21,9 @@ interface TeamView {
   players: MatchDetailParticipant[];
   bans: number[];
   kills: number;
+  deaths: number;
   gold: number;
+  damage: number;
   objectives: Record<string, { first?: boolean; kills?: number }>;
 }
 
@@ -32,7 +37,9 @@ interface TeamView {
 export class MatchOverviewTabComponent {
   private riotApi = inject(RiotApiService);
   private champions = inject(ChampionCatalogService);
+  private gameData = inject(GameDataService);
   private chartTheme = inject(ChartThemeService);
+  private scorer = inject(MatchScoreService);
 
   match = input.required<MatchCacheRow>();
   detail = input.required<MatchDetail>();
@@ -40,6 +47,8 @@ export class MatchOverviewTabComponent {
 
   /** Gold graph is revealed on hover/focus of the gold bar, per the spec. */
   readonly showGoldGraph = signal(false);
+
+  readonly objectiveRows = OBJECTIVE_ROWS;
 
   readonly teams = computed<TeamView[]>(() => {
     const detail = this.detail();
@@ -51,7 +60,9 @@ export class MatchOverviewTabComponent {
         players,
         bans: team.bans.map((b) => b.championId).filter((id) => id > 0),
         kills: players.reduce((n, p) => n + p.kills, 0),
+        deaths: players.reduce((n, p) => n + p.deaths, 0),
         gold: players.reduce((n, p) => n + p.goldEarned, 0),
+        damage: players.reduce((n, p) => n + p.totalDamageDealtToChampions, 0),
         objectives: team.objectives ?? {},
       };
     });
@@ -74,26 +85,32 @@ export class MatchOverviewTabComponent {
     return (teams[0].gold / total) * 100;
   });
 
-  /** Objectives shown in the centre column, in the order they matter. */
-  readonly objectiveKeys = ['baron', 'dragon', 'riftHerald', 'tower', 'inhibitor'] as const;
+  /** Per-match ratings, so the scoreboard can flag MVP and show placements. */
+  private readonly scores = computed(() => {
+    const detail = this.detail();
+    return this.scorer.score(
+      detail.participants.map(fromDetail),
+      detail.gameDuration ?? this.match().duration_seconds ?? 0,
+      `det:${detail.matchId}`
+    );
+  });
 
-  readonly objectiveLabels: Record<string, string> = {
-    baron: 'Baron',
-    dragon: 'Dragon',
-    riftHerald: 'Herald',
-    tower: 'Towers',
-    inhibitor: 'Inhibs',
-  };
+  /** Highest single damage figure, for scaling the per-player damage bars. */
+  readonly maxDamage = computed(() =>
+    Math.max(...this.detail().participants.map((p) => p.totalDamageDealtToChampions), 1)
+  );
 
-  /** Gold lead over time — positive means the account holder's team is ahead. */
+  // ── Gold lead ──────────────────────────────────────────────────────────────
+
   readonly goldLeadSeries = computed(() => {
     const tl = this.timeline();
     const myTeamId = this.match().team_id;
     if (!tl?.frames?.length || myTeamId === null || myTeamId === undefined) return null;
 
-    const detail = this.detail();
     const allyIds = new Set(
-      detail.participants.filter((p) => p.teamId === myTeamId).map((p) => p.participantId)
+      this.detail()
+        .participants.filter((p) => p.teamId === myTeamId)
+        .map((p) => p.participantId)
     );
     if (!allyIds.size) return null;
 
@@ -113,30 +130,19 @@ export class MatchOverviewTabComponent {
 
   readonly goldChartOptions = computed(() => {
     this.chartTheme.revision();
-    const base = this.chartTheme.baseOptions(150);
+    const base = this.chartTheme.baseOptions(160);
     const palette = this.chartTheme.palette();
+    const frames = this.timeline()?.frames.length ?? 0;
 
     return {
       ...base,
-      chart: { ...base.chart, type: 'area' as const },
-      colors: [palette.blueTeam],
-      stroke: { curve: 'straight' as const, width: 2 },
-      fill: {
-        type: 'gradient' as const,
-        gradient: {
-          shadeIntensity: 1,
-          type: 'vertical' as const,
-          // Above the axis = ahead (blue), below = behind (red).
-          colorStops: [
-            { offset: 0, color: palette.blueTeam, opacity: 0.42 },
-            { offset: 50, color: palette.blueTeam, opacity: 0.04 },
-            { offset: 50, color: palette.redTeam, opacity: 0.04 },
-            { offset: 100, color: palette.redTeam, opacity: 0.42 },
-          ],
-        },
-      },
+      chart: { ...base.chart, type: 'line' as const },
+      colors: [palette.gold],
+      stroke: { curve: 'smooth' as const, width: 2 },
       xaxis: {
         type: 'numeric' as const,
+        // At most four labels, so a 20-minute game doesn't print every minute.
+        tickAmount: Math.min(4, Math.max(2, frames - 1)),
         labels: {
           style: this.chartTheme.axisLabelStyle(),
           formatter: (val: string) => `${Math.round(Number(val))}m`,
@@ -171,6 +177,8 @@ export class MatchOverviewTabComponent {
     };
   });
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
   championIcon(name: string): string {
     return this.riotApi.getChampionIconUrl(name);
   }
@@ -188,8 +196,40 @@ export class MatchOverviewTabComponent {
     return this.riotApi.getItemIconUrl(id);
   }
 
+  itemName(id: number): string {
+    return this.gameData.getItemName(id);
+  }
+
+  spellIcon(id: number): string {
+    return this.gameData.getSummonerSpellIconUrl(id);
+  }
+
+  spellName(id: number): string {
+    return this.gameData.getSummonerSpell(id)?.name ?? '';
+  }
+
+  roleIconFor(position: string): string {
+    return roleIcon(position);
+  }
+
+  /** Official objective art, coloured for the team that took it. */
+  objectiveIconFor(kind: string, teamId: number): string {
+    return objectiveIcon(
+      kind as 'baron' | 'dragon' | 'herald' | 'tower' | 'inhibitor',
+      teamId === 200 ? 200 : 100
+    );
+  }
+
   isSelf(participant: MatchDetailParticipant): boolean {
     return participant.puuid === this.match().puuid;
+  }
+
+  isMvp(participant: MatchDetailParticipant): boolean {
+    return this.scores().byPuuid[participant.puuid]?.isMvp ?? false;
+  }
+
+  scoreOf(participant: MatchDetailParticipant): number {
+    return this.scores().byPuuid[participant.puuid]?.score ?? 0;
   }
 
   kda(p: MatchDetailParticipant): number {
@@ -198,6 +238,20 @@ export class MatchOverviewTabComponent {
 
   csOf(p: MatchDetailParticipant): number {
     return p.totalMinionsKilled + p.neutralMinionsKilled;
+  }
+
+  csPerMin(p: MatchDetailParticipant): number {
+    const minutes = (this.detail().gameDuration ?? this.match().duration_seconds ?? 0) / 60;
+    return minutes > 0 ? this.csOf(p) / minutes : 0;
+  }
+
+  killParticipation(p: MatchDetailParticipant, team: TeamView): number {
+    if (!team.kills) return 0;
+    return ((p.kills + p.assists) / team.kills) * 100;
+  }
+
+  damageShare(p: MatchDetailParticipant): number {
+    return (p.totalDamageDealtToChampions / this.maxDamage()) * 100;
   }
 
   objectiveCount(team: TeamView, key: string): number {

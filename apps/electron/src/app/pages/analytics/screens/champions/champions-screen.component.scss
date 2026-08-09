@@ -51,19 +51,44 @@
   }
 }
 
-// Wide tables scroll inside their own container rather than the page.
+// Scrolls inside its own container rather than the page, and only when the
+// viewport is genuinely too narrow for the table's natural minimum.
 .table-scroll {
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid var(--border-color);
   background: var(--card);
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--outline) transparent;
+}
+
+.table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--outline);
+  border: 2px solid var(--card);
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-text);
 }
 
 .pool {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 860px;
+  // Well under a typical content width, so the table fits without scrolling
+  // in normal use and only scrolls on genuinely narrow windows.
+  min-width: 680px;
+  table-layout: fixed;
 }
 
 thead th {
@@ -113,8 +138,9 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+// Fixed layout: explicit widths keep every column visible without scrolling.
 .col-rank {
-  width: 34px;
+  width: 32px;
   text-align: left !important;
   color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
@@ -122,11 +148,22 @@ tbody tr:last-child td {
 
 .col-champ {
   text-align: left !important;
-  min-width: 170px;
+  width: 24%;
+  min-width: 140px;
 }
 
 .col-expand {
-  width: 34px;
+  width: 32px;
+}
+
+.penta {
+  color: var(--secondary-text);
+}
+
+// A pentakill is worth calling out.
+.penta.has-penta {
+  color: #e0a33c;
+  font-weight: 700;
 }
 
 .row-champ {
@@ -239,7 +276,6 @@ tbody tr:last-child td {
 }
 
 .chevron {
-  display: inline-block;
   color: var(--secondary-text);
   transition: transform 0.18s ease;
 

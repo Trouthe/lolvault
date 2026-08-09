@@ -1,25 +1,53 @@
 <div class="damage-tab">
   <header class="controls">
-    <app-segmented-toggle
-      [options]="directionOptions"
-      [value]="direction()"
-      label="Damage direction"
-      compact
-      (valueChange)="direction.set($event)"
-    />
-    <app-segmented-toggle
-      [options]="typeOptions()"
-      [value]="damageType()"
-      label="Damage type"
-      compact
-      (valueChange)="damageType.set($event)"
-    />
+    <!-- Dealt / taken: sword and shield -->
+    <div class="toggle" role="tablist" aria-label="Damage direction">
+      @for (opt of directionOptions; track opt.value) {
+        <button
+          type="button"
+          role="tab"
+          class="toggle-btn"
+          [class.active]="direction() === opt.value"
+          [attr.aria-selected]="direction() === opt.value"
+          (click)="direction.set(opt.value)"
+        >
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path [attr.d]="opt.icon" />
+          </svg>
+          <span>{{ opt.label }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Damage type: icon + name -->
+    <div class="toggle" role="tablist" aria-label="Damage type">
+      @for (opt of typeOptions; track opt.value) {
+        <button
+          type="button"
+          role="tab"
+          class="toggle-btn"
+          [class.active]="damageType() === opt.value"
+          [attr.aria-selected]="damageType() === opt.value"
+          (click)="damageType.set(opt.value)"
+        >
+          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" [style.color]="opt.color">
+            <path [attr.d]="opt.icon" />
+          </svg>
+          <span>{{ opt.label }}</span>
+        </button>
+      }
+    </div>
   </header>
 
-  <!-- ── Per-minute chart ─────────────────────────────────────────────────── -->
+  <!-- ── Cumulative curve ─────────────────────────────────────────────────── -->
   <section class="chart-block">
     <div class="chart-head">
-      <h4>{{ directionLabel() }} per minute</h4>
+      <h4>
+        <svg class="glyph title-glyph" viewBox="0 0 24 24" aria-hidden="true">
+          <path [attr.d]="activeTypeIcon()" />
+        </svg>
+        {{ directionLabel() }} — running total
+      </h4>
       @if (typeNotChartable()) {
         <span class="chart-note">
           Showing total — the per-minute split isn't recorded for damage taken
@@ -33,6 +61,7 @@
         [chart]="chartOptions().chart"
         [colors]="chartOptions().colors"
         [stroke]="chartOptions().stroke"
+        [fill]="chartOptions().fill"
         [xaxis]="chartOptions().xaxis"
         [yaxis]="chartOptions().yaxis"
         [grid]="chartOptions().grid"
@@ -44,7 +73,7 @@
     } @else {
       <app-empty-state
         inline
-        icon="📉"
+        icon="chart-line"
         title="No per-minute damage available"
         hint="This chart needs the match timeline. It is fetched when a card is opened — if it stays empty, Riot may not have timeline data for this game."
       />

@@ -1,32 +1,22 @@
+// Card colour carries the result — no left stripe, no separate accent bar.
 .card {
-  border-radius: 11px;
+  position: relative;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
   background: var(--card);
   overflow: hidden;
-  position: relative;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 
-  // Result stripe down the left edge.
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--secondary-text);
+  &.win {
+    background: color-mix(in oklch, #2f6fd0 14%, var(--card));
+    border-color: color-mix(in oklch, #2f6fd0 30%, var(--border-color));
   }
 
-  &.win::before {
-    background: #2f6fd0;
-  }
-
-  &.loss::before {
-    background: #d6455d;
-  }
-
-  &.remake::before {
-    background: var(--outline);
+  &.loss {
+    background: color-mix(in oklch, #d6455d 13%, var(--card));
+    border-color: color-mix(in oklch, #d6455d 28%, var(--border-color));
   }
 
   &.is-open {
@@ -34,45 +24,93 @@
   }
 }
 
+// ── MVP treatment ────────────────────────────────────────────────────────────
+// A 2px spectrum border around the whole card, drawn as a gradient backdrop
+// with the card content inset over it so the animation runs on the edge itself.
+.card.mvp {
+  border-color: transparent;
+  background:
+    linear-gradient(color-mix(in oklch, #b06fd6 10%, var(--card)), color-mix(in oklch, #b06fd6 10%, var(--card)))
+      padding-box,
+    linear-gradient(100deg, #ff5f6d, #ffc371, #47e08d, #38b6ff, #b06fd6, #ff5f6d) border-box;
+  background-size:
+    auto,
+    300% 100%;
+  border: 2px solid transparent;
+  animation: mvp-sweep 3.4s linear infinite;
+}
+
+@keyframes mvp-sweep {
+  to {
+    background-position:
+      0 0,
+      -300% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.mvp {
+    animation: none;
+    background-position:
+      0 0,
+      40% 0;
+  }
+}
+
+.badge-mvp,
+.badge-ace {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  z-index: 3;
+  padding: 1px 9px 2px;
+  border-radius: 0 0 6px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #14110f;
+}
+
+.badge-mvp {
+  background: linear-gradient(100deg, #ff5f6d, #ffc371, #47e08d, #38b6ff, #b06fd6, #ff5f6d);
+  background-size: 300% 100%;
+  animation: badge-sweep 3.4s linear infinite;
+}
+
+@keyframes badge-sweep {
+  to {
+    background-position: -300% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-mvp {
+    animation: none;
+    background-position: 40% 0;
+  }
+}
+
+.badge-ace {
+  background: var(--outline);
+  color: var(--primary-text);
+}
+
 // ── Summary row ──────────────────────────────────────────────────────────────
+// Fixed track widths with `minmax(0, …)` so cells shrink rather than wrapping.
 
 .summary {
   display: grid;
   grid-template-columns:
-    minmax(84px, 0.9fr)
-    minmax(120px, 1.1fr)
-    minmax(74px, 0.7fr)
-    minmax(104px, 1fr)
-    minmax(150px, 1fr)
-    minmax(150px, 1.1fr)
-    minmax(58px, auto);
+    minmax(0, 0.95fr)
+    minmax(0, 1fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.92fr)
+    minmax(0, 1.15fr)
+    46px;
   align-items: center;
   gap: 12px;
-  padding: 9px 12px 9px 15px;
-  cursor: pointer;
-  outline: none;
-  transition: background 0.12s ease;
-
-  &:hover,
-  &:focus-visible {
-    background: var(--muted);
-  }
-}
-
-@media (max-width: 1250px) {
-  .summary {
-    grid-template-columns:
-      minmax(80px, 0.9fr)
-      minmax(112px, 1.1fr)
-      minmax(70px, 0.7fr)
-      minmax(96px, 1fr)
-      minmax(140px, 1fr)
-      minmax(52px, auto);
-  }
-
-  .col-teams {
-    display: none;
-  }
+  padding: 11px 12px;
 }
 
 .col {
@@ -82,78 +120,127 @@
   min-width: 0;
 }
 
-// Meta
-.queue {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--primary-text);
-}
-
-.ago,
-.duration {
-  font-size: 10.5px;
-  color: var(--secondary-text);
-}
-
+// Meta column
 .outcome {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
-}
-
-.win .outcome {
-  color: #4a8fe0;
-}
-
-.loss .outcome {
-  color: #e0697c;
-}
-
-.remake .outcome {
-  color: var(--secondary-text);
-}
-
-// Champion
-.col-champ {
-  flex-direction: row;
-  align-items: center;
-  gap: 9px;
-}
-
-.champ-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.champ-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.champ-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--primary-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.champ-role {
-  font-size: 10px;
-  color: var(--secondary-text);
-  text-transform: capitalize;
+.win .outcome {
+  color: #6ba5ee;
 }
 
-// KDA
+.loss .outcome {
+  color: #ed8a99;
+}
+
+.remake .outcome,
+.mvp .outcome {
+  color: var(--primary-text);
+}
+
+.win.mvp .outcome {
+  color: #6ba5ee;
+}
+
+.lp {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary-text);
+  white-space: nowrap;
+
+  &.gain {
+    color: #2f9e6f;
+  }
+
+  &.drop {
+    color: var(--danger);
+  }
+}
+
+.lp-none {
+  opacity: 0.5;
+  font-weight: 600;
+}
+
+.queue,
+.ago {
+  font-size: 10.5px;
+  color: var(--secondary-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Champion column
+.col-champ {
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+}
+
+.champ-portrait {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.champ-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+
+.champ-level {
+  position: absolute;
+  bottom: -2px;
+  right: -3px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  color: var(--primary-text);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.loadout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.loadout-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--muted);
+  display: block;
+}
+
+.loadout-icon.rune {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 70%, transparent);
+}
+
+.loadout-icon.rune.keystone {
+  background: color-mix(in oklch, var(--outline) 40%, transparent);
+}
+
+// KDA column
 .kda-line {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--primary-text);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 
   b {
     font-weight: 700;
@@ -164,44 +251,72 @@
   }
 }
 
-.kda-ratio {
+.kda-ratio,
+.kda-kp {
   font-size: 10.5px;
   color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-// Stats
+.kda-kp {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+// Stats column
 .stat {
   font-size: 11px;
   color: var(--primary-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &.muted {
     font-size: 10.5px;
     color: var(--secondary-text);
   }
+
+  &.role {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: var(--secondary-text);
+  }
 }
 
-// Items
+.role-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .role-icon {
+  filter: invert(1);
+}
+
+// Items — two fixed rows of four, never wraps beyond that.
 .col-items {
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 22px);
   gap: 3px;
-  align-content: center;
+  justify-content: start;
 }
 
 .item {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   border-radius: 5px;
   object-fit: cover;
-  background: var(--muted);
+  background: color-mix(in oklch, var(--muted) 80%, transparent);
   display: block;
 }
 
 .item-empty {
-  background: color-mix(in oklch, var(--muted) 60%, transparent);
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
 }
 
 .trinket {
@@ -211,7 +326,7 @@
 // Teams
 .col-teams {
   flex-direction: row;
-  gap: 10px;
+  gap: 9px;
 }
 
 .team {
@@ -253,33 +368,89 @@
   font-weight: 700;
 }
 
-// LP + chevron
-.col-lp {
-  flex-direction: row;
+// ── Expander ─────────────────────────────────────────────────────────────────
+// Sits on a stronger tint of whatever the card's own colour is.
+
+.expander {
+  display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 62px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--primary-text) 8%, transparent);
+  color: var(--secondary-text);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
-.lp {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--danger);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.win .expander {
+  background: color-mix(in oklch, #2f6fd0 34%, transparent);
+  color: #cfe1fb;
+}
 
-  &.gain {
-    color: #2f9e6f;
+.loss .expander {
+  background: color-mix(in oklch, #d6455d 32%, transparent);
+  color: #f8d8dd;
+}
+
+.expander:hover {
+  color: var(--primary-text);
+}
+
+.win .expander:hover {
+  background: color-mix(in oklch, #2f6fd0 50%, transparent);
+  color: #fff;
+}
+
+.loss .expander:hover {
+  background: color-mix(in oklch, #d6455d 48%, transparent);
+  color: #fff;
+}
+
+.expander-icon {
+  transition: transform 0.2s ease;
+}
+
+.expander-icon.open {
+  transform: rotate(180deg);
+}
+
+// ── Responsive: drop columns rather than wrapping them ───────────────────────
+
+@media (max-width: 1400px) {
+  .summary {
+    grid-template-columns:
+      minmax(0, 0.95fr)
+      minmax(0, 1fr)
+      minmax(0, 0.72fr)
+      minmax(0, 0.8fr)
+      minmax(0, 0.92fr)
+      46px;
+  }
+
+  .col-teams {
+    display: none;
   }
 }
 
-.chevron {
-  color: var(--secondary-text);
-  font-size: 14px;
-  transition: transform 0.18s ease;
+@media (max-width: 1050px) {
+  .summary {
+    grid-template-columns:
+      minmax(0, 0.95fr)
+      minmax(0, 1fr)
+      minmax(0, 0.72fr)
+      minmax(0, 0.92fr)
+      46px;
+  }
 
-  &.open {
-    transform: rotate(180deg);
+  .col-stats {
+    display: none;
   }
 }
 
@@ -291,7 +462,7 @@
   gap: 12px;
   padding: 12px 14px 16px;
   border-top: 1px solid var(--border-color);
-  background: color-mix(in oklch, var(--muted) 45%, transparent);
+  background: color-mix(in oklch, var(--background) 62%, transparent);
 }
 
 .detail-tabs {

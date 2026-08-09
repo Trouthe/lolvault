@@ -20,7 +20,7 @@ import { EmptyStateComponent } from '../../widgets/empty-state.component';
       </header>
 
       <app-empty-state
-        icon="📊"
+        icon="bar-chart"
         title="Deep analytics is not built yet"
         hint="Overview and Champions are live and read real match data. This screen is reserved for
               longer-horizon trends — tilt and session analysis, time-of-day performance, rank

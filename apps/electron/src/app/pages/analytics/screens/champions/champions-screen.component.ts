@@ -4,6 +4,7 @@ import { AnalyticsDataService } from '../../services/analytics-data.service';
 import { MatchAggregationService } from '../../services/match-aggregation.service';
 import { RiotApiService } from '../../../../services/riot-api.service';
 import { EmptyStateComponent } from '../../widgets/empty-state.component';
+import { IconComponent } from '../../widgets/icon.component';
 import {
   SegmentOption,
   SegmentedToggleComponent,
@@ -17,7 +18,7 @@ type SortColumn =
   | 'damagePerMin'
   | 'damageTakenPerMin'
   | 'csPerMin'
-  | 'goldDiff15';
+  | 'pentaKills';
 
 /** A matchup row: how this champion performed against a specific opponent. */
 interface MatchupRow {
@@ -25,13 +26,12 @@ interface MatchupRow {
   games: number;
   wins: number;
   winRate: number;
-  goldDiff15: number | null;
 }
 
 @Component({
   selector: 'app-champions-screen',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, EmptyStateComponent, SegmentedToggleComponent],
+  imports: [CommonModule, EmptyStateComponent, SegmentedToggleComponent, IconComponent],
   templateUrl: './champions-screen.component.html',
   styleUrl: './champions-screen.component.scss',
 })
@@ -65,16 +65,7 @@ export class ChampionsScreenComponent {
     const col = this.sortColumn();
     const dir = this.sortDesc() ? -1 : 1;
 
-    return [...stats].sort((a, b) => {
-      const av = a[col];
-      const bv = b[col];
-      // Champions without timeline-derived gold diff sort last either way,
-      // rather than being treated as a real 0.
-      if (av === null && bv === null) return 0;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      return (av - bv) * dir;
-    });
+    return [...stats].sort((a, b) => (a[col] - b[col]) * dir);
   });
 
   /** Opponent breakdown for one champion, from the cached participant summaries. */
@@ -85,7 +76,7 @@ export class ChampionsScreenComponent {
     const selfPuuid = this.data.puuid();
     if (!selfPuuid) return [];
 
-    const map = new Map<string, { games: number; wins: number; diffSum: number; diffN: number }>();
+    const map = new Map<string, { games: number; wins: number }>();
 
     for (const m of this.filteredMatches()) {
       if (m.champion !== champion) continue;
@@ -98,13 +89,9 @@ export class ChampionsScreenComponent {
       );
       if (!opponent?.championName) continue;
 
-      const e = map.get(opponent.championName) ?? { games: 0, wins: 0, diffSum: 0, diffN: 0 };
+      const e = map.get(opponent.championName) ?? { games: 0, wins: 0 };
       e.games++;
       if (m.win === 1) e.wins++;
-      if (m.gold_diff_15 !== null && m.gold_diff_15 !== undefined) {
-        e.diffSum += m.gold_diff_15;
-        e.diffN++;
-      }
       map.set(opponent.championName, e);
     }
 
@@ -114,7 +101,6 @@ export class ChampionsScreenComponent {
         games: e.games,
         wins: e.wins,
         winRate: (e.wins / e.games) * 100,
-        goldDiff15: e.diffN > 0 ? e.diffSum / e.diffN : null,
       }))
       .sort((a, b) => b.games - a.games);
   });
@@ -140,13 +126,6 @@ export class ChampionsScreenComponent {
 
   championIcon(name: string): string {
     return this.riotApi.getChampionIconUrl(name);
-  }
-
-  /** Formats a gold diff with an explicit sign; em dash when unavailable. */
-  formatDiff(value: number | null): string {
-    if (value === null) return '—';
-    const rounded = Math.round(value);
-    return rounded > 0 ? `+${rounded}` : `${rounded}`;
   }
 
   trackChampion(_index: number, row: ChampionStatRow): string {

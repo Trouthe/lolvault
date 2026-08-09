@@ -29,14 +29,14 @@
 // ── Team totals ──────────────────────────────────────────────────────────────
 
 .team-rows,
-.rows {
+.fixed-stats {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
 .team-row,
-.row {
+.fixed-stat {
   display: grid;
   grid-template-columns: minmax(58px, auto) minmax(0, 1fr) minmax(58px, auto);
   align-items: center;
@@ -44,7 +44,7 @@
 }
 
 .team-mid,
-.row-mid {
+.fixed-mid {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -52,7 +52,7 @@
 }
 
 .team-label,
-.row-label {
+.fixed-label {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -61,7 +61,7 @@
 }
 
 .team-track,
-.row-track {
+.fixed-track {
   display: flex;
   height: 6px;
   border-radius: 999px;
@@ -70,7 +70,7 @@
 }
 
 .team-fill,
-.row-fill {
+.fixed-fill {
   height: 100%;
   transition: width 0.25s ease;
 
@@ -87,7 +87,7 @@
 }
 
 .team-value,
-.row-value {
+.fixed-value {
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -114,8 +114,33 @@
 }
 
 // The winning side of each metric is emphasised.
-.row-value.wins {
+.fixed-value.wins {
   color: var(--primary-text);
+}
+
+// ── Metric graph ─────────────────────────────────────────────────────────────
+
+.graph {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.graph-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--secondary-text);
 }
 
 // ── Head to head ─────────────────────────────────────────────────────────────

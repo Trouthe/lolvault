@@ -20,6 +20,13 @@ interface PerksPayload {
   }[];
 }
 
+/** Summoner spells taken, resolved to names and icons. */
+interface SpellView {
+  id: number;
+  name: string;
+  icon: string;
+}
+
 /** One minute-bucket of item purchases. */
 interface BuildStep {
   minute: number;
@@ -145,7 +152,7 @@ export class MatchBuildTabComponent {
   readonly finalItems = computed(() => this.activePlayer()?.items?.filter((i) => i > 0) ?? []);
 
   /** The two summoner spells taken, resolved to names and icons. */
-  readonly summonerSpells = computed(() => {
+  readonly summonerSpells = computed<SpellView[]>(() => {
     const p = this.activePlayer();
     if (!p) return [];
     return [p.summoner1Id, p.summoner2Id]
@@ -159,7 +166,8 @@ export class MatchBuildTabComponent {
   });
 
   /**
-   * Rune selections split into the primary tree (keystone first) and secondary.
+   * Rune page laid out the way the client shows it: primary tree with the
+   * keystone leading, then the secondary tree's picks and stat shards.
    * Returns null when the match record carries no perks.
    */
   readonly runes = computed(() => {
@@ -179,18 +187,35 @@ export class MatchBuildTabComponent {
     const primary = styles.find((s) => s.description === 'primaryStyle') ?? styles[0];
     const secondary = styles.find((s) => s.description === 'subStyle') ?? styles[1];
 
-    const primaryRunes = (primary?.selections ?? []).map((s) => resolve(s.perk));
+    const primarySelections = (primary?.selections ?? []).map((s) => resolve(s.perk));
     const secondaryRunes = (secondary?.selections ?? []).map((s) => resolve(s.perk));
 
-    if (!primaryRunes.length && !secondaryRunes.length) return null;
+    if (!primarySelections.length && !secondaryRunes.length) return null;
+
+    // Stat shards are plain numbers with no rune entry, so they render as
+    // labelled pips rather than icons.
+    const shards = Object.values(perks?.statPerks ?? {}).filter((v) => typeof v === 'number');
 
     return {
       primaryTree: primary?.style ? resolve(primary.style) : null,
       secondaryTree: secondary?.style ? resolve(secondary.style) : null,
-      primary: primaryRunes,
+      keystone: primarySelections[0] ?? null,
+      primaryMinor: primarySelections.slice(1),
       secondary: secondaryRunes,
+      shardCount: shards.length,
     };
   });
+
+  /** Ability icons for the active champion, indexed by skill slot (1-4). */
+  readonly abilityIcons = computed<string[]>(() => {
+    const champion = this.activePlayer()?.championName;
+    if (!champion) return ['', '', '', ''];
+    return [1, 2, 3, 4].map((slot) => this.gameData.getAbilityIconUrl(champion, slot));
+  });
+
+  abilityIcon(slotIndex: number): string {
+    return this.abilityIcons()[slotIndex] ?? '';
+  }
 
   selectPlayer(pid: number): void {
     this.selectedPid.set(pid);

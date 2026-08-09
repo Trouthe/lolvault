@@ -3,83 +3,123 @@
   [class.win]="won() && !remake()"
   [class.loss]="!won() && !remake()"
   [class.remake]="remake()"
+  [class.mvp]="isMvp()"
   [class.is-open]="expanded()"
 >
+  @if (isMvp()) {
+    <span class="badge-mvp" title="Top performance on the winning team">MVP</span>
+  } @else if (isAce()) {
+    <span class="badge-ace" title="Top performance on the losing team">ACE</span>
+  }
+
   <!-- ── Collapsed summary row ────────────────────────────────────────────── -->
-  <div
-    class="summary"
-    role="button"
-    tabindex="0"
-    [attr.aria-expanded]="expanded()"
-    (click)="onToggle()"
-    (keydown.enter)="onToggle()"
-    (keydown.space)="onToggle(); $event.preventDefault()"
-  >
+  <div class="summary">
+    <!-- Outcome / queue / LP / time -->
     <div class="col col-meta">
-      <span class="queue">{{ queueName() }}</span>
-      <span class="ago">{{ timeAgo() }}</span>
       <span class="outcome">{{ outcomeLabel() }}</span>
-      <span class="duration">{{ duration() }}</span>
+      <span class="lp" [class.gain]="(match().lp_delta ?? 0) > 0" [class.drop]="(match().lp_delta ?? 0) < 0">
+        @if (match().lp_delta !== null) {
+          {{ (match().lp_delta ?? 0) > 0 ? '+' : '' }}{{ match().lp_delta }} LP
+        } @else {
+          <span class="lp-none" title="No LP recorded for this game">No LP</span>
+        }
+      </span>
+      <span class="queue">{{ queueName() }}</span>
+      <span class="ago">{{ timeAgo() }} · {{ duration() }}</span>
     </div>
 
+    <!-- Champion, spells, runes -->
     <div class="col col-champ">
-      <img
-        class="champ-icon"
-        [src]="championIcon(match().champion ?? '')"
-        [alt]="match().champion ?? ''"
-        loading="lazy"
-      />
-      <div class="champ-meta">
-        <span class="champ-name">{{ match().champion }}</span>
-        @if (match().position) {
-          <span class="champ-role">{{ match().position }}</span>
+      <div class="champ-portrait">
+        <img
+          class="champ-icon"
+          [src]="championIcon(match().champion ?? '')"
+          [alt]="match().champion ?? ''"
+          loading="lazy"
+        />
+        @if (champLevel()) {
+          <span class="champ-level">{{ champLevel() }}</span>
+        }
+      </div>
+
+      <div class="loadout">
+        @for (spell of summonerSpells(); track spell.id) {
+          <img class="loadout-icon" [src]="spell.icon" [alt]="spell.name" [title]="spell.name" loading="lazy" />
+        }
+      </div>
+      <div class="loadout">
+        @for (rune of runeIcons(); track $index) {
+          <img
+            class="loadout-icon rune"
+            [class.keystone]="rune.keystone"
+            [src]="rune.icon"
+            [alt]="rune.name"
+            [title]="rune.name"
+            loading="lazy"
+          />
         }
       </div>
     </div>
 
+    <!-- KDA -->
     <div class="col col-kda">
       <span class="kda-line">
         <b>{{ match().kills }}</b> / <b class="deaths">{{ match().deaths }}</b> /
         <b>{{ match().assists }}</b>
       </span>
       <span class="kda-ratio">{{ kda() | number: '1.2-2' }} KDA</span>
+      @if (killParticipation(); as kp) {
+        <span class="kda-kp">{{ kp | number: '1.0-0' }}% KP</span>
+      }
     </div>
 
+    <!-- CS / vision / role -->
     <div class="col col-stats">
       <span class="stat">{{ match().cs ?? 0 }} CS ({{ match().cs_per_min | number: '1.1-1' }})</span>
-      @if (killParticipation(); as kp) {
-        <span class="stat muted">{{ kp | number: '1.0-0' }}% KP</span>
-      }
       @if (match().vision_score !== null) {
-        <span class="stat muted">{{ match().vision_score }} VS</span>
+        <span class="stat muted">{{ match().vision_score }} vision</span>
+      }
+      @if (roleIconUrl()) {
+        <span class="stat role">
+          <img class="role-icon" [src]="roleIconUrl()" [alt]="''" />
+          {{ roleName() }}
+        </span>
       }
     </div>
 
+    <!-- Items -->
     <div class="col col-items">
       @for (item of items(); track $index) {
         @if (item > 0) {
-          <img class="item" [src]="itemIcon(item)" alt="" loading="lazy" />
+          <img class="item" [src]="itemIcon(item)" [alt]="itemName(item)" [title]="itemName(item)" loading="lazy" />
         } @else {
           <span class="item item-empty"></span>
         }
       }
       @if (trinket() > 0) {
-        <img class="item trinket" [src]="itemIcon(trinket())" alt="" loading="lazy" />
+        <img
+          class="item trinket"
+          [src]="itemIcon(trinket())"
+          [alt]="itemName(trinket())"
+          [title]="itemName(trinket())"
+          loading="lazy"
+        />
       }
     </div>
 
+    <!-- Team rosters -->
     <div class="col col-teams">
       <ul class="team">
-        @for (p of teams().allies.slice(0, 5); track p.puuid) {
-          <li [class.self]="p.puuid === match().puuid" [title]="p.riotIdGameName">
+        @for (p of teams().allies; track p.puuid) {
+          <li [class.self]="p.puuid === match().puuid" [title]="p.riotIdGameName + ' — ' + p.championName">
             <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
             <span class="team-name">{{ p.riotIdGameName }}</span>
           </li>
         }
       </ul>
       <ul class="team">
-        @for (p of teams().enemies.slice(0, 5); track p.puuid) {
-          <li [title]="p.riotIdGameName">
+        @for (p of teams().enemies; track p.puuid) {
+          <li [title]="p.riotIdGameName + ' — ' + p.championName">
             <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
             <span class="team-name">{{ p.riotIdGameName }}</span>
           </li>
@@ -87,14 +127,16 @@
       </ul>
     </div>
 
-    <div class="col col-lp">
-      @if (match().lp_delta !== null) {
-        <span class="lp" [class.gain]="(match().lp_delta ?? 0) >= 0">
-          {{ (match().lp_delta ?? 0) >= 0 ? '+' : '' }}{{ match().lp_delta }} LP
-        </span>
-      }
-      <span class="chevron" [class.open]="expanded()" aria-hidden="true">⌄</span>
-    </div>
+    <!-- Expander -->
+    <button
+      type="button"
+      class="expander"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="expanded() ? 'Collapse match details' : 'Expand match details'"
+      (click)="onToggle()"
+    >
+      <app-icon class="expander-icon" [class.open]="expanded()" name="chevron-down" [size]="18" />
+    </button>
   </div>
 
   <!-- ── Expanded detail ──────────────────────────────────────────────────── -->
@@ -127,17 +169,16 @@
             <app-match-overview-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
           }
           @case ('performance') {
-            <app-match-performance-tab
-              [match]="match()"
-              [detail]="detail()!"
-              [timeline]="timeline()"
-            />
+            <app-match-performance-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
           }
           @case ('damage') {
             <app-match-damage-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
           }
           @case ('build') {
             <app-match-build-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+          }
+          @case ('map') {
+            <app-match-map-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
           }
         }
       }

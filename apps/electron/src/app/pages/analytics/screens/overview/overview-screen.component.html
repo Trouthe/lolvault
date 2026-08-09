@@ -1,101 +1,153 @@
 <section class="overview">
-  <!-- ── Top band: LP climb + role performance ────────────────────────────── -->
+  <!-- ── Top band ─────────────────────────────────────────────────────────── -->
   <div class="band">
-    <article class="panel panel-climb">
+    <article class="panel panel-winrate">
       <header class="panel-head">
-        <h3>LP Climb</h3>
-        @if (data.lpSnapshots().length >= 2) {
-          <span class="panel-note">{{ data.lpSnapshots().length }} snapshots</span>
+        <h3>Win Rate</h3>
+        @if (recentRecord(); as record) {
+          <span class="panel-note">last {{ record.games.length }}</span>
         }
       </header>
-      <app-lp-climb-chart [snapshots]="data.lpSnapshots()" />
+      @if (recentRecord(); as record) {
+        <app-win-rate-dial
+          [games]="record.games"
+          [wins]="record.wins"
+          [losses]="record.losses"
+          [winRate]="record.winRate"
+        />
+      } @else {
+        <app-empty-state inline title="No completed games yet" />
+      }
+    </article>
+
+    <article class="panel panel-kda">
+      <header class="panel-head">
+        <h3>KDA</h3>
+      </header>
+      @if (recentRecord(); as record) {
+        <div class="kda">
+          <span class="kda-main" [class.high]="record.avgKda >= 3">
+            {{ record.avgKda | number: '1.2-2' }}
+          </span>
+          @if (averages(); as avg) {
+            <span class="kda-split">
+              <b>{{ avg.kills | number: '1.1-1' }}</b>
+              <i>/</i>
+              <b class="deaths">{{ avg.deaths | number: '1.1-1' }}</b>
+              <i>/</i>
+              <b>{{ avg.assists | number: '1.1-1' }}</b>
+            </span>
+          }
+          <span class="kda-caption">Average per game</span>
+        </div>
+      } @else {
+        <app-empty-state inline title="No games yet" />
+      }
+    </article>
+
+    <article class="panel panel-averages">
+      <header class="panel-head">
+        <h3>Averages</h3>
+        @if (averages(); as avg) {
+          <span class="panel-note">{{ avg.games }} games</span>
+        }
+      </header>
+      @if (averages(); as avg) {
+        <div class="averages">
+          <div class="avg">
+            <span class="avg-value">{{ avg.csPerMin | number: '1.1-1' }}</span>
+            <span class="avg-label">CS / min</span>
+          </div>
+          <div class="avg">
+            <span class="avg-value">{{ avg.killParticipation | number: '1.0-0' }}%</span>
+            <span class="avg-label">Kill part.</span>
+          </div>
+          <div class="avg">
+            <span class="avg-value">{{ avg.visionPerMin | number: '1.1-1' }}</span>
+            <span class="avg-label">Vision / min</span>
+          </div>
+          <div class="avg">
+            <span class="avg-value">{{ avg.damagePerMin | number: '1.0-0' }}</span>
+            <span class="avg-label">DMG / min</span>
+          </div>
+        </div>
+      } @else {
+        <app-empty-state inline title="No games with duration data" />
+      }
     </article>
 
     <article class="panel panel-roles">
       <header class="panel-head">
-        <h3>Role Performance</h3>
-        @if (recentForm(); as form) {
-          <span class="panel-note">
-            Last {{ form.games }}: {{ form.wins }}W {{ form.losses }}L
-          </span>
-        }
+        <h3>Roles</h3>
       </header>
       <app-role-performance [rows]="roleRows()" />
     </article>
+
+    <article class="panel panel-champs">
+      <header class="panel-head">
+        <h3>Most Played</h3>
+      </header>
+      <app-most-played-champions [rows]="topChampions()" />
+    </article>
   </div>
 
-  <!-- ── Main: match history + side panels ────────────────────────────────── -->
-  <div class="main">
-    <div class="matches">
-      <header class="section-head">
-        <h3>Match History</h3>
-        <span class="section-note">
-          {{ matches().length }} cached {{ matches().length === 1 ? 'game' : 'games' }}
-        </span>
-      </header>
-
-      <app-backfill-control />
-
-      @if (matches().length === 0) {
-        <app-empty-state
-          icon="📭"
-          title="No matches cached yet"
-          hint="Match history is fetched from Riot when this account is opened. If nothing appears, check your API key in Settings."
-        />
-      } @else {
-        <div class="match-list">
-          @for (match of visibleMatches(); track match.match_id) {
-            <app-match-card
-              [match]="match"
-              [expanded]="expandedMatchId() === match.match_id"
-              (toggled)="toggleMatch(match.match_id)"
-            />
-          }
-        </div>
-
-        @if (hasMore()) {
-          <button type="button" class="load-more" (click)="loadMore()">
-            Show more games
-          </button>
-        }
+  <!-- ── LP activity (full calendar year) ─────────────────────────────────── -->
+  <article class="panel">
+    <header class="panel-head">
+      <h3>LP Activity</h3>
+      @if (activity(); as grid) {
+        <span class="panel-note">{{ grid.totalGames }} games in {{ selectedYear() }}</span>
       }
-    </div>
+    </header>
+    @if (activity(); as grid) {
+      <app-lp-activity
+        [weeks]="grid.weeks"
+        [monthLabels]="grid.monthLabels"
+        [years]="activityYears()"
+        [year]="selectedYear()"
+        (yearChange)="activityYear.set($event)"
+      />
+    } @else {
+      <app-empty-state
+        inline
+        icon="calendar"
+        title="No activity recorded yet"
+        hint="Days fill in as games are cached and LP is captured while LoL Vault runs."
+      />
+    }
+  </article>
 
-    <aside class="side">
-      <article class="panel">
-        <header class="panel-head">
-          <h3>Most Played</h3>
-        </header>
-        <app-segmented-toggle
-          class="panel-toggle"
-          [options]="queueOptions"
-          [value]="champQueue()"
-          label="Queue"
-          compact
-          (valueChange)="champQueue.set($event)"
-        />
-        <app-most-played-champions [rows]="mostPlayed()" />
-      </article>
+  <!-- ── Match history ────────────────────────────────────────────────────── -->
+  <div class="matches">
+    <header class="section-head">
+      <h3>Match History</h3>
+      <span class="section-note">
+        {{ matches().length }} cached {{ matches().length === 1 ? 'game' : 'games' }}
+      </span>
+    </header>
 
-      <article class="panel">
-        <header class="panel-head">
-          <h3>Recently Played</h3>
-          <span class="panel-note">last {{ sampleSize() }} games</span>
-        </header>
-        <app-segmented-toggle
-          class="panel-toggle"
-          [options]="playedWithOptions"
-          [value]="playedWithMode()"
-          label="Teammates or opponents"
-          compact
-          (valueChange)="playedWithMode.set($event)"
-        />
-        <app-played-with-panel
-          [rows]="playedWithRows()"
-          [mode]="playedWithMode()"
-          [sampleSize]="sampleSize()"
-        />
-      </article>
-    </aside>
+    <app-backfill-control />
+
+    @if (matches().length === 0) {
+      <app-empty-state
+        icon="inbox"
+        title="No matches cached yet"
+        hint="Match history is fetched from Riot when this account is opened. If nothing appears, check your API key in Settings."
+      />
+    } @else {
+      <div class="match-list">
+        @for (match of visibleMatches(); track match.match_id) {
+          <app-match-card
+            [match]="match"
+            [expanded]="expandedMatchId() === match.match_id"
+            (toggled)="toggleMatch(match.match_id)"
+          />
+        }
+      </div>
+
+      @if (hasMore()) {
+        <button type="button" class="load-more" (click)="loadMore()">Show more games</button>
+      }
+    }
   </div>
 </section>

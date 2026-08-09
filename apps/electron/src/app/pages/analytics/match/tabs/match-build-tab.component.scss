@@ -113,50 +113,113 @@
   color: var(--secondary-text);
 }
 
-// ── Runes & summoners ────────────────────────────────────────────────────────
+// ── Split: runes | skill order ───────────────────────────────────────────────
 
-.runes {
-  display: flex;
-  align-items: center;
+.split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  flex-wrap: wrap;
+  align-items: start;
 }
 
-.rune-group {
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── Runes, laid out like the in-game tree ────────────────────────────────────
+
+.rune-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.rune-col {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
 }
 
-.rune-divider {
+.rune-split {
   width: 1px;
-  height: 20px;
+  align-self: stretch;
   background: var(--border-color);
 }
 
+.rune-tree-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
 .rune-tree {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
-  opacity: 0.85;
+}
+
+.rune-tree-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--secondary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rune-branch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .rune {
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   border-radius: 999px;
   object-fit: contain;
-  background: var(--muted);
+  background: color-mix(in oklch, var(--muted) 75%, transparent);
 }
 
-// The keystone is the defining choice, so it reads larger.
+// The keystone is the defining choice, so it reads larger and highlighted.
 .rune.keystone {
-  width: 34px;
-  height: 34px;
-  background: color-mix(in oklch, var(--outline) 35%, transparent);
+  width: 46px;
+  height: 46px;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--outline) 55%, transparent) 0%,
+    transparent 72%
+  );
 }
 
-.spell {
+.shards {
+  display: flex;
+  gap: 4px;
+}
+
+.shard {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--outline);
+}
+
+.summoners {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.summoner {
   width: 24px;
   height: 24px;
   border-radius: 6px;
@@ -165,23 +228,22 @@
 
 // ── Build path ───────────────────────────────────────────────────────────────
 
+// Wraps onto multiple lines rather than forcing a horizontal scroller.
 .steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 10px 12px;
 }
 
 .step {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  flex-shrink: 0;
   position: relative;
-  padding-right: 14px;
+  padding-right: 12px;
 
   // Connector between purchase groups.
   &:not(:last-child)::after {
@@ -261,11 +323,30 @@
 }
 
 .skill-key {
-  width: 22px;
+  width: 26px;
   font-size: 10px;
   font-weight: 700;
   color: var(--secondary-text);
   text-align: center;
+  vertical-align: middle;
+}
+
+// Real ability art rather than a bare letter.
+.ability-icon {
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  object-fit: cover;
+  display: block;
+}
+
+.ability-letter {
+  display: inline-block;
+  width: 21px;
+  line-height: 21px;
+  border-radius: 5px;
+  background: var(--muted);
+  color: var(--secondary-text);
 }
 
 .skill-cell {

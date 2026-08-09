@@ -47,79 +47,7 @@
       </div>
     </header>
 
-    <!-- ── Runes & summoner spells ────────────────────────────────────────── -->
-    @if (runes(); as r) {
-      <section class="block">
-        <h4 class="block-title">Runes &amp; summoners</h4>
-        <div class="runes">
-          <div class="rune-group">
-            @if (r.primaryTree?.icon) {
-              <img
-                class="rune-tree"
-                [src]="r.primaryTree!.icon"
-                [alt]="r.primaryTree!.name"
-                [title]="r.primaryTree!.name"
-                loading="lazy"
-              />
-            }
-            @for (rune of r.primary; track $index; let first = $first) {
-              @if (rune.icon) {
-                <img
-                  class="rune"
-                  [class.keystone]="first"
-                  [src]="rune.icon"
-                  [alt]="rune.name"
-                  [title]="rune.name"
-                  loading="lazy"
-                />
-              }
-            }
-          </div>
-
-          <span class="rune-divider" aria-hidden="true"></span>
-
-          <div class="rune-group">
-            @if (r.secondaryTree?.icon) {
-              <img
-                class="rune-tree"
-                [src]="r.secondaryTree!.icon"
-                [alt]="r.secondaryTree!.name"
-                [title]="r.secondaryTree!.name"
-                loading="lazy"
-              />
-            }
-            @for (rune of r.secondary; track $index) {
-              @if (rune.icon) {
-                <img
-                  class="rune"
-                  [src]="rune.icon"
-                  [alt]="rune.name"
-                  [title]="rune.name"
-                  loading="lazy"
-                />
-              }
-            }
-          </div>
-
-          @if (summonerSpells().length) {
-            <span class="rune-divider" aria-hidden="true"></span>
-            <div class="rune-group">
-              @for (spell of summonerSpells(); track spell.id) {
-                <img
-                  class="spell"
-                  [src]="spell.icon"
-                  [alt]="spell.name"
-                  [title]="spell.name"
-                  loading="lazy"
-                />
-              }
-            </div>
-          }
-        </div>
-      </section>
-    }
-
-    <!-- ── Build path ─────────────────────────────────────────────────────── -->
+    <!-- ── Build path (first) ─────────────────────────────────────────────── -->
     <section class="block">
       <h4 class="block-title">Build path</h4>
 
@@ -146,12 +74,18 @@
       } @else if (finalItems().length) {
         <div class="fallback">
           <p class="fallback-note">
-            Purchase order needs the match timeline, which isn't available for this game. Showing the
-            final build instead.
+            Purchase order needs the match timeline, which isn't available for this game. Showing
+            the final build instead.
           </p>
           <div class="step-items">
             @for (item of finalItems(); track $index) {
-              <img class="step-item" [src]="itemIcon(item)" alt="" loading="lazy" />
+              <img
+                class="step-item"
+                [src]="itemIcon(item)"
+                [alt]="itemName(item) || 'Item'"
+                [title]="itemName(item)"
+                loading="lazy"
+              />
             }
           </div>
         </div>
@@ -160,50 +94,162 @@
       }
     </section>
 
-    <!-- ── Skill order ────────────────────────────────────────────────────── -->
-    <section class="block">
-      <h4 class="block-title">Skill order</h4>
+    <!-- ── Runes (left) + skill order (right) ─────────────────────────────── -->
+    <div class="split">
+      <section class="block">
+        <h4 class="block-title">Runes &amp; summoners</h4>
 
-      @if (skillOrder(); as skills) {
-        <div class="skills-scroll">
-          <table class="skills">
-            <thead>
-              <tr>
-                <th class="skill-key-head"></th>
-                @for (level of [].constructor(skills.levels); track $index) {
-                  <th class="skill-level-head">{{ $index + 1 }}</th>
+        @if (runes(); as r) {
+          <div class="rune-page">
+            <!-- Primary tree -->
+            <div class="rune-col">
+              @if (r.primaryTree?.icon) {
+                <div class="rune-tree-head">
+                  <img class="rune-tree" [src]="r.primaryTree!.icon" [alt]="r.primaryTree!.name" />
+                  <span class="rune-tree-name">{{ r.primaryTree!.name }}</span>
+                </div>
+              }
+
+              @if (r.keystone; as keystone) {
+                @if (keystone.icon) {
+                  <img
+                    class="rune keystone"
+                    [src]="keystone.icon"
+                    [alt]="keystone.name"
+                    [title]="keystone.name"
+                    loading="lazy"
+                  />
                 }
-              </tr>
-            </thead>
-            <tbody>
-              @for (key of skillKeys; track key; let slotIndex = $index) {
+              }
+
+              <div class="rune-branch">
+                @for (rune of r.primaryMinor; track $index) {
+                  @if (rune.icon) {
+                    <img
+                      class="rune"
+                      [src]="rune.icon"
+                      [alt]="rune.name"
+                      [title]="rune.name"
+                      loading="lazy"
+                    />
+                  }
+                }
+              </div>
+            </div>
+
+            <span class="rune-split" aria-hidden="true"></span>
+
+            <!-- Secondary tree + summoners -->
+            <div class="rune-col">
+              @if (r.secondaryTree?.icon) {
+                <div class="rune-tree-head">
+                  <img
+                    class="rune-tree"
+                    [src]="r.secondaryTree!.icon"
+                    [alt]="r.secondaryTree!.name"
+                  />
+                  <span class="rune-tree-name">{{ r.secondaryTree!.name }}</span>
+                </div>
+              }
+
+              <div class="rune-branch">
+                @for (rune of r.secondary; track $index) {
+                  @if (rune.icon) {
+                    <img
+                      class="rune"
+                      [src]="rune.icon"
+                      [alt]="rune.name"
+                      [title]="rune.name"
+                      loading="lazy"
+                    />
+                  }
+                }
+              </div>
+
+              @if (r.shardCount > 0) {
+                <div class="shards" [title]="r.shardCount + ' stat shards'">
+                  @for (shard of [].constructor(r.shardCount); track $index) {
+                    <span class="shard"></span>
+                  }
+                </div>
+              }
+
+              @if (summonerSpells().length) {
+                <div class="summoners">
+                  @for (spell of summonerSpells(); track spell.id) {
+                    <img
+                      class="summoner"
+                      [src]="spell.icon"
+                      [alt]="spell.name"
+                      [title]="spell.name"
+                      loading="lazy"
+                    />
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <app-empty-state inline title="No rune data recorded for this player" />
+        }
+      </section>
+
+      <section class="block">
+        <h4 class="block-title">Skill order</h4>
+
+        @if (skillOrder(); as skills) {
+          <div class="skills-scroll">
+            <table class="skills">
+              <thead>
                 <tr>
-                  <th class="skill-key" [attr.data-skill]="key">{{ key }}</th>
-                  @for (taken of skills.grid[slotIndex]; track $index) {
-                    <td>
-                      <span
-                        class="skill-cell"
-                        [class.taken]="taken"
-                        [attr.data-skill]="taken ? key : null"
-                      >
-                        @if (taken) {
-                          {{ $index + 1 }}
-                        }
-                      </span>
-                    </td>
+                  <th class="skill-key-head"></th>
+                  @for (level of [].constructor(skills.levels); track $index) {
+                    <th class="skill-level-head">{{ $index + 1 }}</th>
                   }
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      } @else {
-        <app-empty-state
-          inline
-          title="No skill order recorded"
-          hint="Skill levels come from the match timeline, which isn't cached for this game."
-        />
-      }
-    </section>
+              </thead>
+              <tbody>
+                @for (key of skillKeys; track key; let slotIndex = $index) {
+                  <tr>
+                    <th class="skill-key">
+                      @if (abilityIcon(slotIndex)) {
+                        <img
+                          class="ability-icon"
+                          [src]="abilityIcon(slotIndex)"
+                          [alt]="key"
+                          [title]="key"
+                          loading="lazy"
+                        />
+                      } @else {
+                        <span class="ability-letter">{{ key }}</span>
+                      }
+                    </th>
+                    @for (taken of skills.grid[slotIndex]; track $index) {
+                      <td>
+                        <span
+                          class="skill-cell"
+                          [class.taken]="taken"
+                          [attr.data-skill]="taken ? key : null"
+                        >
+                          @if (taken) {
+                            {{ $index + 1 }}
+                          }
+                        </span>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <app-empty-state
+            inline
+            title="No skill order recorded"
+            hint="Skill levels come from the match timeline, which isn't cached for this game."
+          />
+        }
+      </section>
+    </div>
   }
 </div>

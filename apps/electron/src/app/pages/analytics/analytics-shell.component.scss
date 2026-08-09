@@ -19,38 +19,65 @@
 
 // ── Left rail ────────────────────────────────────────────────────────────────
 
-.rail {
+// The rail scrolls, but the scrollbar itself is hidden — a fade at the bottom
+// edge signals "more below" instead (see .rail-wrap::after).
+.rail-wrap {
   display: none;
-  flex-direction: column;
-  gap: 14px;
-  width: 25%;
-  min-width: 232px;
-  max-width: 320px;
-  padding: 16px;
-  border-right: 2px solid var(--border-color);
-  overflow-y: auto;
+  position: relative;
+  width: 27%;
+  min-width: 254px;
+  max-width: 330px;
   flex-shrink: 0;
+  min-height: 0;
 }
 
-.with-sidebar .rail {
+.with-sidebar .rail-wrap {
+  display: block;
+}
+
+.rail-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--background), transparent);
+}
+
+.rail {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 14px 14px 44px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  // Hide the scrollbar in every engine while keeping the element scrollable.
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .rail-back {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
   align-self: flex-start;
-  padding: 4px 8px 4px 4px;
-  margin-bottom: 2px;
-  border: none;
+  padding: 6px 11px 6px 9px;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: transparent;
+  background: var(--card);
   color: var(--secondary-text);
   font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
   cursor: pointer;
   transition:
     color 0.15s ease,
@@ -63,28 +90,29 @@
 }
 
 .rail-back-chevron {
-  font-size: 17px;
+  font-size: 13px;
   line-height: 1;
-  margin-top: -1px;
 }
 
-// Account identity — replaces the old bordered button + bare name header.
+// Identity — portrait on the left, details to its right (per the design).
 .identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 2px;
 }
 
 .identity-avatar {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
 
   img {
     width: 100%;
     height: 100%;
-    border-radius: 14px;
+    border-radius: 50%;
     border: 2px solid var(--border-color);
     object-fit: cover;
     display: block;
@@ -93,219 +121,157 @@
 
 .identity-level {
   position: absolute;
-  bottom: -6px;
+  bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 1px 7px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--card);
   border: 1px solid var(--border-color);
   color: var(--secondary-text);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.identity-name {
+.identity-info {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 4px;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
 }
 
-.identity-game {
+.identity-name {
   margin: 0;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.15;
   color: var(--primary-text);
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 // Tag is de-emphasised so the name reads first.
 .identity-tag {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--secondary-text);
-  opacity: 0.75;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+.identity-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
 }
 
 .identity-server {
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 5px;
   background: var(--muted);
   border: 1px solid var(--border-color);
   color: var(--secondary-text);
-  font-size: 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.identity-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 5px;
+  background: var(--muted);
+  border: 1px solid var(--border-color);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--secondary-text);
+  letter-spacing: 0.2px;
+}
+
+.identity-role-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  // Role SVGs ship white; invert them on light themes so they stay visible.
+  opacity: 0.9;
+}
+
+[data-theme='light'] .identity-role-icon {
+  filter: invert(1);
+}
+
+.identity-role-share {
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+// Peak rank — mountain icon plus the emblem of the tier reached.
+.identity-peak {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 5px;
+  background: color-mix(in oklch, #c89b3c 16%, var(--muted));
+  border: 1px solid color-mix(in oklch, #c89b3c 34%, var(--border-color));
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #d9b45f;
+  white-space: nowrap;
+}
+
+.identity-peak-emblem {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+}
+
+// ── Rail sections ────────────────────────────────────────────────────────────
+
+.queues {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.rail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.rail-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rail-panel-head h2 {
+  margin: 0;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
-}
-
-// ── Rank card ────────────────────────────────────────────────────────────────
-
-.rank-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 1px solid var(--border-color);
-}
-
-.rank-emblem {
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.rank-emblem-empty {
-  border-radius: 50%;
-  background: var(--muted);
-}
-
-.rank-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.rank-lp {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary-text);
-  font-variant-numeric: tabular-nums;
-
-  &.muted {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--secondary-text);
-  }
-}
-
-.rank-record {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.rank-wins {
-  color: var(--secondary-text);
-}
-
-.rank-losses {
-  color: var(--secondary-text);
-}
-
-.rank-wr {
-  font-weight: 700;
-  color: var(--danger);
-
-  &.positive {
-    color: #2f9e6f;
-  }
-}
-
-.streak {
-  padding: 7px 10px;
-  border-radius: 9px;
-  font-size: 11.5px;
-  font-weight: 700;
-  text-align: center;
-  text-transform: capitalize;
-
-  &.win {
-    background: color-mix(in oklch, #2f9e6f 22%, transparent);
-    color: #47c48d;
-  }
-
-  &.loss {
-    background: color-mix(in oklch, var(--danger) 20%, transparent);
-    color: var(--danger);
-  }
-}
-
-.secondary-queue {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px dashed var(--border-color);
-}
-
-.secondary-queue-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
   text-transform: uppercase;
   color: var(--secondary-text);
 }
 
-.secondary-queue-value {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary-text);
-}
-
-.secondary-queue-record {
-  font-size: 11px;
+.rail-panel-note {
+  font-size: 10px;
   color: var(--secondary-text);
+  opacity: 0.8;
   font-variant-numeric: tabular-nums;
 }
 
-// ── Screen switcher ──────────────────────────────────────────────────────────
-
-.rail-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-}
-
-.rail-nav-item {
-  position: relative;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--secondary-text);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-
-  &:hover:not(.active) {
-    background: var(--muted);
-    color: var(--primary-text);
-  }
-
-  &.active {
-    background: var(--muted);
-    color: var(--primary-text);
-  }
-
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 18px;
-    border-radius: 0 3px 3px 0;
-    background: var(--primary-text);
-  }
+.rail-toggle {
+  align-self: flex-start;
 }
 
 // ── Content ──────────────────────────────────────────────────────────────────
@@ -315,7 +281,53 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px 40px;
+  padding: 16px 22px 40px;
+
+  // Scrollbars are hidden throughout the feature; content still scrolls.
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.screen-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--muted);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+}
+
+.screen-tab {
+  padding: 7px 20px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover:not(.active) {
+    color: var(--primary-text);
+  }
+
+  &.active {
+    background: var(--card);
+    color: var(--primary-text);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  }
 }
 
 .loading {

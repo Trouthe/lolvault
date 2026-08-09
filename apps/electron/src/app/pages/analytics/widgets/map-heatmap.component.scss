@@ -12,37 +12,19 @@
   flex-wrap: wrap;
 }
 
-.heatmap-title {
-  margin: 0;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--secondary-text);
-}
+// ── Map ──────────────────────────────────────────────────────────────────────
 
-.map-wrap {
-  display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-@media (max-width: 720px) {
-  .map-wrap {
-    grid-template-columns: 1fr;
-  }
-}
-
-// Stacked layers: minimap, density, markers.
+// Stacked layers: minimap, density, then DOM markers on top.
 .map-stack {
   position: relative;
   width: 100%;
+  max-width: 460px;
   aspect-ratio: 1 / 1;
-  border-radius: 10px;
+  margin: 0 auto;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
-  background: #0d1117;
+  background: #0a0e14;
 }
 
 .layer {
@@ -53,26 +35,58 @@
   display: block;
 }
 
-// ── Controls ─────────────────────────────────────────────────────────────────
+.markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+// Markers are real client art, positioned by percentage over the canvas.
+.marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  pointer-events: auto;
+  cursor: help;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 85%));
+  transition: transform 0.12s ease;
+}
+
+.marker:hover {
+  transform: translate(-50%, -50%) scale(1.35);
+  z-index: 4;
+}
+
+.marker.kill,
+.marker.death {
+  width: 15px;
+  height: 15px;
+}
+
+.marker.objective {
+  width: 21px;
+  height: 21px;
+}
+
+// ── Controls (under the map) ─────────────────────────────────────────────────
 
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-width: 0;
+  gap: 9px;
 }
 
 .range {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .range-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .range-label {
@@ -98,7 +112,6 @@
 }
 
 .marker-toggle {
-  align-self: flex-start;
   padding: 5px 11px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -123,44 +136,28 @@
 
 // ── Legend ───────────────────────────────────────────────────────────────────
 
-.legend {
+.summary-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
-  padding: 9px 10px;
-  border-radius: 9px;
-  background: var(--card);
-  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .legend-item {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: 7px;
-}
-
-.legend-mark {
-  font-size: 11px;
-  line-height: 1;
-  text-align: center;
-
-  &.kill {
-    color: #5ad18f;
-  }
-
-  &.death {
-    color: #ff6b7d;
-  }
-
-  &.objective {
-    color: #c9a227;
-  }
+  gap: 5px;
 }
 
 .legend dt {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--secondary-text);
 }
 
@@ -170,6 +167,20 @@
   font-weight: 700;
   color: var(--primary-text);
   font-variant-numeric: tabular-nums;
+}
+
+.legend-swatch {
+  width: 22px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.legend-swatch.cold {
+  background: linear-gradient(90deg, #1a56db, #16b0c7);
+}
+
+.legend-swatch.hot {
+  background: linear-gradient(90deg, #2ecc71, #f1c40f, #e72e33);
 }
 
 .sample {

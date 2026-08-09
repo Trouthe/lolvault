@@ -1,0 +1,74 @@
+<div class="map-tab">
+  <section class="map-side">
+    <app-map-heatmap [match]="match()" [detail]="detail()" [timeline]="timeline()" />
+  </section>
+
+  <section class="feed-side">
+    <header class="feed-head">
+      <h4>Match Timeline</h4>
+      @if (hasFeed()) {
+        <span class="feed-count">{{ feed().length }} events</span>
+      }
+    </header>
+
+    @if (!hasFeed()) {
+      <app-empty-state
+        inline
+        title="No timeline events"
+        hint="Kills and objectives come from the match timeline, which isn't cached for this game."
+      />
+    } @else {
+      <ol class="feed">
+        @for (event of feed(); track $index) {
+          <li class="event" [class.friendly]="event.friendly" [class.hostile]="!event.friendly">
+            <span class="event-time">{{ formatTime(event.at) }}</span>
+
+            <span class="event-icon-wrap">
+              <img class="event-icon" [src]="iconFor(event)" [alt]="''" loading="lazy" />
+            </span>
+
+            <div class="event-body">
+              <span class="event-title">
+                {{ event.title }}
+                @if (event.multiKill) {
+                  <span class="multikill">{{ event.multiKill }}x</span>
+                }
+              </span>
+
+              <span class="event-sub">
+                @if (event.subtitle) {
+                  {{ event.subtitle }}
+                }
+                @if (event.assists?.length) {
+                  <span class="assists">+ {{ event.assists!.join(', ') }}</span>
+                }
+              </span>
+            </div>
+
+            <div class="event-champs">
+              @if (event.actorChampion) {
+                <img
+                  class="event-champ"
+                  [src]="championIcon(event.actorChampion)"
+                  [alt]="event.actorChampion"
+                  [title]="event.actorChampion"
+                  loading="lazy"
+                />
+              }
+              @if (event.targetChampion) {
+                <app-icon class="event-arrow" name="chevron-right" [size]="12" />
+                <img
+                  class="event-champ dead"
+                  [src]="championIcon(event.targetChampion)"
+                  [alt]="event.targetChampion"
+                  [title]="event.targetChampion"
+                  loading="lazy"
+                />
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    }
+  </section>
+</div>

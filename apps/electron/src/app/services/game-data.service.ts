@@ -45,6 +45,9 @@ export class GameDataService {
   readonly summonerSpells = signal<Record<string, SummonerSpellInfo>>({});
   readonly runeTrees = signal<RuneTree[]>([]);
 
+  /** Champion name → ability icon filenames (Q, W, E, R) plus passive. */
+  readonly championSpells = signal<Record<string, { spells: string[]; passive: string }>>({});
+
   /** id → rune, flattened across all trees for O(1) perk lookups. */
   readonly runesById = signal<Record<string, RuneInfo>>({});
 
@@ -60,11 +63,19 @@ export class GameDataService {
 
     this.loading = (async () => {
       try {
-        const [items, spells, runes] = await Promise.all([
+        const [items, spells, runes, champSpells] = await Promise.all([
           import('../data/item.json'),
           import('../data/summoner.json'),
           import('../data/runesReforged.json'),
+          import('../data/champion-spells.json'),
         ]);
+
+        this.championSpells.set(
+          (champSpells.default ?? champSpells).byName as Record<
+            string,
+            { spells: string[]; passive: string }
+          >
+        );
 
         this.items.set((items.default ?? items).data as Record<string, ItemInfo>);
         this.summonerSpells.set(
@@ -120,6 +131,26 @@ export class GameDataService {
     const spell = this.getSummonerSpell(key);
     if (!spell?.image) return '';
     return this.riotApi.getSpellIconUrl(spell.image);
+  }
+
+  // ── Champion abilities ─────────────────────────────────────────────────────
+
+  /**
+   * Ability icon for a champion's skill slot (1=Q, 2=W, 3=E, 4=R).
+   * Returns '' when the champion isn't in the bundled dataset, so callers can
+   * fall back to a letter rather than rendering a broken image.
+   */
+  getAbilityIconUrl(championName: string, skillSlot: number): string {
+    const entry = this.championSpells()[championName];
+    const file = entry?.spells?.[skillSlot - 1];
+    if (!file) return '';
+    return this.riotApi.getSpellIconUrl(file);
+  }
+
+  getPassiveIconUrl(championName: string): string {
+    const file = this.championSpells()[championName]?.passive;
+    if (!file) return '';
+    return this.riotApi.getPassiveIconUrl(file);
   }
 
   // ── Runes ──────────────────────────────────────────────────────────────────

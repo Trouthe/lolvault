@@ -29,14 +29,14 @@
 
   @if (!hasMatches()) {
     <app-empty-state
-      icon="📭"
+      icon="inbox"
       title="No cached matches yet"
       hint="Match data is fetched from Riot when you open this account. If this persists, check your API key in Settings."
     />
   } @else if (rows().length === 0) {
     <app-empty-state
       inline
-      icon="🔍"
+      icon="search"
       title="No champions match this filter"
       hint="Try a different queue or clear the search."
     />
@@ -67,8 +67,8 @@
             <th class="sortable" [class.sorted]="sortColumn() === 'csPerMin'" (click)="setSort('csPerMin')">
               CS/m
             </th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'goldDiff15'" (click)="setSort('goldDiff15')">
-              GD@15
+            <th class="sortable" [class.sorted]="sortColumn() === 'pentaKills'" (click)="setSort('pentaKills')">
+              Pentas
             </th>
             <th class="col-expand" aria-label="Expand"></th>
           </tr>
@@ -103,8 +103,8 @@
               <td class="num">{{ all.damagePerMin | number: '1.0-0' }}</td>
               <td class="num">{{ all.damageTakenPerMin | number: '1.0-0' }}</td>
               <td class="num">{{ all.csPerMin | number: '1.1-1' }}</td>
-              <td class="num" [class.positive]="(all.goldDiff15 ?? 0) > 0" [class.negative]="(all.goldDiff15 ?? 0) < 0">
-                {{ formatDiff(all.goldDiff15) }}
+              <td class="num penta" [class.has-penta]="all.pentaKills > 0">
+                {{ all.pentaKills || '–' }}
               </td>
               <td></td>
             </tr>
@@ -147,11 +147,16 @@
               <td class="num">{{ row.damagePerMin | number: '1.0-0' }}</td>
               <td class="num">{{ row.damageTakenPerMin | number: '1.0-0' }}</td>
               <td class="num">{{ row.csPerMin | number: '1.1-1' }}</td>
-              <td class="num" [class.positive]="(row.goldDiff15 ?? 0) > 0" [class.negative]="(row.goldDiff15 ?? 0) < 0">
-                {{ formatDiff(row.goldDiff15) }}
+              <td class="num penta" [class.has-penta]="row.pentaKills > 0">
+                {{ row.pentaKills || '–' }}
               </td>
               <td class="col-expand">
-                <span class="chevron" [class.open]="expanded() === row.champion" aria-hidden="true">⌄</span>
+                <app-icon
+                  class="chevron"
+                  [class.open]="expanded() === row.champion"
+                  name="chevron-down"
+                  [size]="15"
+                />
               </td>
             </tr>
 
@@ -185,14 +190,6 @@
                                 </span>
                               </span>
                             </div>
-                            <span
-                              class="matchup-gd"
-                              [class.positive]="(mu.goldDiff15 ?? 0) > 0"
-                              [class.negative]="(mu.goldDiff15 ?? 0) < 0"
-                              title="Average gold difference at 15 minutes"
-                            >
-                              {{ formatDiff(mu.goldDiff15) }}
-                            </span>
                           </div>
                         }
                       </div>

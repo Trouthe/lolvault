@@ -19,13 +19,11 @@
     </div>
   </section>
 
-  <!-- ── Head-to-head ─────────────────────────────────────────────────────── -->
+  <!-- ── Head to head ─────────────────────────────────────────────────────── -->
   <section class="block">
     <h4 class="block-title">Head to head</h4>
-    <p class="block-hint">Pick a player on each side to compare.</p>
 
     <div class="compare">
-      <!-- Left picker: your team -->
       <div class="picker left">
         @for (p of players().allies; track p.puuid) {
           <button
@@ -60,63 +58,86 @@
               <div class="diffs">
                 <div class="diff">
                   <span class="diff-label">Gold @15</span>
-                  <span
-                    class="diff-value"
-                    [class.positive]="diffs.gold > 0"
-                    [class.negative]="diffs.gold < 0"
-                  >
+                  <span class="diff-value" [class.positive]="diffs.gold > 0" [class.negative]="diffs.gold < 0">
                     {{ formatDiff(diffs.gold) }}
                   </span>
                 </div>
                 <div class="diff">
                   <span class="diff-label">CS @15</span>
-                  <span
-                    class="diff-value"
-                    [class.positive]="diffs.cs > 0"
-                    [class.negative]="diffs.cs < 0"
-                  >
+                  <span class="diff-value" [class.positive]="diffs.cs > 0" [class.negative]="diffs.cs < 0">
                     {{ formatDiff(diffs.cs) }}
                   </span>
                 </div>
                 <div class="diff">
                   <span class="diff-label">XP @15</span>
-                  <span
-                    class="diff-value"
-                    [class.positive]="diffs.xp > 0"
-                    [class.negative]="diffs.xp < 0"
-                  >
+                  <span class="diff-value" [class.positive]="diffs.xp > 0" [class.negative]="diffs.xp < 0">
                     {{ formatDiff(diffs.xp) }}
                   </span>
                 </div>
               </div>
             } @else if (gameTooShort()) {
-              <p class="diffs-note">
-                This game ended before 15 minutes, so there are no @15 differentials.
-              </p>
+              <p class="diffs-note">This game ended before 15 minutes, so there are no @15 differentials.</p>
             } @else {
               <p class="diffs-note">
                 @15 differentials need the match timeline, which isn't available for this game.
               </p>
             }
 
-            <!-- Metric rows -->
-            <div class="rows">
-              @for (row of compareRows(); track row.label) {
-                <div class="row">
-                  <span class="row-value left" [class.wins]="leftWins(row)">
-                    {{ formatValue(row, row.left) }}
+            <!-- Always-visible stats -->
+            <div class="fixed-stats">
+              @for (stat of fixedStats(); track stat.label) {
+                <div class="fixed-stat">
+                  <span class="fixed-value left" [class.wins]="leftWins(stat)">
+                    {{ formatStat(stat, stat.left) }}
                   </span>
-                  <div class="row-mid">
-                    <span class="row-label">{{ row.label }}</span>
-                    <div class="row-track">
-                      <div class="row-fill left" [style.width.%]="leftShare(row)"></div>
-                      <div class="row-fill right"></div>
+                  <div class="fixed-mid">
+                    <span class="fixed-label">{{ stat.label }}</span>
+                    <div class="fixed-track">
+                      <div class="fixed-fill left" [style.width.%]="leftShare(stat)"></div>
+                      <div class="fixed-fill right"></div>
                     </div>
                   </div>
-                  <span class="row-value right" [class.wins]="rightWins(row)">
-                    {{ formatValue(row, row.right) }}
+                  <span class="fixed-value right" [class.wins]="rightWins(stat)">
+                    {{ formatStat(stat, stat.right) }}
                   </span>
                 </div>
+              }
+            </div>
+
+            <!-- Selectable metric graph -->
+            <div class="graph">
+              <div class="graph-head">
+                <span class="graph-title">{{ metricLabel() }} over time</span>
+                <app-segmented-toggle
+                  [options]="metricOptions"
+                  [value]="metric()"
+                  label="Graph metric"
+                  compact
+                  (valueChange)="metric.set($event)"
+                />
+              </div>
+
+              @if (series(); as data) {
+                <apx-chart
+                  [series]="data"
+                  [chart]="chartOptions().chart"
+                  [colors]="chartOptions().colors"
+                  [stroke]="chartOptions().stroke"
+                  [xaxis]="chartOptions().xaxis"
+                  [yaxis]="chartOptions().yaxis"
+                  [grid]="chartOptions().grid"
+                  [theme]="chartOptions().theme"
+                  [tooltip]="chartOptions().tooltip"
+                  [legend]="chartOptions().legend"
+                  [dataLabels]="chartOptions().dataLabels"
+                />
+              } @else {
+                <app-empty-state
+                  inline
+                  icon="chart-line"
+                  title="No timeline for this match"
+                  hint="Per-minute comparisons need the match timeline, which isn't cached for this game."
+                />
               }
             </div>
           } @else {
@@ -125,7 +146,6 @@
         }
       </div>
 
-      <!-- Right picker: enemy team -->
       <div class="picker right">
         @for (p of players().enemies; track p.puuid) {
           <button
@@ -140,10 +160,5 @@
         }
       </div>
     </div>
-  </section>
-
-  <!-- ── Heatmap ──────────────────────────────────────────────────────────── -->
-  <section class="block">
-    <app-map-heatmap [match]="match()" [detail]="detail()" [timeline]="timeline()" />
   </section>
 </div>

@@ -12,16 +12,18 @@ import { CommonModule } from '@angular/common';
 import { CompactTimeline, MatchCacheRow, MatchDetail } from '../../../../types/electron';
 import { AnalyticsDataService } from '../services/analytics-data.service';
 import { MatchAggregationService } from '../services/match-aggregation.service';
+import { MatchScoreService, fromDetail, fromSummary } from '../services/match-score.service';
 import { RiotApiService } from '../../../services/riot-api.service';
+import { GameDataService } from '../../../services/game-data.service';
 import { MatchTab } from '../models/analytics.types';
-import {
-  SegmentOption,
-  SegmentedToggleComponent,
-} from '../widgets/segmented-toggle.component';
+import { roleIcon, roleLabel } from '../services/game-assets';
+import { SegmentOption, SegmentedToggleComponent } from '../widgets/segmented-toggle.component';
+import { IconComponent } from '../widgets/icon.component';
 import { MatchOverviewTabComponent } from './tabs/match-overview-tab.component';
 import { MatchPerformanceTabComponent } from './tabs/match-performance-tab.component';
 import { MatchDamageTabComponent } from './tabs/match-damage-tab.component';
 import { MatchBuildTabComponent } from './tabs/match-build-tab.component';
+import { MatchMapTabComponent } from './tabs/match-map-tab.component';
 
 const QUEUE_NAMES: Record<number, string> = {
   400: 'Normal Draft',
@@ -32,23 +34,38 @@ const QUEUE_NAMES: Record<number, string> = {
   1700: 'Arena',
 };
 
+/** Root of `raw_json` — the account holder's own full participant record. */
+interface SelfRaw {
+  summoner1Id?: number;
+  summoner2Id?: number;
+  champLevel?: number;
+  perks?: {
+    styles?: { description?: string; style?: number; selections?: { perk: number }[] }[];
+  };
+  [key: string]: unknown;
+}
+
 @Component({
   selector: 'app-match-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     SegmentedToggleComponent,
+    IconComponent,
     MatchOverviewTabComponent,
     MatchPerformanceTabComponent,
     MatchDamageTabComponent,
     MatchBuildTabComponent,
+    MatchMapTabComponent,
   ],
   templateUrl: './match-card.component.html',
   styleUrl: './match-card.component.scss',
 })
 export class MatchCardComponent {
   private riotApi = inject(RiotApiService);
+  private gameData = inject(GameDataService);
   private data = inject(AnalyticsDataService);
+  private scorer = inject(MatchScoreService);
   readonly agg = inject(MatchAggregationService);
 
   match = input.required<MatchCacheRow>();
@@ -68,6 +85,7 @@ export class MatchCardComponent {
     { value: 'performance', label: 'Performance' },
     { value: 'damage', label: 'Damage' },
     { value: 'build', label: 'Build' },
+    { value: 'map', label: 'Map' },
   ];
 
   constructor() {
@@ -116,6 +134,53 @@ export class MatchCardComponent {
     return this.match().queue_type?.replace(/_/g, ' ') ?? 'Match';
   });
 
+  /** The account holder's own full participant record, stored on raw_json. */
+  private readonly selfRaw = computed<SelfRaw>(() => (this.match().raw_json ?? {}) as SelfRaw);
+
+  readonly summonerSpells = computed(() => {
+    const raw = this.selfRaw();
+    return [raw.summoner1Id, raw.summoner2Id]
+      .filter((id): id is number => typeof id === 'number' && id > 0)
+      .map((id) => ({
+        id,
+        name: this.gameData.getSummonerSpell(id)?.name ?? '',
+        icon: this.gameData.getSummonerSpellIconUrl(id),
+      }))
+      .filter((s) => s.icon);
+  });
+
+  /** Keystone + secondary tree, the two rune icons shown on the collapsed row. */
+  readonly runeIcons = computed(() => {
+    const styles = this.selfRaw().perks?.styles;
+    if (!styles?.length) return [];
+
+    const primary = styles.find((s) => s.description === 'primaryStyle') ?? styles[0];
+    const secondary = styles.find((s) => s.description === 'subStyle') ?? styles[1];
+
+    const keystoneId = primary?.selections?.[0]?.perk;
+    const out: { icon: string; name: string; keystone: boolean }[] = [];
+
+    if (keystoneId) {
+      const icon = this.gameData.getRuneIconUrl(keystoneId);
+      if (icon) {
+        out.push({ icon, name: this.gameData.getRune(keystoneId)?.name ?? '', keystone: true });
+      }
+    }
+    if (secondary?.style) {
+      const icon = this.gameData.getRuneIconUrl(secondary.style);
+      if (icon) {
+        out.push({
+          icon,
+          name: this.gameData.getRune(secondary.style)?.name ?? '',
+          keystone: false,
+        });
+      }
+    }
+    return out;
+  });
+
+  readonly champLevel = computed(() => this.selfRaw().champLevel ?? 0);
+
   readonly kda = computed(() => {
     const m = this.match();
     const k = m.kills ?? 0;
@@ -149,8 +214,7 @@ export class MatchCardComponent {
     const raw = this.match().items;
     if (!raw) return [];
     try {
-      const parsed: number[] = JSON.parse(raw);
-      return parsed.slice(0, 6);
+      return (JSON.parse(raw) as number[]).slice(0, 6);
     } catch {
       return [];
     }
@@ -160,14 +224,51 @@ export class MatchCardComponent {
     const raw = this.match().items;
     if (!raw) return 0;
     try {
-      const parsed: number[] = JSON.parse(raw);
-      return parsed[6] ?? 0;
+      return (JSON.parse(raw) as number[])[6] ?? 0;
     } catch {
       return 0;
     }
   });
 
-  /** Kill participation needs teammate kills, available from the cached summary. */
+  readonly roleIconUrl = computed(() => roleIcon(this.match().position));
+  readonly roleName = computed(() => roleLabel(this.match().position));
+
+  /**
+   * Performance rating and placement for the account holder.
+   *
+   * Uses the richer detail-based rating once a card has been expanded, and the
+   * always-available participant summary before that, so the badge is present
+   * on collapsed cards without costing an API call.
+   */
+  readonly selfScore = computed(() => {
+    const m = this.match();
+    if (!m.puuid) return null;
+
+    const detail = this.detail();
+    if (detail?.participants?.length) {
+      return (
+        this.scorer.score(
+          detail.participants.map(fromDetail),
+          detail.gameDuration ?? m.duration_seconds ?? 0,
+          `det:${m.match_id}`
+        ).byPuuid[m.puuid] ?? null
+      );
+    }
+
+    const participants = this.agg.participantsOf(m);
+    if (!participants.length) return null;
+    return (
+      this.scorer.score(
+        participants.map((p, i) => fromSummary(p, i + 1)),
+        m.duration_seconds ?? 0,
+        `sum:${m.match_id}`
+      ).byPuuid[m.puuid] ?? null
+    );
+  });
+
+  readonly isMvp = computed(() => !!this.selfScore()?.isMvp);
+  readonly isAce = computed(() => !!this.selfScore()?.isAce);
+
   readonly killParticipation = computed(() => {
     const m = this.match();
     const participants = this.agg.participantsOf(m);
@@ -197,6 +298,10 @@ export class MatchCardComponent {
 
   itemIcon(id: number): string {
     return this.riotApi.getItemIconUrl(id);
+  }
+
+  itemName(id: number): string {
+    return this.gameData.getItemName(id);
   }
 
   onToggle(): void {

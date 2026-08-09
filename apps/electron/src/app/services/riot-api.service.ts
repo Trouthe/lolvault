@@ -156,9 +156,15 @@ export class RiotApiService {
     return `https://ddragon.leagueoflegends.com/cdn/${v}/img/item/${itemId}.png`;
   }
 
-  /** Summoner spell icon, e.g. 'SummonerFlash.png'. */
+  /** Spell icon — covers both summoner spells and champion abilities. */
   getSpellIconUrl(imageFile: string): string {
     const v = this._ddragonVersion || '15.21.1';
     return `https://ddragon.leagueoflegends.com/cdn/${v}/img/spell/${imageFile}`;
+  }
+
+  /** Champion passive icon, e.g. 'Katarina_Passive.png'. */
+  getPassiveIconUrl(imageFile: string): string {
+    const v = this._ddragonVersion || '15.21.1';
+    return `https://ddragon.leagueoflegends.com/cdn/${v}/img/passive/${imageFile}`;
   }
 }

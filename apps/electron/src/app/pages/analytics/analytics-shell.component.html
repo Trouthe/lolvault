@@ -1,12 +1,14 @@
 <div class="analytics" [class.with-sidebar]="sidebarMode()">
-  <!-- ── Left rail: account identity + screen switcher ───────────────────── -->
+  <!-- ── Left rail (scrollbar hidden; bottom fade signals more content) ───── -->
+  <div class="rail-wrap">
   <aside class="rail">
-    <button class="rail-back" type="button" (click)="goBack()" aria-label="Back to dashboard">
-      <span class="rail-back-chevron" aria-hidden="true">‹</span>
-      <span>Vault</span>
+    <button class="rail-back" type="button" (click)="goBack()">
+      <app-icon name="arrow-left" [size]="14" />
+      <span>Back to Accounts</span>
     </button>
 
     @if (data.account(); as account) {
+      <!-- Identity: portrait left, details right -->
       <div class="identity">
         <div class="identity-avatar">
           <img [src]="profileIconUrl()" alt="" />
@@ -15,64 +17,100 @@
           }
         </div>
 
-        <div class="identity-name">
-          <h1 class="identity-game">{{ accountName().game }}</h1>
-          @if (accountName().tag) {
-            <span class="identity-tag">#{{ accountName().tag }}</span>
-          }
-        </div>
+        <div class="identity-info">
+          <h1 class="identity-name">
+            {{ accountName().game }}<span class="identity-tag">#{{ accountName().tag }}</span>
+          </h1>
 
-        @if (account.server) {
-          <span class="identity-server">{{ account.server }}</span>
-        }
-      </div>
-
-      <!-- Rank card -->
-      <div class="rank-card">
-        @if (rankEmblemUrl()) {
-          <img class="rank-emblem" [src]="rankEmblemUrl()!" [alt]="rankLabel()" />
-        } @else {
-          <div class="rank-emblem rank-emblem-empty" aria-hidden="true"></div>
-        }
-        <div class="rank-body">
-          <span class="rank-pill" [attr.data-rank]="rankSlug()">{{ rankLabel() }}</span>
-          @if (soloRecord(); as record) {
-            <span class="rank-lp">{{ record.lp }} LP</span>
-            <div class="rank-record">
-              <span class="rank-wins">{{ record.wins }}W</span>
-              <span class="rank-losses">{{ record.losses }}L</span>
-              <span class="rank-wr" [class.positive]="record.winRate >= 50">
-                {{ record.winRate | number: '1.0-0' }}%
+          <div class="identity-meta">
+            @if (account.server) {
+              <span class="identity-server">{{ account.server }}</span>
+            }
+            @if (mainRole(); as role) {
+              <span class="identity-role" [title]="role.games + ' games as ' + role.label">
+                @if (role.icon) {
+                  <img class="identity-role-icon" [src]="role.icon" [alt]="''" />
+                }
+                {{ role.label }}
+                <span class="identity-role-share">{{ role.share | number: '1.0-0' }}%</span>
               </span>
-            </div>
-          } @else {
-            <span class="rank-lp muted">No ranked games this season</span>
-          }
+            }
+
+            @if (peakRank(); as peak) {
+              <span
+                class="identity-peak"
+                [title]="'Peak rank: ' + peak.full + ' (' + peak.when + ')'"
+              >
+                <app-icon name="mountain" [size]="11" />
+                @if (peak.emblem) {
+                  <img class="identity-peak-emblem" [src]="peak.emblem" [alt]="''" />
+                }
+                {{ peak.short }}
+              </span>
+            }
+          </div>
         </div>
       </div>
 
-      @if (streak().count >= 2) {
-        <div class="streak" [class.win]="streak().type === 'win'" [class.loss]="streak().type === 'loss'">
-          {{ streak().count }}-game {{ streak().type }} streak
-        </div>
-      }
+      <!-- Ranked queues -->
+      <div class="queues">
+        @for (queue of queueCards(); track queue.queueType) {
+          <app-queue-card
+            [queue]="queue"
+            [snapshots]="snapshotsFor(queue.queueType)"
+            [open]="isQueueOpen(queue.queueType)"
+            (openChange)="setQueueOpen(queue.queueType, $event)"
+          />
+        }
+      </div>
 
-      @if (flexQueue(); as flex) {
-        <div class="secondary-queue">
-          <span class="secondary-queue-label">Flex</span>
-          <span class="secondary-queue-value">
-            {{ flex.tier | titlecase }} {{ flex.rank }} · {{ flex.leaguePoints }} LP
-          </span>
-          <span class="secondary-queue-record">{{ flex.wins }}W {{ flex.losses }}L</span>
-        </div>
-      }
+      <!-- Most played -->
+      <section class="rail-panel">
+        <header class="rail-panel-head">
+          <h2>Most Played</h2>
+        </header>
+        <app-segmented-toggle
+          class="rail-toggle"
+          [options]="queueOptions"
+          [value]="champQueue()"
+          label="Queue"
+          compact
+          (valueChange)="champQueue.set($event)"
+        />
+        <app-most-played-champions [rows]="mostPlayed()" />
+      </section>
+
+      <!-- Recently played with / against -->
+      <section class="rail-panel">
+        <header class="rail-panel-head">
+          <h2>Recently Played</h2>
+          <span class="rail-panel-note">last {{ sampleSize() }}</span>
+        </header>
+        <app-segmented-toggle
+          class="rail-toggle"
+          [options]="playedWithOptions"
+          [value]="playedWithMode()"
+          label="Teammates or opponents"
+          compact
+          (valueChange)="playedWithMode.set($event)"
+        />
+        <app-played-with-panel
+          [rows]="playedWithRows()"
+          [mode]="playedWithMode()"
+          [sampleSize]="sampleSize()"
+        />
+      </section>
     }
+  </aside>
+  </div>
 
-    <nav class="rail-nav" aria-label="Analytics sections">
+  <!-- ── Content ──────────────────────────────────────────────────────────── -->
+  <main class="content">
+    <nav class="screen-tabs" aria-label="Analytics sections">
       @for (item of screens; track item.id) {
         <button
           type="button"
-          class="rail-nav-item"
+          class="screen-tab"
           [class.active]="screen() === item.id"
           [attr.aria-current]="screen() === item.id ? 'page' : null"
           (click)="setScreen(item.id)"
@@ -81,10 +119,7 @@
         </button>
       }
     </nav>
-  </aside>
 
-  <!-- ── Content ─────────────────────────────────────────────────────────── -->
-  <main class="content">
     @if (data.loading()) {
       <div class="loading">
         <div class="spinner" aria-hidden="true"></div>
@@ -92,20 +127,20 @@
       </div>
     } @else if (data.failure() === 'no-api-key') {
       <app-empty-state
-        icon="🔑"
+        icon="key"
         title="No Riot API key configured"
         hint="Analytics reads match data straight from Riot. Add your API key in Settings to enable it."
       />
     } @else if (data.failure() === 'no-account') {
-      <app-empty-state icon="🔍" title="Account not found" hint="This vault entry no longer exists." />
+      <app-empty-state icon="search" title="Account not found" hint="This vault entry no longer exists." />
     } @else if (data.failure() === 'no-puuid') {
       <app-empty-state
-        icon="⚠️"
+        icon="alert-triangle"
         title="Could not resolve this Riot ID"
         hint="Check the account name and tag are correct, then refresh the account from the dashboard."
       />
     } @else if (data.failure() === 'error') {
-      <app-empty-state icon="⚠️" title="Could not load analytics" [hint]="data.errorMessage() ?? ''" />
+      <app-empty-state icon="alert-triangle" title="Could not load analytics" [hint]="data.errorMessage() ?? ''" />
     } @else {
       @switch (screen()) {
         @case ('overview') {

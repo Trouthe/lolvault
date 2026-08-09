@@ -37,7 +37,7 @@ export function frameCs(frame: TimelineParticipantFrame): number {
 export type AnalyticsScreen = 'overview' | 'champions' | 'insights';
 
 /** Tabs inside an expanded match card. */
-export type MatchTab = 'overview' | 'performance' | 'damage' | 'build';
+export type MatchTab = 'overview' | 'performance' | 'damage' | 'build' | 'map';
 
 /** Queue filter used by the Overview most-played toggle. */
 export type QueueFilter = 'all' | 'solo' | 'flex' | 'normal';
@@ -73,8 +73,8 @@ export interface ChampionStatRow {
   csPerMin: number;
   damagePerMin: number;
   damageTakenPerMin: number;
-  /** Average gold diff at 15 min; null when no game had timeline data. */
-  goldDiff15: number | null;
+  /** Total pentakills across all games on this champion. */
+  pentaKills: number;
 }
 
 export interface PlayedWithRow {
@@ -88,6 +88,8 @@ export interface PlayedWithRow {
 }
 
 export interface RolePerformanceRow {
+  /** Raw `teamPosition` key, used to resolve the official role icon. */
+  roleKey: string;
   role: string;
   games: number;
   wins: number;
@@ -95,3 +97,85 @@ export interface RolePerformanceRow {
   kda: number;
   share: number;
 }
+
+/** One game in the recent-form strip. */
+export interface RecentGame {
+  matchId: string;
+  win: boolean;
+  /** Top rating on the winning team — our own metric, not a Riot flag. */
+  mvp: boolean;
+  timestamp: number;
+}
+
+/** One cell of the LP activity grid. */
+export interface ActivityDay {
+  date: Date;
+  wins: number;
+  losses: number;
+  games: number;
+  /** Net LP for the day; null when no ranked snapshot bracketed it. */
+  netLp: number | null;
+  future: boolean;
+  /** Before the first day we have any data for — rendered as "not tracked". */
+  untracked: boolean;
+}
+
+/** A ranked queue entry rendered as a collapsible card in the rail. */
+export interface QueueCard {
+  queueType: string;
+  label: string;
+  tier: string;
+  rank: string;
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  games: number;
+  ranked: boolean;
+}
+
+/**
+ * Queues always shown in the rail, even with no games, so the card is there to
+ * expand from day one. Any *other* ranked queue the API returns is appended
+ * dynamically, so a newly added 5v5 queue appears without a code change.
+ * Clash is deliberately excluded.
+ */
+export const PINNED_QUEUES: { queueType: string; label: string }[] = [
+  { queueType: 'RANKED_SOLO_5x5', label: 'Ranked Solo/Duo' },
+  { queueType: 'RANKED_FLEX_SR', label: 'Ranked Flex 5v5' },
+];
+
+/** Human label for a queueType, falling back to a de-slugged version. */
+export function queueTypeLabel(queueType: string): string {
+  const known: Record<string, string> = {
+    RANKED_SOLO_5x5: 'Ranked Solo/Duo',
+    RANKED_FLEX_SR: 'Ranked Flex 5v5',
+    RANKED_FLEX_TT: 'Ranked Flex 3v3',
+  };
+  if (known[queueType]) return known[queueType];
+  return queueType
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Clash queues are excluded from analytics entirely. */
+export function isClashQueue(queueType: string): boolean {
+  return /CLASH/i.test(queueType);
+}
+
+/** Divisions ordered low → high, for the rank stepper. */
+export const DIVISION_ORDER = ['IV', 'III', 'II', 'I'] as const;
+
+export const TIER_ORDER = [
+  'IRON',
+  'BRONZE',
+  'SILVER',
+  'GOLD',
+  'PLATINUM',
+  'EMERALD',
+  'DIAMOND',
+  'MASTER',
+  'GRANDMASTER',
+  'CHALLENGER',
+] as const;

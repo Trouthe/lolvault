@@ -79,7 +79,7 @@ export function daysAgoLabel(timestamp: number): string {
     } @else {
       <app-empty-state
         inline
-        icon="📈"
+        icon="chart-line"
         title="Not enough LP history yet"
         [hint]="emptyHint()"
       />
