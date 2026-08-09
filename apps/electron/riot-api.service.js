@@ -221,6 +221,9 @@ function summariseParticipant(p) {
     puuid: p.puuid,
     riotIdGameName: p.riotIdGameName || p.summonerName || '',
     riotIdTagline: p.riotIdTagline || '',
+    // Their summoner icon at the time of the game — lets "recently played"
+    // show people by their account picture without a per-player API call.
+    profileIcon: p.profileIcon ?? 0,
     championName: p.championName || '',
     championId: p.championId ?? 0,
     teamId: p.teamId,

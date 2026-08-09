@@ -51,18 +51,33 @@
   }
 }
 
+// Riot ships these SVGs in the client's warm grey, which sits correctly on a
+// dark surface; light themes invert them, matching how the role icons are
+// handled elsewhere in the feature. The stat-shard PNGs (`.art`) keep their own
+// gold palette and are only sized.
 .glyph {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
+  width: 15px;
+  height: 15px;
+  display: block;
   flex-shrink: 0;
+  object-fit: contain;
+}
+
+[data-theme='light'] .glyph:not(.art) {
+  filter: invert(1);
+}
+
+.glyph.art {
+  width: 17px;
+  height: 17px;
 }
 
 .title-glyph {
-  width: 12px;
-  height: 12px;
-  vertical-align: -1px;
-  margin-right: 3px;
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 4px;
 }
 
 // ── Chart ────────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LpSnapshot } from '../../../../types/electron';
 import { absoluteLpToLabel } from './lp-climb-chart.component';
@@ -6,6 +6,13 @@ import { absoluteLpToLabel } from './lp-climb-chart.component';
 const DAY_MS = 86_400_000;
 const W = 100;
 const H = 38;
+/**
+ * Inset so the first and last sample dots sit fully inside the viewBox. Drawn
+ * edge-to-edge they were sliced in half by the box, which read as a rendering
+ * glitch rather than as data.
+ */
+const PAD_X = 3;
+const PAD_Y = 4;
 
 interface Plotted {
   x: number;
@@ -39,35 +46,58 @@ interface Plotted {
           </b>
         </header>
 
-        <svg
-          class="spark"
-          [attr.viewBox]="'0 0 ' + W + ' ' + H"
-          preserveAspectRatio="none"
-          role="img"
-          [attr.aria-label]="ariaLabel()"
-        >
-          <!-- Soft fill under the line for readability at this size. -->
-          <polygon class="spark-area" [class.up]="netLp() >= 0" [attr.points]="areaPoints()" />
-          <polyline
-            class="spark-line"
-            [class.up]="netLp() >= 0"
-            [attr.points]="linePoints()"
-            fill="none"
-            vector-effect="non-scaling-stroke"
-          />
-          <!-- Real samples are marked, so sparse data doesn't read as a
-               continuous recording. -->
-          @for (p of plotted(); track $index) {
-            <circle
-              class="spark-dot"
+        <!-- The line is SVG; the sample dots are HTML overlaid on it. The SVG is
+             stretched to fill the card (preserveAspectRatio="none"), which would
+             squash circles into ellipses — and DOM dots are hoverable. -->
+        <div class="spark-wrap" (mouseleave)="hovered.set(null)">
+          <svg
+            class="spark"
+            [attr.viewBox]="'0 0 ' + W + ' ' + H"
+            preserveAspectRatio="none"
+            role="img"
+            [attr.aria-label]="ariaLabel()"
+          >
+            <!-- Soft fill under the line for readability at this size. -->
+            <polygon class="spark-area" [class.up]="netLp() >= 0" [attr.points]="areaPoints()" />
+            <polyline
+              class="spark-line"
               [class.up]="netLp() >= 0"
-              [attr.cx]="p.x"
-              [attr.cy]="p.y"
-              r="1.6"
+              [attr.points]="linePoints()"
+              fill="none"
               vector-effect="non-scaling-stroke"
             />
+          </svg>
+
+          <!-- Real samples are marked, so sparse data doesn't read as a
+               continuous recording. -->
+          @for (p of plotted(); track $index; let i = $index) {
+            <button
+              type="button"
+              class="dot"
+              [class.up]="netLp() >= 0"
+              [class.active]="hovered() === i"
+              [style.left.%]="p.x"
+              [style.top.%]="(p.y / H) * 100"
+              [attr.aria-label]="tooltipFor(i)"
+              (mouseenter)="hovered.set(i)"
+              (focus)="hovered.set(i)"
+              (blur)="hovered.set(null)"
+            ></button>
           }
-        </svg>
+
+          @if (activePoint(); as point) {
+            <div
+              class="tip"
+              [class.pin-left]="point.x < 30"
+              [class.pin-right]="point.x > 70"
+              [style.left.%]="point.x"
+            >
+              <span class="tip-rank">{{ point.rank }}</span>
+              <span class="tip-lp">{{ point.lp }} LP</span>
+              <span class="tip-when">{{ point.when }} · {{ point.ago }}</span>
+            </div>
+          }
+        </div>
 
         <div class="trend-axis">
           <span>{{ startLabel() }}</span>
@@ -115,11 +145,89 @@ interface Plotted {
         color: var(--danger);
       }
 
-      .spark {
+      .spark-wrap {
+        position: relative;
         width: 100%;
         height: 38px;
+      }
+
+      .spark {
+        width: 100%;
+        height: 100%;
         display: block;
-        overflow: visible;
+      }
+
+      /* Sample markers: HTML so they stay circular over the stretched SVG and
+         can take pointer and keyboard focus. */
+      .dot {
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        margin: -3.5px 0 0 -3.5px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: var(--danger);
+        cursor: pointer;
+        transition: transform 0.12s ease;
+      }
+
+      .dot.up {
+        background: #2f9e6f;
+      }
+
+      .dot:hover,
+      .dot:focus-visible,
+      .dot.active {
+        transform: scale(1.5);
+        outline: none;
+        box-shadow: 0 0 0 2px color-mix(in oklch, var(--card) 85%, transparent);
+      }
+
+      .tip {
+        position: absolute;
+        bottom: calc(100% + 7px);
+        transform: translateX(-50%);
+        z-index: 4;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 5px 8px;
+        border-radius: 7px;
+        background: var(--card);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 6px 16px rgb(0 0 0 / 28%);
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      /* Near either edge the tooltip anchors to that side instead of centring,
+         so it never spills out of the (clipped) rank card. */
+      .tip.pin-left {
+        transform: translateX(-6px);
+      }
+
+      .tip.pin-right {
+        transform: translateX(calc(-100% + 6px));
+      }
+
+      .tip-rank {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--primary-text);
+      }
+
+      .tip-lp {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--secondary-text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tip-when {
+        font-size: 9.5px;
+        color: var(--secondary-text);
+        opacity: 0.85;
       }
 
       .spark-line {
@@ -139,14 +247,6 @@ interface Plotted {
 
       .spark-area.up {
         fill: color-mix(in oklch, #2f9e6f 22%, transparent);
-      }
-
-      .spark-dot {
-        fill: var(--danger);
-      }
-
-      .spark-dot.up {
-        fill: #2f9e6f;
       }
 
       .trend-axis {
@@ -172,6 +272,9 @@ export class LpTrendMiniComponent {
 
   readonly W = W;
   readonly H = H;
+
+  /** Index of the sample under the pointer, or null. */
+  readonly hovered = signal<number | null>(null);
 
   /**
    * Snapshots to draw, oldest first.
@@ -213,9 +316,12 @@ export class LpTrendMiniComponent {
     const range = max - min || 1;
     const flat = max === min;
 
+    const innerW = W - PAD_X * 2;
+    const innerH = H - PAD_Y * 2;
+
     return points.map((snapshot) => ({
-      x: ((snapshot.timestamp - first) / span) * W,
-      y: flat ? H / 2 : H - ((snapshot.absolute_lp - min) / range) * (H - 4) - 2,
+      x: PAD_X + ((snapshot.timestamp - first) / span) * innerW,
+      y: flat ? H / 2 : H - PAD_Y - ((snapshot.absolute_lp - min) / range) * innerH,
       snapshot,
     }));
   });
@@ -268,6 +374,44 @@ export class LpTrendMiniComponent {
   readonly ariaLabel = computed(
     () => `LP trend, ${this.windowLabel()}, net ${this.netLp()} LP`
   );
+
+  /** Everything the hover card shows for the focused sample. */
+  readonly activePoint = computed(() => {
+    const index = this.hovered();
+    if (index === null) return null;
+    const point = this.plotted()[index];
+    if (!point) return null;
+
+    const { timestamp, absolute_lp } = point.snapshot;
+    return {
+      x: point.x,
+      rank: absoluteLpToLabel(Math.round(absolute_lp)),
+      lp: Math.round(absolute_lp) % 100,
+      when: new Date(timestamp).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+      ago: this.agoLabel(timestamp),
+    };
+  });
+
+  /** Accessible label for one dot, mirroring the hover card. */
+  tooltipFor(index: number): string {
+    const point = this.plotted()[index];
+    if (!point) return '';
+    const lp = Math.round(point.snapshot.absolute_lp);
+    return `${absoluteLpToLabel(lp)} ${lp % 100} LP, ${this.agoLabel(point.snapshot.timestamp)}`;
+  }
+
+  private agoLabel(timestamp: number): string {
+    const days = Math.floor((Date.now() - timestamp) / DAY_MS);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return `${days} days ago`;
+    const months = Math.round(days / 30);
+    return months === 1 ? 'a month ago' : `${months} months ago`;
+  }
 
   private dateLabel(timestamp?: number): string {
     if (!timestamp) return '';

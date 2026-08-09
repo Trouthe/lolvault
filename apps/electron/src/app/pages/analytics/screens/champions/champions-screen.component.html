@@ -47,27 +47,24 @@
           <tr>
             <th class="col-rank">#</th>
             <th class="col-champ">Champion</th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'games'" (click)="setSort('games')">
-              Games
-            </th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'winRate'" (click)="setSort('winRate')">
+            <th class="col-wl sortable" [class.sorted]="sortColumn() === 'winRate'" (click)="setSort('winRate')">
               Win / Lose
             </th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'kda'" (click)="setSort('kda')">KDA</th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'damagePerMin'" (click)="setSort('damagePerMin')">
+            <th class="col-kda sortable" [class.sorted]="sortColumn() === 'kda'" (click)="setSort('kda')">KDA</th>
+            <th class="col-num sortable" [class.sorted]="sortColumn() === 'damagePerMin'" (click)="setSort('damagePerMin')">
               Damage/m
             </th>
             <th
-              class="sortable"
+              class="col-num sortable"
               [class.sorted]="sortColumn() === 'damageTakenPerMin'"
               (click)="setSort('damageTakenPerMin')"
             >
               Taken/m
             </th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'csPerMin'" (click)="setSort('csPerMin')">
+            <th class="col-num sortable" [class.sorted]="sortColumn() === 'csPerMin'" (click)="setSort('csPerMin')">
               CS/m
             </th>
-            <th class="sortable" [class.sorted]="sortColumn() === 'pentaKills'" (click)="setSort('pentaKills')">
+            <th class="col-penta sortable" [class.sorted]="sortColumn() === 'pentaKills'" (click)="setSort('pentaKills')">
               Pentas
             </th>
             <th class="col-expand" aria-label="Expand"></th>
@@ -81,8 +78,7 @@
               <td class="col-champ">
                 <span class="champ-name">All Champions</span>
               </td>
-              <td class="num">{{ all.games }}</td>
-              <td>
+              <td class="col-wl">
                 <div class="wl">
                   <div class="wl-bar" [style.--win-pct.%]="all.winRate">
                     <span class="wl-win">{{ all.wins }}</span>
@@ -93,7 +89,7 @@
                   </span>
                 </div>
               </td>
-              <td class="num">
+              <td class="num col-kda">
                 <span class="kda-main">{{ all.kda | number: '1.2-2' }}</span>
                 <span class="kda-sub">
                   {{ all.kills | number: '1.1-1' }} / {{ all.deaths | number: '1.1-1' }} /
@@ -125,8 +121,7 @@
                 <img class="champ-icon" [src]="championIcon(row.champion)" [alt]="row.champion" loading="lazy" />
                 <span class="champ-name">{{ row.champion }}</span>
               </td>
-              <td class="num">{{ row.games }}</td>
-              <td>
+              <td class="col-wl">
                 <div class="wl">
                   <div class="wl-bar" [style.--win-pct.%]="row.winRate">
                     <span class="wl-win">{{ row.wins }}</span>
@@ -137,7 +132,7 @@
                   </span>
                 </div>
               </td>
-              <td class="num">
+              <td class="num col-kda">
                 <span class="kda-main">{{ row.kda | number: '1.2-2' }}</span>
                 <span class="kda-sub">
                   {{ row.kills | number: '1.1-1' }} / {{ row.deaths | number: '1.1-1' }} /
@@ -162,7 +157,7 @@
 
             @if (expanded() === row.champion) {
               <tr class="row-detail">
-                <td colspan="10">
+                <td colspan="9">
                   <div class="matchups">
                     <h3 class="matchups-title">Matchups on {{ row.champion }}</h3>
                     @if (matchupsFor().length === 0) {

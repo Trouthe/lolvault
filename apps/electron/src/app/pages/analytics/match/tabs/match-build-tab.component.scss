@@ -98,6 +98,8 @@
 // ── Blocks ───────────────────────────────────────────────────────────────────
 
 .block {
+  display: flex;
+  flex-direction: column;
   padding: 11px 12px;
   border-radius: 10px;
   background: var(--card);
@@ -115,14 +117,17 @@
 
 // ── Split: runes | skill order ───────────────────────────────────────────────
 
+// The runes card gives up horizontal room to the skill order: a full level-18
+// game is 18 columns wide and must never need a scrollbar. Rows stretch so the
+// two cards end up the same height.
 .split {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 980px) {
   .split {
     grid-template-columns: 1fr;
   }
@@ -133,8 +138,12 @@
 .rune-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   align-items: start;
+  // Fills the block so the runes sit centred against the taller skill table
+  // instead of hugging the top of a short card.
+  flex: 1;
+  align-content: center;
 }
 
 .rune-col {
@@ -183,8 +192,8 @@
 }
 
 .rune {
-  width: 27px;
-  height: 27px;
+  width: 25px;
+  height: 25px;
   border-radius: 999px;
   object-fit: contain;
   background: color-mix(in oklch, var(--muted) 75%, transparent);
@@ -192,8 +201,8 @@
 
 // The keystone is the defining choice, so it reads larger and highlighted.
 .rune.keystone {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   background: radial-gradient(
     circle,
     color-mix(in oklch, var(--outline) 55%, transparent) 0%,
@@ -300,13 +309,20 @@
 
 // ── Skill order ──────────────────────────────────────────────────────────────
 
+// No horizontal scroller: the grid is sized so all 18 levels fit, and the cells
+// share the leftover width rather than overflowing.
 .skills-scroll {
-  overflow-x: auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .skills {
+  width: 100%;
   border-collapse: separate;
   border-spacing: 2px;
+  table-layout: fixed;
 }
 
 .skill-level-head {
@@ -314,7 +330,6 @@
   font-weight: 600;
   color: var(--secondary-text);
   text-align: center;
-  min-width: 19px;
   padding: 0 0 2px;
 }
 
@@ -353,7 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 19px;
+  width: 100%;
   height: 19px;
   border-radius: 4px;
   background: var(--muted);

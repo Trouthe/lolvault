@@ -29,16 +29,18 @@
           <span class="kda-main" [class.high]="record.avgKda >= 3">
             {{ record.avgKda | number: '1.2-2' }}
           </span>
-          @if (averages(); as avg) {
-            <span class="kda-split">
-              <b>{{ avg.kills | number: '1.1-1' }}</b>
-              <i>/</i>
-              <b class="deaths">{{ avg.deaths | number: '1.1-1' }}</b>
-              <i>/</i>
-              <b>{{ avg.assists | number: '1.1-1' }}</b>
-            </span>
-          }
-          <span class="kda-caption">Average per game</span>
+          <div class="kda-side">
+            @if (averages(); as avg) {
+              <span class="kda-split">
+                <b>{{ avg.kills | number: '1.1-1' }}</b>
+                <i>/</i>
+                <b class="deaths">{{ avg.deaths | number: '1.1-1' }}</b>
+                <i>/</i>
+                <b>{{ avg.assists | number: '1.1-1' }}</b>
+              </span>
+            }
+            <span class="kda-caption">Average per game</span>
+          </div>
         </div>
       } @else {
         <app-empty-state inline title="No games yet" />

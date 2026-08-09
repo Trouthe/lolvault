@@ -51,13 +51,21 @@
   flex-direction: column;
   gap: 12px;
   height: 100%;
-  padding: 14px 14px 44px;
+  // Bottom padding clears the fade overlay (56px) so the last panel can be
+  // scrolled fully into view instead of ending underneath it.
+  padding: 14px 14px 76px;
   overflow-y: auto;
   overscroll-behavior: contain;
 
   // Hide the scrollbar in every engine while keeping the element scrollable.
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+// Sections keep their natural height; without this a tall rail compresses the
+// last panel instead of scrolling.
+.rail > * {
+  flex-shrink: 0;
 }
 
 .rail::-webkit-scrollbar {
@@ -69,14 +77,14 @@
 .rail-back {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   align-self: flex-start;
-  padding: 6px 11px 6px 9px;
+  padding: 8px 14px 8px 11px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--card);
   color: var(--secondary-text);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -99,14 +107,14 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
+  gap: 13px;
   padding: 2px;
 }
 
 .identity-avatar {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 62px;
+  height: 62px;
   flex-shrink: 0;
 
   img {
@@ -129,7 +137,7 @@
   background: var(--card);
   border: 1px solid var(--border-color);
   color: var(--secondary-text);
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -143,7 +151,7 @@
 
 .identity-name {
   margin: 0;
-  font-size: 17px;
+  font-size: 19.5px;
   font-weight: 700;
   line-height: 1.15;
   color: var(--primary-text);
@@ -154,7 +162,7 @@
 
 // Tag is de-emphasised so the name reads first.
 .identity-tag {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--secondary-text);
   opacity: 0.7;
@@ -169,12 +177,12 @@
 }
 
 .identity-server {
-  padding: 2px 7px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: var(--muted);
   border: 1px solid var(--border-color);
   color: var(--secondary-text);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.4px;
 }
@@ -183,19 +191,19 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px 2px 5px;
-  border-radius: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
   background: var(--muted);
   border: 1px solid var(--border-color);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--secondary-text);
   letter-spacing: 0.2px;
 }
 
 .identity-role-icon {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   object-fit: contain;
   // Role SVGs ship white; invert them on light themes so they stay visible.
   opacity: 0.9;
@@ -215,11 +223,11 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 7px 2px 5px;
-  border-radius: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
   background: color-mix(in oklch, #c89b3c 16%, var(--muted));
   border: 1px solid color-mix(in oklch, #c89b3c 34%, var(--border-color));
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.2px;
   color: #d9b45f;
@@ -227,8 +235,8 @@
 }
 
 .identity-peak-emblem {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   object-fit: contain;
 }
 

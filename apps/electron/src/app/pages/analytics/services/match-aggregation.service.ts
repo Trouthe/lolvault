@@ -14,6 +14,8 @@ export interface ParticipantSummary {
   puuid: string;
   riotIdGameName: string;
   riotIdTagline?: string;
+  /** Summoner icon id. Absent on rows cached before it was recorded. */
+  profileIcon?: number;
   championName: string;
   championId?: number;
   teamId: number;
@@ -225,8 +227,18 @@ export class MatchAggregationService {
   ): PlayedWithRow[] {
     const map = new Map<
       string,
-      { name: string; tagline: string; games: number; wins: number; champs: Set<string> }
+      {
+        name: string;
+        tagline: string;
+        games: number;
+        wins: number;
+        champs: Set<string>;
+        profileIcon: number;
+      }
     >();
+
+    // Newest first, so the first icon we see for a player is their latest.
+    matches = [...matches].sort((a, b) => b.timestamp - a.timestamp);
 
     for (const m of matches) {
       const participants = this.participantsOf(m);
@@ -246,7 +258,9 @@ export class MatchAggregationService {
           games: 0,
           wins: 0,
           champs: new Set<string>(),
+          profileIcon: 0,
         };
+        if (!e.profileIcon && p.profileIcon) e.profileIcon = p.profileIcon;
         e.games++;
         // For opponents, "wins" counts games where WE won, so the rate always
         // reads from the account holder's perspective.
@@ -268,6 +282,7 @@ export class MatchAggregationService {
         wins: e.wins,
         winRate: (e.wins / e.games) * 100,
         championsPlayed: [...e.champs],
+        profileIcon: e.profileIcon,
       }))
       .sort((a, b) => b.games - a.games || b.winRate - a.winRate);
   }

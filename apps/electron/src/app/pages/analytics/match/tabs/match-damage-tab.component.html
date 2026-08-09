@@ -1,6 +1,6 @@
 <div class="damage-tab">
   <header class="controls">
-    <!-- Dealt / taken: sword and shield -->
+    <!-- Dealt / taken: Riot's own post-game sword and shield -->
     <div class="toggle" role="tablist" aria-label="Damage direction">
       @for (opt of directionOptions; track opt.value) {
         <button
@@ -11,15 +11,13 @@
           [attr.aria-selected]="direction() === opt.value"
           (click)="direction.set(opt.value)"
         >
-          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path [attr.d]="opt.icon" />
-          </svg>
+          <img class="glyph" [src]="opt.icon" alt="" aria-hidden="true" />
           <span>{{ opt.label }}</span>
         </button>
       }
     </div>
 
-    <!-- Damage type: icon + name -->
+    <!-- Damage type: Riot stat-shard art -->
     <div class="toggle" role="tablist" aria-label="Damage type">
       @for (opt of typeOptions; track opt.value) {
         <button
@@ -30,9 +28,7 @@
           [attr.aria-selected]="damageType() === opt.value"
           (click)="damageType.set(opt.value)"
         >
-          <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" [style.color]="opt.color">
-            <path [attr.d]="opt.icon" />
-          </svg>
+          <img class="glyph art" [src]="opt.icon" alt="" aria-hidden="true" />
           <span>{{ opt.label }}</span>
         </button>
       }
@@ -43,9 +39,7 @@
   <section class="chart-block">
     <div class="chart-head">
       <h4>
-        <svg class="glyph title-glyph" viewBox="0 0 24 24" aria-hidden="true">
-          <path [attr.d]="activeTypeIcon()" />
-        </svg>
+        <img class="glyph art title-glyph" [src]="activeTypeIcon()" alt="" aria-hidden="true" />
         {{ directionLabel() }} — running total
       </h4>
       @if (typeNotChartable()) {

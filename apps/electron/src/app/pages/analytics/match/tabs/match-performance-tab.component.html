@@ -118,19 +118,24 @@
               </div>
 
               @if (series(); as data) {
-                <apx-chart
-                  [series]="data"
-                  [chart]="chartOptions().chart"
-                  [colors]="chartOptions().colors"
-                  [stroke]="chartOptions().stroke"
-                  [xaxis]="chartOptions().xaxis"
-                  [yaxis]="chartOptions().yaxis"
-                  [grid]="chartOptions().grid"
-                  [theme]="chartOptions().theme"
-                  [tooltip]="chartOptions().tooltip"
-                  [legend]="chartOptions().legend"
-                  [dataLabels]="chartOptions().dataLabels"
-                />
+                <!-- Keyed on the compared pair: ApexCharts updates series *data*
+                     in place but keeps the original series names in its legend,
+                     so switching player has to rebuild the chart. -->
+                @for (key of chartKey(); track key) {
+                  <apx-chart
+                    [series]="data"
+                    [chart]="chartOptions().chart"
+                    [colors]="chartOptions().colors"
+                    [stroke]="chartOptions().stroke"
+                    [xaxis]="chartOptions().xaxis"
+                    [yaxis]="chartOptions().yaxis"
+                    [grid]="chartOptions().grid"
+                    [theme]="chartOptions().theme"
+                    [tooltip]="chartOptions().tooltip"
+                    [legend]="chartOptions().legend"
+                    [dataLabels]="chartOptions().dataLabels"
+                  />
+                }
               } @else {
                 <app-empty-state
                   inline

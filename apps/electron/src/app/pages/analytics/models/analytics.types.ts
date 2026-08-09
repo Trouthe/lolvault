@@ -85,6 +85,12 @@ export interface PlayedWithRow {
   wins: number;
   winRate: number;
   championsPlayed: string[];
+  /**
+   * Their summoner icon id, taken from the most recent game we have with them.
+   * 0 when every cached game predates the field being recorded — the panel
+   * resolves those from the Summoner API instead.
+   */
+  profileIcon: number;
 }
 
 export interface RolePerformanceRow {

@@ -6,38 +6,55 @@
 
 // ── Top band ─────────────────────────────────────────────────────────────────
 
+// Two rows on a six-column grid: three short summary cards above, the two tall
+// list cards below. Spans are explicit at every breakpoint so a row is never
+// left with a hole where a third column used to be.
 .band {
   display: grid;
-  grid-template-columns:
-    minmax(168px, 0.8fr)
-    minmax(150px, 0.75fr)
-    minmax(190px, 1fr)
-    minmax(200px, 1.05fr)
-    minmax(210px, 1.1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
 
-@media (max-width: 1500px) {
-  .band {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.panel-winrate,
+.panel-kda,
+.panel-averages {
+  grid-column: span 2;
+}
 
-  .panel-roles,
-  .panel-champs {
-    grid-column: span 1;
-  }
+.panel-roles,
+.panel-champs {
+  grid-column: span 3;
 }
 
 @media (max-width: 1080px) {
   .band {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .panel-winrate {
+    grid-column: span 2;
+  }
+
+  .panel-kda,
+  .panel-averages,
+  .panel-roles,
+  .panel-champs {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 700px) {
   .band {
     grid-template-columns: 1fr;
+  }
+
+  .panel-winrate,
+  .panel-kda,
+  .panel-averages,
+  .panel-roles,
+  .panel-champs {
+    grid-column: span 1;
   }
 }
 
@@ -77,20 +94,31 @@
 
 // ── KDA ──────────────────────────────────────────────────────────────────────
 
+// The headline number sits beside its breakdown rather than above it, so the
+// card fills its width instead of leaving a wide blank margin.
 .kda {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   flex: 1;
+  min-width: 0;
+}
+
+.kda-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .kda-main {
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
   color: var(--primary-text);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 // A 3.0+ average reads as the standout number it is.
@@ -122,7 +150,6 @@
 }
 
 .kda-caption {
-  margin-top: 2px;
   font-size: 10px;
   color: var(--secondary-text);
 }
@@ -132,7 +159,9 @@
 .averages {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 10px;
+  gap: 10px;
+  flex: 1;
+  align-content: center;
 }
 
 .avg {

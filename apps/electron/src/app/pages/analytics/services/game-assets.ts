@@ -9,6 +9,30 @@
 
 const OBJ = 'assets/game-images/objectives';
 const ROLE = 'assets/game-images/roles';
+const STAT = 'assets/game-images/stats';
+
+/**
+ * Stat icons, taken from Riot's own clients via Community Dragon.
+ *
+ * `dealt`/`taken`/`kda`/`vision`/`minions` are the League post-game scoreboard
+ * icons (rcp-fe-lol-postgame), recoloured to `currentColor` so they follow the
+ * theme. Riot publishes no dedicated physical/magic/true damage art, so the
+ * type split reuses the rune stat-shard icons for the resistance each type is
+ * answered by — armour for physical, magic resist for magic, health for true
+ * (which ignores both) and adaptive force for the combined total.
+ */
+export const STAT_ICONS = {
+  dealt: `${STAT}/damage-dealt.svg`,
+  taken: `${STAT}/damage-taken.svg`,
+  kda: `${STAT}/kda.svg`,
+  vision: `${STAT}/vision.svg`,
+  minions: `${STAT}/minions.svg`,
+  ccScore: `${STAT}/cc-score.svg`,
+  total: `${STAT}/damage-total.png`,
+  physical: `${STAT}/damage-physical.png`,
+  magic: `${STAT}/damage-magic.png`,
+  true: `${STAT}/damage-true.png`,
+} as const;
 
 export type TeamSide = 100 | 200;
 

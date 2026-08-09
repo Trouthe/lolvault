@@ -1,22 +1,30 @@
-// Card colour carries the result — no left stripe, no separate accent bar.
+// Card colour carries the result outright: a win card is blue, a loss card is
+// red. The tint is deliberately heavy — at a glance the history should read as
+// two colours, not as one surface with a faint wash.
 .card {
+  // `--result-bg` is the single source of truth for the card's colour so the
+  // MVP treatment can reuse it behind its gradient border.
+  --result-bg: var(--card);
+
   position: relative;
   border-radius: 10px;
   border: 1px solid var(--border-color);
-  background: var(--card);
+  background: var(--result-bg);
   overflow: hidden;
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
 
   &.win {
-    background: color-mix(in oklch, #2f6fd0 14%, var(--card));
-    border-color: color-mix(in oklch, #2f6fd0 30%, var(--border-color));
+    --result-bg: #001d47;
+    border-color: color-mix(in oklch, #2f6fd0 62%, var(--border-color));
   }
 
   &.loss {
-    background: color-mix(in oklch, #d6455d 13%, var(--card));
-    border-color: color-mix(in oklch, #d6455d 28%, var(--border-color));
+    // Paired to the win navy above — both are flat, dark and saturated, so the
+    // two results read as one colour each. Tune the pair together.
+    --result-bg: #4a0011;
+    border-color: color-mix(in oklch, #d6455d 62%, var(--border-color));
   }
 
   &.is-open {
@@ -30,8 +38,7 @@
 .card.mvp {
   border-color: transparent;
   background:
-    linear-gradient(color-mix(in oklch, #b06fd6 10%, var(--card)), color-mix(in oklch, #b06fd6 10%, var(--card)))
-      padding-box,
+    var(--result-bg) padding-box,
     linear-gradient(100deg, #ff5f6d, #ffc371, #47e08d, #38b6ff, #b06fd6, #ff5f6d) border-box;
   background-size:
     auto,
@@ -57,11 +64,13 @@
   }
 }
 
+// The crumb hangs off the top of the champion column — between the outcome
+// text and the portrait rather than sitting on top of "Victory".
 .badge-mvp,
 .badge-ace {
   position: absolute;
-  top: 0;
-  left: 14px;
+  top: -10px;
+  left: -8px;
   z-index: 3;
   padding: 1px 9px 2px;
   border-radius: 0 0 6px 6px;
@@ -96,21 +105,36 @@
 }
 
 // ── Summary row ──────────────────────────────────────────────────────────────
-// Fixed track widths with `minmax(0, …)` so cells shrink rather than wrapping.
+// The head is the click target; the expander rail is its second child so it can
+// stretch the card's full height flush against the right edge.
 
+.head {
+  display: flex;
+  align-items: stretch;
+  cursor: pointer;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--outline);
+    outline-offset: -2px;
+  }
+}
+
+// Fixed track widths with `minmax(0, …)` so cells shrink rather than wrapping.
 .summary {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns:
-    minmax(0, 0.95fr)
-    minmax(0, 1fr)
-    minmax(0, 0.72fr)
-    minmax(0, 0.8fr)
-    minmax(0, 0.92fr)
-    minmax(0, 1.15fr)
-    46px;
+    minmax(0, 0.9fr)
+    minmax(0, 0.98fr)
+    minmax(0, 0.66fr)
+    minmax(0, 0.74fr)
+    minmax(0, 0.86fr)
+    minmax(0, 1.2fr);
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
+  gap: 8px;
+  padding: 10px 10px 10px 12px;
 }
 
 .col {
@@ -127,21 +151,30 @@
   white-space: nowrap;
 }
 
-.win .outcome {
-  color: #6ba5ee;
-}
-
-.loss .outcome {
-  color: #ed8a99;
-}
-
+// On a saturated card the outcome reads as the brightest thing on the row
+// rather than as a tinted label — a mid-blue on blue would disappear.
+.win .outcome,
+.loss .outcome,
 .remake .outcome,
 .mvp .outcome {
   color: var(--primary-text);
+  font-size: 13.5px;
+  letter-spacing: 0.2px;
 }
 
-.win.mvp .outcome {
-  color: #6ba5ee;
+// Secondary text on a tinted card needs more weight than the theme's default
+// grey, which is tuned for the neutral surface.
+.win .queue,
+.win .ago,
+.win .kda-ratio,
+.win .kda-kp,
+.win .team-name,
+.loss .queue,
+.loss .ago,
+.loss .kda-ratio,
+.loss .kda-kp,
+.loss .team-name {
+  color: color-mix(in oklch, var(--primary-text) 74%, transparent);
 }
 
 .lp {
@@ -160,8 +193,23 @@
   }
 }
 
+// Green-on-blue and red-on-red both vanish, so LP and deaths lighten on a
+// tinted card instead of keeping their neutral-surface colours.
+.win .lp.gain {
+  color: #b7f0d6;
+}
+
+.loss .lp.drop {
+  color: #ffd6dc;
+}
+
+.win .kda-line .deaths,
+.loss .kda-line .deaths {
+  color: #ffcbd3;
+}
+
 .lp-none {
-  opacity: 0.5;
+  opacity: 0.6;
   font-weight: 600;
 }
 
@@ -174,10 +222,13 @@
   text-overflow: ellipsis;
 }
 
-// Champion column
+// Champion column. Stretched so the MVP crumb can anchor to the card's top
+// edge, and `position: relative` so it does.
 .col-champ {
+  position: relative;
   flex-direction: row;
   align-items: center;
+  align-self: stretch;
   gap: 5px;
 }
 
@@ -323,10 +374,11 @@
   border-radius: 999px;
 }
 
-// Teams
+// Teams — both rosters stay on the card at every width. When space runs out the
+// names truncate; the enemy column is never dropped.
 .col-teams {
   flex-direction: row;
-  gap: 9px;
+  gap: 6px;
 }
 
 .team {
@@ -337,7 +389,7 @@
   flex-direction: column;
   gap: 1px;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0;
 
   li {
     display: flex;
@@ -347,8 +399,8 @@
   }
 
   img {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     border-radius: 4px;
     object-fit: cover;
     flex-shrink: 0;
@@ -361,6 +413,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .team li.self .team-name {
@@ -369,48 +422,53 @@
 }
 
 // ── Expander ─────────────────────────────────────────────────────────────────
-// Sits on a stronger tint of whatever the card's own colour is.
+// A full-height rail flush against the card's right edge — square on the left
+// so it reads as part of the card, rounded on the right to follow the corner.
 
 .expander {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-height: 62px;
+  flex-shrink: 0;
+  width: 40px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 0 9px 9px 0;
   background: color-mix(in oklch, var(--primary-text) 8%, transparent);
   color: var(--secondary-text);
-  cursor: pointer;
   transition:
     background 0.15s ease,
     color 0.15s ease;
 }
 
 .win .expander {
-  background: color-mix(in oklch, #2f6fd0 34%, transparent);
-  color: #cfe1fb;
+  background: color-mix(in oklch, #2f6fd0 42%, transparent);
+  color: #e2edfd;
 }
 
 .loss .expander {
-  background: color-mix(in oklch, #d6455d 32%, transparent);
-  color: #f8d8dd;
+  background: color-mix(in oklch, #d6455d 40%, transparent);
+  color: #fbe6ea;
 }
 
-.expander:hover {
+.head:hover .expander {
   color: var(--primary-text);
 }
 
-.win .expander:hover {
-  background: color-mix(in oklch, #2f6fd0 50%, transparent);
+.win .head:hover .expander {
+  background: color-mix(in oklch, #2f6fd0 62%, transparent);
   color: #fff;
 }
 
-.loss .expander:hover {
-  background: color-mix(in oklch, #d6455d 48%, transparent);
+.loss .head:hover .expander {
+  background: color-mix(in oklch, #d6455d 58%, transparent);
   color: #fff;
+}
+
+// Open, the card continues below the row, so the rail runs square into the
+// detail panel instead of leaving a rounded notch above it.
+.card.is-open .expander {
+  border-radius: 0;
 }
 
 .expander-icon {
@@ -421,36 +479,49 @@
   transform: rotate(180deg);
 }
 
-// ── Responsive: drop columns rather than wrapping them ───────────────────────
+// ── Responsive ───────────────────────────────────────────────────────────────
+// Tracks tighten instead of columns disappearing. Only the CS/vision block —
+// the one stat repeated elsewhere on the card — goes at the narrowest widths.
 
 @media (max-width: 1400px) {
   .summary {
     grid-template-columns:
-      minmax(0, 0.95fr)
-      minmax(0, 1fr)
-      minmax(0, 0.72fr)
+      minmax(0, 0.86fr)
+      minmax(0, 0.9fr)
+      minmax(0, 0.58fr)
+      minmax(0, 0.66fr)
       minmax(0, 0.8fr)
-      minmax(0, 0.92fr)
-      46px;
+      minmax(0, 1.05fr);
+    gap: 7px;
   }
 
-  .col-teams {
-    display: none;
+  .team-name {
+    font-size: 9px;
   }
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1120px) {
   .summary {
     grid-template-columns:
-      minmax(0, 0.95fr)
-      minmax(0, 1fr)
-      minmax(0, 0.72fr)
-      minmax(0, 0.92fr)
-      46px;
+      minmax(0, 0.86fr)
+      minmax(0, 0.86fr)
+      minmax(0, 0.56fr)
+      minmax(0, 0.76fr)
+      minmax(0, 1fr);
+    gap: 6px;
   }
 
   .col-stats {
     display: none;
+  }
+
+  .col-items {
+    grid-template-columns: repeat(4, 20px);
+  }
+
+  .item {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -462,7 +533,10 @@
   gap: 12px;
   padding: 12px 14px 16px;
   border-top: 1px solid var(--border-color);
-  background: color-mix(in oklch, var(--background) 62%, transparent);
+  // Opaque: the detail panel stays neutral instead of inheriting the card's
+  // now-saturated result colour.
+  background: var(--background);
+  cursor: default;
 }
 
 .detail-tabs {

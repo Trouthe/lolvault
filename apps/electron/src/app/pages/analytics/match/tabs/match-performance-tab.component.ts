@@ -229,6 +229,20 @@ export class MatchPerformanceTabComponent {
     () => this.metricOptions.find((o) => o.value === this.metric())?.label ?? ''
   );
 
+  /**
+   * Identity of the compared pair, used to rebuild the chart when it changes.
+   *
+   * ApexCharts' `updateSeries` swaps the data but leaves the legend showing the
+   * names the chart was created with, so picking a different player redrew the
+   * lines under the old two names. Returned as a single-element array so the
+   * template can key an `@for` on it.
+   */
+  readonly chartKey = computed(() => {
+    const l = this.left()?.participantId ?? 0;
+    const r = this.right()?.participantId ?? 0;
+    return [`${l}-${r}`];
+  });
+
   // ── Team totals ────────────────────────────────────────────────────────────
 
   readonly teamTotals = computed(() => {

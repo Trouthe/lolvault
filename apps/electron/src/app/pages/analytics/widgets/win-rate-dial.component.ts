@@ -60,17 +60,20 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
   `,
   styles: [
     `
+      /* Dial left, record + form strip right — the card stays short so the
+         Overview band doesn't grow a column of dead space beside it. */
       .dial-card {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
       }
 
       .dial {
         position: relative;
-        width: 96px;
-        height: 96px;
+        width: 92px;
+        height: 92px;
+        flex-shrink: 0;
       }
 
       .dial svg {
@@ -112,16 +115,17 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
       .dial-meta {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 7px;
-        width: 100%;
+        align-items: flex-start;
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
       }
 
       .record {
         display: flex;
         align-items: baseline;
         gap: 5px;
-        font-size: 12px;
+        font-size: 13px;
         font-variant-numeric: tabular-nums;
       }
 
@@ -138,21 +142,21 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
         opacity: 0.6;
       }
 
+      /* A fixed 10-wide grid: 20 recent games always read as two tidy rows
+         rather than reflowing with the card width. */
       .strip {
         list-style: none;
         margin: 0;
         padding: 0;
-        display: flex;
-        gap: 2px;
-        flex-wrap: wrap;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(10, 10px);
+        gap: 3px;
       }
 
       .pip {
-        width: 9px;
-        height: 9px;
+        width: 10px;
+        height: 10px;
         border-radius: 2px;
-        flex-shrink: 0;
       }
 
       .pip.win {

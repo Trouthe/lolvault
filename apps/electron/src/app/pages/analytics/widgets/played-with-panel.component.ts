@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PlayedWithRow, PlayedWithMode } from '../models/analytics.types';
 import { RiotApiService } from '../../../services/riot-api.service';
+import { AnalyticsDataService } from '../services/analytics-data.service';
+import { SummonerIconService } from '../services/summoner-icon.service';
 import { EmptyStateComponent } from './empty-state.component';
 
 /**
@@ -29,11 +31,13 @@ import { EmptyStateComponent } from './empty-state.component';
       <ul class="players">
         @for (row of rows(); track row.puuid) {
           <li class="player">
-            <div class="player-champs">
-              @for (champ of row.championsPlayed.slice(0, 3); track champ) {
-                <img class="player-champ" [src]="icon(champ)" [alt]="champ" loading="lazy" />
-              }
-            </div>
+            <img
+              class="player-avatar"
+              [src]="avatar(row)"
+              [alt]="row.name"
+              [title]="row.name + (row.tagline ? '#' + row.tagline : '')"
+              loading="lazy"
+            />
 
             <div class="player-body">
               <span class="player-name" [title]="row.name + (row.tagline ? '#' + row.tagline : '')">
@@ -79,22 +83,15 @@ import { EmptyStateComponent } from './empty-state.component';
         border: 1px solid var(--border-color);
       }
 
-      .player-champs {
-        display: flex;
-        flex-shrink: 0;
-      }
-
-      .player-champ {
-        width: 26px;
-        height: 26px;
-        border-radius: 7px;
+      /* The person, not the champions they happened to pick. */
+      .player-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
         object-fit: cover;
-        border: 1.5px solid var(--card);
-        margin-left: -8px;
-      }
-
-      .player-champ:first-child {
-        margin-left: 0;
+        flex-shrink: 0;
+        border: 1px solid var(--border-color);
+        background: var(--muted);
       }
 
       .player-body {
@@ -156,12 +153,27 @@ import { EmptyStateComponent } from './empty-state.component';
 })
 export class PlayedWithPanelComponent {
   private riotApi = inject(RiotApiService);
+  private data = inject(AnalyticsDataService);
+  private icons = inject(SummonerIconService);
 
   rows = input.required<PlayedWithRow[]>();
   mode = input.required<PlayedWithMode>();
   sampleSize = input.required<number>();
 
-  icon(champion: string): string {
-    return this.riotApi.getChampionIconUrl(champion);
+  constructor() {
+    // Rows cached before the icon was recorded have none; look those few up
+    // once and the service remembers them across sessions.
+    effect(() => {
+      const platform = this.data.platform();
+      for (const row of this.rows()) {
+        if (!row.profileIcon) this.icons.request(row.puuid, platform);
+      }
+    });
+  }
+
+  /** Their account picture: from the match row, else the resolved lookup. */
+  avatar(row: PlayedWithRow): string {
+    const id = row.profileIcon || this.icons.iconFor(row.puuid) || undefined;
+    return this.riotApi.getProfileIconUrl(id);
   }
 }

@@ -118,8 +118,15 @@ export class ChartThemeService {
       legend: {
         labels: { colors: p.secondaryText },
         fontSize: '11px',
+        // Flat colour chips, not outlined dots: a square swatch reads as "this
+        // colour is that series" more directly than a bordered circle.
         // ApexCharts v5 replaced the legend marker width/height with `size`.
-        markers: { size: 5, shape: 'circle' as const },
+        markers: {
+          size: 6,
+          shape: 'square' as const,
+          radius: 2,
+          strokeWidth: 0,
+        },
       },
       stroke: { curve: 'smooth' as const, width: 2 },
     };

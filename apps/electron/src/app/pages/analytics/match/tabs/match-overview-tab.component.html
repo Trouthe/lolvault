@@ -116,7 +116,7 @@
 
         <div class="rows">
           @for (p of team.players; track p.puuid) {
-            <div class="row" [class.self]="isSelf(p)">
+            <div class="row" [class.self]="isSelf(p)" [class.mvp]="isMvp(p)">
               <!-- Champion + loadout -->
               <div class="cell cell-player">
                 <div class="portrait">
