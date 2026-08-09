@@ -3,15 +3,15 @@ import { CommonModule } from '@angular/common';
 import { ActivityDay } from '../models/analytics.types';
 
 /**
- * Day-by-day LP/activity grid.
+ * Day-by-day activity heatmap.
  *
- * The range starts at the first day we actually have data for — a new account
- * shows a short honest strip that grows over time rather than a wall of empty
- * cells implying a year of inactivity. Days before tracking began are rendered
- * distinctly from days that simply had no games.
+ * The grid always spans a full calendar year so the strip keeps one shape all
+ * year round. Days we hold nothing for — before the first cached game, and
+ * after today — are drawn as faint "no data" cells rather than being left
+ * blank, which made the year look truncated partway through.
  */
 @Component({
-  selector: 'app-lp-activity',
+  selector: 'app-activity-heatmap',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
@@ -46,8 +46,7 @@ import { ActivityDay } from '../models/analytics.types';
               @for (day of week; track $index) {
                 <div
                   class="cell"
-                  [class.untracked]="day.untracked"
-                  [class.future]="day.future"
+                  [class.no-data]="day.untracked || day.future"
                   [class.empty]="!day.games && !day.untracked && !day.future"
                   [style.background]="cellColor(day)"
                   [attr.aria-label]="describe(day)"
@@ -63,8 +62,8 @@ import { ActivityDay } from '../models/analytics.types';
         <div class="detail" [class.visible]="!!hovered()">
           @if (hovered(); as day) {
             <span class="detail-date">{{ day.date | date: 'EEE d MMM y' }}</span>
-            @if (day.untracked) {
-              <span class="detail-muted">Before tracking started</span>
+            @if (day.untracked || day.future) {
+              <span class="detail-muted">No Data</span>
             } @else if (day.games === 0) {
               <span class="detail-muted">No games</span>
             } @else {
@@ -74,27 +73,27 @@ import { ActivityDay } from '../models/analytics.types';
               <span class="detail-wl">
                 <b class="w">{{ day.wins }}W</b> <b class="l">{{ day.losses }}L</b>
               </span>
-              @if (day.netLp !== null) {
-                <span class="detail-lp" [class.up]="day.netLp > 0" [class.down]="day.netLp < 0">
-                  {{ day.netLp > 0 ? '+' : '' }}{{ day.netLp }} LP
-                </span>
-              } @else {
-                <span class="detail-muted">LP not recorded</span>
-              }
+              <span
+                class="detail-rate"
+                [class.up]="day.wins > day.losses"
+                [class.down]="day.wins < day.losses"
+              >
+                {{ (day.wins / day.games) * 100 | number: '1.0-0' }}%
+              </span>
             }
           } @else {
-            <span class="detail-hint">Hover a day for games, record and LP</span>
+            <span class="detail-hint">Hover a day for games played and record</span>
           }
         </div>
 
         <div class="legend">
-          <span class="legend-label">Loss</span>
+          <span class="legend-label">Losing</span>
           <span class="swatch" style="background: #d6455d"></span>
           <span class="swatch" style="background: #a8404f"></span>
           <span class="swatch swatch-empty"></span>
           <span class="swatch" style="background: #2c7a58"></span>
           <span class="swatch" style="background: #35c184"></span>
-          <span class="legend-label">Gain</span>
+          <span class="legend-label">Winning</span>
         </div>
       </footer>
     </div>
@@ -199,16 +198,11 @@ import { ActivityDay } from '../models/analytics.types';
         outline-color: var(--primary-text);
       }
 
-      /* Distinguish "we weren't tracking" from "you didn't play". */
-      .cell.untracked {
+      /* Distinguish "we hold nothing for this day" from "you didn't play".
+         Runs to 31 Dec so the year always reads as a complete strip. */
+      .cell.no-data {
         background: color-mix(in oklch, var(--muted) 45%, transparent);
         opacity: 0.5;
-      }
-
-      .cell.future {
-        background: transparent;
-        cursor: default;
-        pointer-events: none;
       }
 
       .legend-row {
@@ -247,17 +241,17 @@ import { ActivityDay } from '../models/analytics.types';
         margin-left: 3px;
       }
 
-      .detail-lp {
+      .detail-rate {
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         color: var(--secondary-text);
       }
 
-      .detail-lp.up {
+      .detail-rate.up {
         color: #2f9e6f;
       }
 
-      .detail-lp.down {
+      .detail-rate.down {
         color: var(--danger);
       }
 
@@ -291,32 +285,42 @@ import { ActivityDay } from '../models/analytics.types';
     `,
   ],
 })
-export class LpActivityComponent {
+export class ActivityHeatmapComponent {
   weeks = input.required<ActivityDay[][]>();
   monthLabels = input.required<{ index: number; label: string }[]>();
   /** Years with data, newest first. The switcher hides when there's only one. */
   years = input<number[]>([]);
   year = input<number>(new Date().getFullYear());
+  /** Games on the year's busiest day, used to scale cell opacity. */
+  busiestDay = input<number>(1);
 
   yearChange = output<number>();
 
   readonly hovered = signal<ActivityDay | null>(null);
 
   /**
-   * Colour encodes net LP where we have it, and falls back to win/loss balance
-   * where we only know the games played — so a day is never blank just because
-   * LP wasn't captured.
+   * Hue is the day's win/loss balance, opacity is how much was played.
+   *
+   * Volume is scaled against the year's busiest day rather than a fixed ceiling
+   * so the grid reads the same for someone who plays two games a night and
+   * someone who plays twenty.
    */
   cellColor(day: ActivityDay): string {
-    if (day.future || day.untracked) return '';
-    if (day.games === 0 && day.netLp === null) return '';
+    // Empty string leaves the class-driven "no data" background in place.
+    if (day.future || day.untracked || day.games === 0) return '';
 
-    const value = day.netLp ?? (day.wins - day.losses) * 18;
-    if (value === 0) return 'var(--muted)';
+    const balance = (day.wins - day.losses) / day.games;
+    const volume = Math.min(1, day.games / Math.max(1, this.busiestDay()));
+    const alpha = 0.32 + volume * 0.68;
 
-    const magnitude = Math.min(Math.abs(value) / 60, 1);
-    const alpha = 0.35 + magnitude * 0.65;
-    return value > 0 ? `rgba(47, 176, 118, ${alpha})` : `rgba(214, 69, 93, ${alpha})`;
+    // An even day is neither red nor green — it gets a neutral slate so a 3-3
+    // session does not have to pick a side.
+    if (Math.abs(balance) < 0.001) return `rgba(126, 138, 158, ${alpha})`;
+
+    const strength = 0.45 + Math.abs(balance) * 0.55;
+    return balance > 0
+      ? `rgba(47, 176, 118, ${alpha * strength})`
+      : `rgba(214, 69, 93, ${alpha * strength})`;
   }
 
   describe(day: ActivityDay): string {
@@ -325,10 +329,8 @@ export class LpActivityComponent {
       day: 'numeric',
       month: 'short',
     });
-    if (day.future) return '';
-    if (day.untracked) return `${date}: before tracking started`;
+    if (day.future || day.untracked) return `${date}: no data`;
     if (day.games === 0) return `${date}: no games`;
-    const lp = day.netLp !== null ? `, ${day.netLp > 0 ? '+' : ''}${day.netLp} LP` : '';
-    return `${date}: ${day.games} games, ${day.wins}W ${day.losses}L${lp}`;
+    return `${date}: ${day.games} games, ${day.wins}W ${day.losses}L`;
   }
 }

@@ -56,6 +56,30 @@ export const QUEUE_FILTER_LABELS: Record<QueueFilter, string> = {
   normal: 'Normal',
 };
 
+/**
+ * Riot queue ids we can name. Anything absent falls back to the queue's own
+ * `queue_type` string, which is ugly but honest.
+ */
+export const QUEUE_NAMES: Record<number, string> = {
+  400: 'Normal Draft',
+  420: 'Solo/Duo',
+  430: 'Normal Blind',
+  440: 'Flex 5v5',
+  450: 'ARAM',
+  700: 'Clash',
+  900: 'URF',
+  1700: 'Arena',
+  1900: 'URF',
+};
+
+/** Display name for a queue id, falling back to the raw queue type. */
+export function queueName(queueId: number | null | undefined, queueType?: string | null): string {
+  if (queueId !== null && queueId !== undefined && QUEUE_NAMES[queueId]) {
+    return QUEUE_NAMES[queueId];
+  }
+  return queueType?.replace(/_/g, ' ') ?? 'Other';
+}
+
 /** Whether "recently played with" counts teammates or opponents. */
 export type PlayedWithMode = 'with' | 'against';
 
@@ -113,16 +137,20 @@ export interface RecentGame {
   timestamp: number;
 }
 
-/** One cell of the LP activity grid. */
+/**
+ * One cell of the activity heatmap.
+ *
+ * Games played and won, nothing else. LP used to drive the colour, which meant
+ * the grid only said anything on days a ranked snapshot happened to bracket the
+ * session — and said nothing at all for a player we have never tracked.
+ */
 export interface ActivityDay {
   date: Date;
   wins: number;
   losses: number;
   games: number;
-  /** Net LP for the day; null when no ranked snapshot bracketed it. */
-  netLp: number | null;
   future: boolean;
-  /** Before the first day we have any data for — rendered as "not tracked". */
+  /** Before the first day we have any data for — rendered as "no data". */
   untracked: boolean;
 }
 

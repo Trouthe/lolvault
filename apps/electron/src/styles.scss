@@ -7,6 +7,21 @@
 @use 'styles/shared/rank-pill';
 @use 'styles/shared/form-controls';
 
+// ── Performance tones ────────────────────────────────────────────────────────
+// One scale for "how good is this number", shared by every stat readout so a
+// 52% win rate looks the same in the rail, the roles panel and the champion
+// table. Gold is reserved for the exceptional band (≥80% WR, ≥5 KDA) — it must
+// stay rare to keep meaning something.
+:root {
+  --tone-good: #2f9e6f;
+  --tone-bad: var(--danger);
+  --tone-gold: #b8860b;
+}
+
+[data-theme='dark'] {
+  --tone-gold: #d9b45f;
+}
+
 body {
   background-color: var(--background);
   margin: 0;

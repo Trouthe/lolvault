@@ -51,6 +51,10 @@
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  // There is no global border-box reset, so without this the padding is *added*
+  // to the 100% height: the rail overhangs the window by 90px and its last
+  // 90px of scroll travel sits below the screen edge, permanently unreachable.
+  box-sizing: border-box;
   // Bottom padding clears the fade overlay (56px) so the last panel can be
   // scrolled fully into view instead of ending underneath it.
   padding: 14px 14px 76px;

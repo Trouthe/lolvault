@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AnalyticsDataService } from './services/analytics-data.service';
 import { MatchAggregationService } from './services/match-aggregation.service';
 import { MatchScoreService, fromSummary } from './services/match-score.service';
@@ -49,6 +51,10 @@ import { InsightsScreenComponent } from './screens/insights/insights-screen.comp
 export class AnalyticsShellComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
+
+  /** Profiles opened by clicking through, so Back knows if it can step back. */
+  private visitedProfiles = 0;
   private settings = inject(SettingsService);
   private riotApi = inject(RiotApiService);
   private scorer = inject(MatchScoreService);
@@ -214,16 +220,42 @@ export class AnalyticsShellComponent {
   readonly sampleSize = computed(() => this.data.matches().length);
 
   constructor() {
-    const vaultId = this.route.snapshot.paramMap.get('vaultId') ?? '';
-    this.data.reset();
-    void this.data.load(vaultId);
+    // Two shapes of route share this shell: one of our own vault entries, and
+    // an arbitrary player clicked through to from a match. Re-reading the
+    // params on every navigation matters because Angular reuses the component
+    // when you hop straight from one profile to another.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const puuid = params.get('puuid');
+      this.data.reset();
+      this.screen.set('overview');
+
+      if (puuid) {
+        const platform = params.get('platform') ?? 'euw1';
+        const name = this.route.snapshot.queryParamMap.get('name') ?? '';
+        this.visitedProfiles++;
+        void this.data.loadPlayer(puuid, platform, name);
+      } else {
+        void this.data.load(params.get('vaultId') ?? '');
+      }
+    });
   }
 
   setScreen(screen: AnalyticsScreen): void {
     this.screen.set(screen);
   }
 
+  /**
+   * Someone else's profile is a detour, so it steps back to wherever you came
+   * from; a vault account is a destination, so it returns to the dashboard.
+   */
   goBack(): void {
+    // `visited` only counts profiles opened inside this session, so a page
+    // reached by reload or deep link still has somewhere sensible to go.
+    if (this.data.external() && this.visitedProfiles > 0) {
+      this.visitedProfiles--;
+      this.location.back();
+      return;
+    }
     void this.router.navigate(['/dashboard']);
   }
 

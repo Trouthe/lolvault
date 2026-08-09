@@ -60,6 +60,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   riotCancelBackfill: (args) => ipcRenderer.invoke('riot:cancel-backfill', args),
   riotGetBackfillStatus: (args) => ipcRenderer.invoke('riot:get-backfill-status', args),
   onBackfillProgress: (cb) => ipcRenderer.on('riot:backfill-progress', (_e, data) => cb(data)),
+  riotFetchYearHistory: (args) => ipcRenderer.invoke('riot:fetch-year-history', args),
+  riotCancelYearHistory: (args) => ipcRenderer.invoke('riot:cancel-year-history', args),
+  onYearHistoryProgress: (cb) =>
+    ipcRenderer.on('riot:year-history-progress', (_e, data) => cb(data)),
 
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => ipcRenderer.invoke('lcu:get-state'),

@@ -46,6 +46,32 @@ export interface BucketedPositions {
   total: number;
 }
 
+/** A square density grid in canvas orientation (row-major, origin top-left). */
+export interface DensityField {
+  values: Float32Array;
+  size: number;
+  /**
+   * Normalisation ceiling. A high percentile rather than the raw peak, so one
+   * extreme cell cannot flatten the rest of the ramp.
+   */
+  ceiling: number;
+}
+
+/**
+ * Team spawn points on Summoner's Rift, in Riot's timeline coordinates, and the
+ * radius around them treated as "in base".
+ *
+ * Riot keeps reporting a position while a champion is dead or recalled, parked
+ * on the fountain. Left in, those samples become the single densest cell on
+ * every map — every player's hottest spot is their own fountain, which says
+ * nothing about where the game was played.
+ */
+const FOUNTAINS = [
+  { x: 396, y: 462 },
+  { x: 14340, y: 14390 },
+];
+const FOUNTAIN_RADIUS = 1250;
+
 /**
  * Converts timeline data into map-space geometry.
  *
@@ -73,8 +99,13 @@ export class HeatmapService {
    * sparse to read as a heatmap — a 30-minute game gives 30 dots for one player.
    * Consecutive samples are therefore interpolated along the straight line
    * between them, approximating the path walked and producing a density field
-   * that actually shows where time was spent. Interpolated points are weighted
-   * below real samples so genuine positions still dominate.
+   * that actually shows where time was spent.
+   *
+   * Every point along a segment carries the same weight, including the real
+   * endpoint: the grid is meant to measure *time spent*, and a minute standing
+   * still (where all the interpolated points collapse onto one spot) genuinely
+   * is a minute in that place. Weighting the endpoints higher would have made
+   * the once-a-minute sampling instants visible as beads along each path.
    *
    * Pre-bucketing once at load keeps slider interaction O(window) rather than
    * rescanning every frame on each tick.
@@ -82,16 +113,15 @@ export class HeatmapService {
   bucketPositions(
     timeline: CompactTimeline,
     participantIds: number[],
-    interpolationSteps = 6
+    interpolationSteps = 8
   ): BucketedPositions {
     const byMinute: MapPoint[][] = timeline.frames.map(() => []);
+    const respawnFrames = this.respawnFrames(timeline);
     let total = 0;
 
-    // (0,0) is the pre-game/undefined position, not a real map location.
-    const valid = (x: number, y: number) => !(x <= 0 && y <= 0);
-
     for (const pid of participantIds) {
-      let prev: { x: number; y: number; minute: number } | null = null;
+      let prev: { x: number; y: number } | null = null;
+      const respawns = respawnFrames.get(pid);
 
       for (let frameIndex = 0; frameIndex < timeline.frames.length; frameIndex++) {
         const row = timeline.frames[frameIndex][pid - 1];
@@ -99,7 +129,7 @@ export class HeatmapService {
 
         const x = row[TF.X];
         const y = row[TF.Y];
-        if (!valid(x, y)) {
+        if (!this.isOnMap(x, y)) {
           prev = null;
           continue;
         }
@@ -107,33 +137,87 @@ export class HeatmapService {
         byMinute[frameIndex].push({ x, y, minute: frameIndex, weight: 1 });
         total++;
 
-        if (prev) {
-          // A teleport or death-respawn produces an implausibly long jump;
-          // interpolating across it would paint a line through terrain the
-          // player never walked, so those segments are skipped.
+        // A death between the two samples means this position was reached by
+        // respawning, not by walking; so does an implausibly long jump
+        // (a teleport). Interpolating either paints a path through terrain the
+        // player never crossed.
+        const respawned = respawns?.has(frameIndex) ?? false;
+
+        if (prev && !respawned) {
           const dx = x - prev.x;
           const dy = y - prev.y;
-          const distance = Math.hypot(dx, dy);
 
-          if (distance < MAP_MAX * 0.42) {
+          if (Math.hypot(dx, dy) < MAP_MAX * 0.42) {
             for (let step = 1; step < interpolationSteps; step++) {
               const t = step / interpolationSteps;
               byMinute[frameIndex].push({
                 x: prev.x + dx * t,
                 y: prev.y + dy * t,
                 minute: frameIndex,
-                weight: 0.55,
+                weight: 1,
               });
               total++;
             }
           }
         }
 
-        prev = { x, y, minute: frameIndex };
+        prev = { x, y };
       }
     }
 
     return { byMinute, maxMinute: Math.max(0, byMinute.length - 1), total };
+  }
+
+  /**
+   * Accumulates points into a Gaussian density grid.
+   *
+   * Density is summed as floating point rather than as canvas alpha. Alpha
+   * compositing saturates after four or five overlapping stamps — a threshold a
+   * laner crosses within the first few minutes — after which every busy area
+   * paints the identical maximum colour and the map stops distinguishing a lane
+   * from a camp. Summing first and mapping to colour afterwards keeps the full
+   * dynamic range.
+   */
+  densityField(points: MapPoint[], size = 160, radiusCells = 7): DensityField {
+    const values = new Float32Array(size * size);
+    if (!points.length) return { values, size, ceiling: 0 };
+
+    const span = radiusCells * 2 + 1;
+    const kernel = new Float32Array(span * span);
+    const twoSigmaSq = 2 * (radiusCells / 2) ** 2;
+    const radiusSq = radiusCells * radiusCells;
+
+    for (let ky = 0; ky < span; ky++) {
+      for (let kx = 0; kx < span; kx++) {
+        const dx = kx - radiusCells;
+        const dy = ky - radiusCells;
+        const distanceSq = dx * dx + dy * dy;
+        kernel[ky * span + kx] =
+          distanceSq > radiusSq ? 0 : Math.exp(-distanceSq / twoSigmaSq);
+      }
+    }
+
+    for (const point of points) {
+      // Same Y flip as `toCanvas` — the grid is already in canvas orientation.
+      const gx = Math.round((point.x / MAP_MAX) * (size - 1));
+      const gy = Math.round((1 - point.y / MAP_MAX) * (size - 1));
+      if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
+
+      const xFrom = Math.max(0, gx - radiusCells);
+      const xTo = Math.min(size - 1, gx + radiusCells);
+      const yFrom = Math.max(0, gy - radiusCells);
+      const yTo = Math.min(size - 1, gy + radiusCells);
+
+      for (let y = yFrom; y <= yTo; y++) {
+        const kernelRow = (y - gy + radiusCells) * span;
+        const valueRow = y * size;
+        for (let x = xFrom; x <= xTo; x++) {
+          values[valueRow + x] += kernel[kernelRow + (x - gx + radiusCells)] * point.weight;
+        }
+      }
+    }
+
+    return { values, size, ceiling: this.percentile(values, 0.995) };
   }
 
   /** Points within an inclusive minute range. */
@@ -348,6 +432,49 @@ export class HeatmapService {
 
   private pos(ev: TimelineEvent): { x: number; y: number } {
     return { x: ev.x ?? 0, y: ev.y ?? 0 };
+  }
+
+  /**
+   * True when a sample represents real presence on the map. (0,0) is the
+   * pre-game / undefined position; the fountain is base time — dead, recalled
+   * or shopping — which is not somewhere the player was playing.
+   */
+  private isOnMap(x: number, y: number): boolean {
+    if (x <= 0 && y <= 0) return false;
+    return !FOUNTAINS.some((f) => Math.hypot(x - f.x, y - f.y) <= FOUNTAIN_RADIUS);
+  }
+
+  /**
+   * Frame index of the first sample after each death, per participant — the
+   * point at which a champion's position jumps to the fountain and back out
+   * without walking the distance.
+   */
+  private respawnFrames(timeline: CompactTimeline): Map<number, Set<number>> {
+    const interval = timeline.frameInterval || 60_000;
+    const byVictim = new Map<number, Set<number>>();
+
+    for (const ev of timeline.events) {
+      if (ev.type !== 'CHAMPION_KILL' || !ev.victimId) continue;
+      const frame = Math.ceil(ev.t / interval);
+      let frames = byVictim.get(ev.victimId);
+      if (!frames) byVictim.set(ev.victimId, (frames = new Set()));
+      frames.add(frame);
+    }
+
+    return byVictim;
+  }
+
+  /** Value at `q` through the non-empty cells, used as the ramp's ceiling. */
+  private percentile(values: Float32Array, q: number): number {
+    const filled: number[] = [];
+    for (const value of values) {
+      if (value > 0) filled.push(value);
+    }
+    if (!filled.length) return 0;
+
+    filled.sort((a, b) => a - b);
+    const index = Math.min(filled.length - 1, Math.floor(filled.length * q));
+    return filled[index];
   }
 
   /** Team 100 owns participant ids 1-5, team 200 owns 6-10. */

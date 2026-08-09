@@ -30,6 +30,19 @@ export class RiotApiService {
     return SERVER_TO_PLATFORM[server.toUpperCase()] || 'euw1';
   }
 
+  /**
+   * Platform slug back to the server label the UI shows. Needed when we only
+   * ever knew the platform — clicking through to another player's profile
+   * carries their platform, never a friendly server name.
+   */
+  platformToServer(platform: string): string {
+    const slug = platform.toLowerCase();
+    return (
+      Object.keys(SERVER_TO_PLATFORM).find((server) => SERVER_TO_PLATFORM[server] === slug) ??
+      platform.toUpperCase()
+    );
+  }
+
   /** Riot PUUIDs are 78-char URL-safe base64 tokens. */
   isLikelyPuuid(value: unknown): value is string {
     if (typeof value !== 'string') return false;

@@ -1,4 +1,18 @@
 <section class="overview">
+  <!-- Scopes the whole screen — cards, activity grid and match list alike — to
+       one queue, so ranked figures are not diluted by ARAM and normals. Hidden
+       when there is only one queue to choose from. -->
+  @if (queueOptions().length > 1) {
+    <app-segmented-toggle
+      class="queue-filter"
+      [options]="queueOptions()"
+      [value]="queueFilter()"
+      label="Queue"
+      compact
+      (valueChange)="setQueueFilter($event)"
+    />
+  }
+
   <!-- ── Top band ─────────────────────────────────────────────────────────── -->
   <div class="band">
     <article class="panel panel-winrate">
@@ -85,36 +99,52 @@
       <app-role-performance [rows]="roleRows()" />
     </article>
 
-    <article class="panel panel-champs">
-      <header class="panel-head">
-        <h3>Most Played</h3>
-      </header>
-      <app-most-played-champions [rows]="topChampions()" />
-    </article>
+    <div class="panel-stack">
+      <article class="panel panel-champs">
+        <header class="panel-head">
+          <h3>Most Played</h3>
+        </header>
+        <app-most-played-champions [rows]="topChampions()" />
+      </article>
+
+      <article class="panel panel-mastery">
+        <header class="panel-head">
+          <h3>Masteries</h3>
+        </header>
+        <app-mastery-podium [entries]="data.mastery()" />
+      </article>
+    </div>
   </div>
 
-  <!-- ── LP activity (full calendar year) ─────────────────────────────────── -->
+  <!-- ── Activity heatmap (full calendar year) ────────────────────────────── -->
   <article class="panel">
     <header class="panel-head">
-      <h3>LP Activity</h3>
+      <h3>Heatmap</h3>
       @if (activity(); as grid) {
-        <span class="panel-note">{{ grid.totalGames }} games in {{ selectedYear() }}</span>
+        <span class="panel-note">
+          {{ grid.totalGames }} games in {{ selectedYear() }}
+          @if (grid.totalGames) {
+            · {{ (grid.totalWins / grid.totalGames) * 100 | number: '1.0-0' }}% WR
+          }
+        </span>
       }
     </header>
     @if (activity(); as grid) {
-      <app-lp-activity
+      <app-activity-heatmap
         [weeks]="grid.weeks"
         [monthLabels]="grid.monthLabels"
         [years]="activityYears()"
         [year]="selectedYear()"
+        [busiestDay]="grid.busiestDay"
         (yearChange)="activityYear.set($event)"
       />
+      <app-history-depth [year]="selectedYear()" />
     } @else {
       <app-empty-state
         inline
         icon="calendar"
-        title="No activity recorded yet"
-        hint="Days fill in as games are cached and LP is captured while LoL Vault runs."
+        title="No games cached yet"
+        hint="Days fill in as games are pulled from Riot."
       />
     }
   </article>
@@ -124,7 +154,7 @@
     <header class="section-head">
       <h3>Match History</h3>
       <span class="section-note">
-        {{ matches().length }} cached {{ matches().length === 1 ? 'game' : 'games' }}
+        {{ matches().length }} {{ matches().length === 1 ? 'Game' : 'Games' }}
       </span>
     </header>
 
@@ -133,8 +163,8 @@
     @if (matches().length === 0) {
       <app-empty-state
         icon="inbox"
-        title="No matches cached yet"
-        hint="Match history is fetched from Riot when this account is opened. If nothing appears, check your API key in Settings."
+        title="No matches in this queue"
+        hint="Match history is fetched from Riot when this account is opened. If nothing appears at all, check your API key in Settings."
       />
     } @else {
       <div class="match-list">

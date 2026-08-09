@@ -139,12 +139,18 @@
                 </div>
 
                 <div class="who">
-                  <span class="name" [title]="p.riotIdGameName">
+                  <button
+                    type="button"
+                    class="name"
+                    [class.linked]="playerNav.canOpen(p.puuid)"
+                    [title]="p.riotIdGameName"
+                    (click)="playerNav.open(p.puuid, p.riotIdGameName, p.riotIdTagline)"
+                  >
                     {{ p.riotIdGameName }}
                     @if (isMvp(p)) {
                       <span class="mvp-tag">MVP</span>
                     }
-                  </span>
+                  </button>
                   <span class="sub">
                     @if (roleIconFor(p.teamPosition)) {
                       <img class="role" [src]="roleIconFor(p.teamPosition)" [alt]="''" />

@@ -4,7 +4,7 @@
   <aside class="rail">
     <button class="rail-back" type="button" (click)="goBack()">
       <app-icon name="arrow-left" [size]="14" />
-      <span>Back to Accounts</span>
+      <span>{{ data.external() ? 'Back' : 'Back to Accounts' }}</span>
     </button>
 
     @if (data.account(); as account) {

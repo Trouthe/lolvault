@@ -10,6 +10,21 @@
 const OBJ = 'assets/game-images/objectives';
 const ROLE = 'assets/game-images/roles';
 const STAT = 'assets/game-images/stats';
+const MASTERY = 'assets/game-images/mastery';
+
+/**
+ * Riot ships a crest for levels 0 and 4-10 only; 1-3 reuse the level-0 crest
+ * and anything past 10 keeps the level-10 one, which is how the client itself
+ * renders them.
+ */
+const MASTERY_CREST_LEVELS = [0, 4, 5, 6, 7, 8, 9, 10];
+
+/** Champion-mastery crest for a mastery level. */
+export function masteryCrest(level: number | null | undefined): string {
+  const value = level ?? 0;
+  const crest = [...MASTERY_CREST_LEVELS].reverse().find((l) => value >= l) ?? 0;
+  return `${MASTERY}/masterycrest-${crest}.png`;
+}
 
 /**
  * Stat icons, taken from Riot's own clients via Community Dragon.

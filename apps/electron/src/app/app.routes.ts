@@ -41,6 +41,15 @@ export const routes: Routes = [
     component: DashboardComponent,
   },
   {
+    // Someone else's profile — a teammate or opponent clicked through to from a
+    // match. Declared before `analytics/:vaultId` so "player" is never taken
+    // for a vault id.
+    path: 'analytics/player/:platform/:puuid',
+    canActivate: [redirectLoggedOutFromDashboard],
+    loadComponent: () =>
+      import('./pages/analytics/analytics-shell.component').then((m) => m.AnalyticsShellComponent),
+  },
+  {
     path: 'analytics/:vaultId',
     canActivate: [redirectLoggedOutFromDashboard],
     loadComponent: () =>

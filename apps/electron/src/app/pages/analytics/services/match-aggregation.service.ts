@@ -403,41 +403,37 @@ export class MatchAggregationService {
     };
   }
 
-  /** Calendar years that have any match or snapshot data, newest first. */
-  activityYears(
-    matches: MatchCacheRow[],
-    snapshots: { timestamp: number; absolute_lp: number }[]
-  ): number[] {
+  /** Calendar years that have any cached game, newest first. */
+  activityYears(matches: MatchCacheRow[]): number[] {
     const years = new Set<number>();
     for (const m of matches) if (m.timestamp > 0) years.add(new Date(m.timestamp).getFullYear());
-    for (const s of snapshots) if (s.timestamp > 0) years.add(new Date(s.timestamp).getFullYear());
     // The current year is always offered, even before its first game.
     years.add(new Date().getFullYear());
     return [...years].sort((a, b) => b - a);
   }
 
   /**
-   * Day-by-day activity grid for one calendar year.
+   * Day-by-day activity heatmap for one calendar year.
    *
-   * The grid always spans Jan-Dec so the strip keeps its shape as the year
-   * fills in, rather than stopping at the last game played. Three states are
-   * distinguished: days before we had any data ("untracked"), days in the
-   * future, and days that simply had no games.
+   * Built purely from cached games: a day's colour is its win/loss balance, and
+   * its intensity is how much was played. The grid always spans Jan-Dec so the
+   * strip keeps its shape as the year fills in. Three states are distinguished:
+   * days before we hold any data, days in the future, and days that simply had
+   * no games.
    */
   activityGrid(
     matches: MatchCacheRow[],
-    snapshots: { timestamp: number; absolute_lp: number }[],
     year: number = new Date().getFullYear()
   ): {
     weeks: ActivityDay[][];
     monthLabels: { index: number; label: string }[];
     startDate: Date;
     totalGames: number;
+    totalWins: number;
+    /** Busiest day in the year, used to scale the colour ramp. */
+    busiestDay: number;
   } | null {
-    const stamps = [
-      ...matches.map((m) => m.timestamp),
-      ...snapshots.map((s) => s.timestamp),
-    ].filter((t) => t > 0);
+    const stamps = matches.map((m) => m.timestamp).filter((t) => t > 0);
     if (!stamps.length) return null;
 
     const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -447,44 +443,15 @@ export class MatchAggregationService {
       return d;
     };
 
-    const perDay = new Map<
-      string,
-      { wins: number; losses: number; firstLp: number | null; lastLp: number | null; firstTs: number; lastTs: number }
-    >();
-
-    const touch = (key: string) => {
-      const existing = perDay.get(key);
-      if (existing) return existing;
-      const created = {
-        wins: 0,
-        losses: 0,
-        firstLp: null as number | null,
-        lastLp: null as number | null,
-        firstTs: Number.MAX_SAFE_INTEGER,
-        lastTs: 0,
-      };
-      perDay.set(key, created);
-      return created;
-    };
+    const perDay = new Map<string, { wins: number; losses: number }>();
 
     for (const m of matches) {
       if (m.win === null) continue;
-      const entry = touch(dayKey(new Date(m.timestamp)));
+      const key = dayKey(new Date(m.timestamp));
+      const entry = perDay.get(key) ?? { wins: 0, losses: 0 };
       if (m.win === 1) entry.wins++;
       else entry.losses++;
-    }
-
-    // Net LP for a day is the difference between its first and last reading.
-    for (const s of [...snapshots].sort((a, b) => a.timestamp - b.timestamp)) {
-      const entry = touch(dayKey(new Date(s.timestamp)));
-      if (s.timestamp <= entry.firstTs) {
-        entry.firstTs = s.timestamp;
-        entry.firstLp = s.absolute_lp;
-      }
-      if (s.timestamp >= entry.lastTs) {
-        entry.lastTs = s.timestamp;
-        entry.lastLp = s.absolute_lp;
-      }
+      perDay.set(key, entry);
     }
 
     const today = startOfDay(Date.now());
@@ -499,14 +466,15 @@ export class MatchAggregationService {
       return copy;
     };
 
-    const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
-    const cursor = mondayOf(yearStart);
+    const cursor = mondayOf(new Date(year, 0, 1));
 
     const weeks: ActivityDay[][] = [];
     const monthLabels: { index: number; label: string }[] = [];
     let lastMonth = -1;
     let totalGames = 0;
+    let totalWins = 0;
+    let busiestDay = 0;
     let col = 0;
 
     while (cursor <= yearEnd) {
@@ -517,25 +485,23 @@ export class MatchAggregationService {
         date.setDate(cursor.getDate() + row);
 
         const entry = perDay.get(dayKey(date));
-        const games = entry ? entry.wins + entry.losses : 0;
         // Days from the neighbouring year that fall in an edge week are shown
-        // as untracked padding rather than being counted.
+        // as padding rather than being counted.
         const outsideYear = date.getFullYear() !== year;
-        if (!outsideYear) totalGames += games;
+        const wins = outsideYear ? 0 : (entry?.wins ?? 0);
+        const losses = outsideYear ? 0 : (entry?.losses ?? 0);
+        const games = wins + losses;
 
-        const netLp =
-          entry && entry.firstLp !== null && entry.lastLp !== null
-            ? entry.lastLp - entry.firstLp
-            : null;
+        totalGames += games;
+        totalWins += wins;
+        if (games > busiestDay) busiestDay = games;
 
         week.push({
           date,
-          wins: entry?.wins ?? 0,
-          losses: entry?.losses ?? 0,
-          games: outsideYear ? 0 : games,
-          netLp: outsideYear ? null : netLp,
+          wins,
+          losses,
+          games,
           future: date > today,
-          // Before any data existed reads as "not tracked", not "no games".
           untracked: outsideYear || date < earliest,
         });
       }
@@ -556,7 +522,7 @@ export class MatchAggregationService {
       col++;
     }
 
-    return { weeks, monthLabels, startDate: earliest, totalGames };
+    return { weeks, monthLabels, startDate: earliest, totalGames, totalWins, busiestDay };
   }
 
   /** Longest current streak of the same result, from the newest match backwards. */

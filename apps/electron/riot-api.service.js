@@ -209,7 +209,7 @@ const QUEUE_LABELS = {
 };
 
 /** Queues fetched by default — enough to back the Overview mode toggle. */
-const DEFAULT_QUEUES = [420, 440, 400, 430];
+const DEFAULT_QUEUES = [420, 440, 400, 430, 450];
 
 function queueLabel(queueId) {
   return QUEUE_LABELS[queueId] || (queueId != null ? `QUEUE_${queueId}` : null);
@@ -405,7 +405,7 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20,
     // Re-fetch rows that exist but predate the detail table, so older cached
     // matches gain bans/objectives/damage breakdown rather than staying partial.
     const newMatchIds = matchIds.filter(
-      (id) => !db.hasMatchInCache(id) || !db.hasMatchDetail(id)
+      (id) => !db.hasMatchForAccount(id, accountId) || !db.hasMatchDetail(id)
     );
 
     for (const matchId of newMatchIds) {
@@ -425,6 +425,113 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20,
     console.error('[RiotAPI] fetchAndCacheMatchHistory error:', err?.message);
     return { error: err?.message || 'unknown' };
   }
+}
+
+/**
+ * Pulls one calendar year of match history and caches anything not already held.
+ *
+ * The normal history fetch asks for the newest `count` ids per queue, which is
+ * fine for a match list but leaves the activity heatmap with a few recent weeks
+ * and eleven empty months. This walks the year properly: page the id endpoint
+ * per queue between the year's bounds, then fetch the detail for whatever is
+ * missing.
+ *
+ * Listing ids is cheap; the detail calls are not — one request per game against
+ * a ~0.83 req/s budget. Hence the progress reporting and the cancel check, and
+ * hence this being a thing the user asks for rather than something that happens
+ * on page load.
+ */
+async function fetchYearHistory(
+  accountId,
+  puuid,
+  platform,
+  { year, onProgress = () => {}, shouldCancel = () => false } = {}
+) {
+  const { lol } = createClients();
+  const region = PLATFORM_TO_REGION[platform] || 'EUROPE';
+
+  // Riot's filters are epoch *seconds*, and its matchlist only stores
+  // timestamps from 16 June 2021 — earlier years cannot be windowed at all.
+  const startTime = Math.floor(new Date(year, 0, 1).getTime() / 1000);
+  const endTime = Math.floor(new Date(year + 1, 0, 1).getTime() / 1000);
+
+  const PAGE = 100;
+  const MAX_PAGES_PER_QUEUE = 10;
+
+  const ids = new Set();
+
+  for (const queue of DEFAULT_QUEUES) {
+    for (let page = 0; page < MAX_PAGES_PER_QUEUE; page++) {
+      if (shouldCancel()) return { scanned: ids.size, added: 0, failed: 0, cancelled: true };
+
+      let batch = [];
+      try {
+        const { response } = await withRetry(
+          () =>
+            lol.MatchV5.list(puuid, region, {
+              queue,
+              start: page * PAGE,
+              count: PAGE,
+              startTime,
+              endTime,
+            }),
+          { interactive: false }
+        );
+        batch = Array.isArray(response) ? response : [];
+      } catch (err) {
+        console.warn(`[RiotAPI] Year listing failed for queue ${queue}:`, err?.message);
+        break;
+      }
+
+      for (const id of batch) ids.add(id);
+      if (batch.length < PAGE) break;
+    }
+
+    onProgress({ phase: 'scanning', processed: 0, total: ids.size, failed: 0, etaSeconds: 0, done: false });
+  }
+
+  const missing = [...ids].filter((id) => !db.hasMatchForAccount(id, accountId));
+  const total = missing.length;
+
+  onProgress({
+    phase: 'fetching',
+    processed: 0,
+    total,
+    failed: 0,
+    etaSeconds: limiter.estimateSeconds(total),
+    done: total === 0,
+  });
+  if (total === 0) return { scanned: ids.size, added: 0, failed: 0, cancelled: false };
+
+  let added = 0;
+  let failed = 0;
+
+  for (const matchId of missing) {
+    if (shouldCancel()) return { scanned: ids.size, added, failed, cancelled: true };
+
+    try {
+      const { response: match } = await withRetry(() => lol.MatchV5.get(matchId, region), {
+        interactive: false,
+      });
+      persistMatch(matchId, accountId, puuid, match);
+      added++;
+    } catch (err) {
+      failed++;
+      console.warn('[RiotAPI] Year fetch failed for', matchId, err?.message);
+    }
+
+    const processed = added + failed;
+    onProgress({
+      phase: 'fetching',
+      processed,
+      total,
+      failed,
+      etaSeconds: limiter.estimateSeconds(total - processed),
+      done: processed >= total,
+    });
+  }
+
+  return { scanned: ids.size, added, failed, cancelled: false };
 }
 
 // ── Match timeline ────────────────────────────────────────────────────────────
@@ -451,14 +558,18 @@ async function getMatchTimeline(matchId, platform, { interactive = true } = {}) 
     db.saveMatchTimeline(matchId, compact);
 
     // Denormalise @15 diffs so the Champions table stays a single indexed query.
+    // Once per cached perspective: two people who played this game see opposite
+    // sides of the same lane differential.
     const detail = db.getMatchDetail(matchId);
-    const row = db.getMatchCacheRow(matchId);
-    if (detail?.participants?.length && row?.participant_id) {
-      const opponent = findLaneOpponent(detail.participants, row.puuid);
-      if (opponent?.participantId) {
+    if (detail?.participants?.length) {
+      for (const row of db.getMatchCacheRows(matchId)) {
+        if (!row.participant_id) continue;
+        const opponent = findLaneOpponent(detail.participants, row.puuid);
+        if (!opponent?.participantId) continue;
+
         const diffs = computeDiffsAtMinute(compact, row.participant_id, opponent.participantId, 15);
         if (diffs) {
-          db.updateMatchDiffs(matchId, {
+          db.updateMatchDiffs(matchId, row.account_id, {
             goldDiff: diffs.goldDiff,
             csDiff: diffs.csDiff,
             xpDiff: diffs.xpDiff,
@@ -630,6 +741,7 @@ module.exports = {
   getSummonerByPuuid,
   getRankedByPuuid,
   getTopMasteryChampions,
+  fetchYearHistory,
   fetchAndCacheMatchHistory,
   getMatchTimeline,
   getMatchDetailCached,

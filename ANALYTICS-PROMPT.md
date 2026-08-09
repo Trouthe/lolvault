@@ -131,3 +131,42 @@ We are STILL not listening and understanding when i say redesign the match card 
     - **PERFORMANCE:** On this screen, when I change the person in the HEAD TO HEAD section, the graph changes but the names do NOT change, it still shows my name and the enemy laner's name, when it should be showing whoever i have selected's name.
 - **CHAMPIONS SCREEN:**
   - We need to fix the spacing and gap on the left side after the name... because what the hell.. remove the GAMES one because it's redundant since we're already writing the total amount of wins and losses in the WIN/LOSE red/blue bar itself. and make it span more after resizing the spacing after the champion's name.
+
+# FIFTH ITERATION
+
+The analytics screen sometimes goes white when we're applying changes to it while i'm on it, figure out why and fix it pls.
+Show mastery button doesn't work.
+The LP Trend is breaking onto another line and breaking the UI when it's one card at a time showing, i think we can increase the height when it's breaking on ONE account card at a line. Thank you.
+
+- **LEFT SIDE:**
+  - Still i CAN'T scroll all the way down brother...
+  - Color code the KDAs and winrates and stuff for the MOST PLAYED champs like you're doing with the RECENTLY PLAYED and if it's above 80% color it gold instead of green.
+- **MIDDLE OVERVIEW:**
+  - the LP activity thing, on the days we don't have data before a certain point, the "before tracking started", it's black dots kinda, why do they not continue for the rest of the year, it looks cut off in a way don't you think? And don't name it "before tracking stared" just say "No Data"
+  - I think we can add 1 more champion to the most played so they showcase the same height and filling as the most played roles
+- **MATCH CARD:**
+  - the MVP thing is not sitting flush at the top
+  - the text contrast on the mvp card is not it
+  - the right side thing feels off when it's the MVP card look at the border type shit
+  - **HEATMAP:**
+    - The kill indicator is not good looking. we can barely see it.
+    - The heatmap data kinda still is NOT accurate. You could check these ones out and see how they're doing it and how we can do it ourselves: https://github.com/Tapiiri/lol-champion-heatmaps, https://github.com/DeMoriarty/LeagueHeatmap, https://www.reddit.com/r/leagueoflegends/comments/exo1mr/so_i_made_a_league_of_legends_heatmap_viewer/
+    - Dont show the 15-25, 25+ markers if the game itself is only around 16 minutes or something
+    - Redesign the scrollbar for the match timeline to better fit with our whole application vibe, don't remove it. make it slim and dark and whatever you see is fit.
+  - Theres a small gap between when i hover on the TOTAL GOLD and i move the mouse down to interact with the graph that's closing the graph, fix it.
+- **CHAMPIONS SCREEN:**
+  - Fix it. look at the screenshot.
+
+\*NOTE: YOUR MAIN FOCUS, WHICH YOU WILL WORK ON **LAST** IS GOING TO BE ALL THE HEATMAP WORK. FINISH EVERYTHING ELSE FIRST AND THEN FOCUS UP ON THE HEATMAP WORK.
+
+# SIXTH ITERRATION
+
+- **CHAMPIONS SCREEN:**
+  - Don't show a 0 if it's all wins, it's messing it up
+- **MATCH CARD:**
+  - i want the MVP match card's background to kinda change as well i dont like it staying blue like it is now. 
+  - The ACE should be purple or something and also give the border thing like the MVP please, idk if you want to do an animation for it because i think the mvp is more special than the ace so the ace is static and the mvp only is animated.
+- **OVERVIEW SCREEN:**
+  - We should showcase a filter for the queue type or game type if it's aram, ranked solo ranked flex etcetc. because we could also be showing games that are not ranked you know? 
+  - Remove the "39 cached games" text just say 39 Games brotha 
+  - Honeslty under the MOST PLAYED, like a bento grid typa thing the middle top overview thing gonna be, i want you to showcase the top 3 masteries champs i got on this account please, i think that's best thing to do, and showcase them horizontally, showing the left and right masteried champions icons smaller than the middle one icon which would be the most masteried one, and maybe showcase the score under it and showcase the mastery icon to the lect of the score –look it up through the cdragon bs– so now the structure would be ROLES -> MOST PLAYED / MASTERIES on top of each other to the right of the ROLES, and the most played and masteries on top of each other should be equal to the height of the ROLES so we dont have empty and weird spaces. 

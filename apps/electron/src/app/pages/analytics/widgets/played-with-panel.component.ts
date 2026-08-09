@@ -4,6 +4,8 @@ import { PlayedWithRow, PlayedWithMode } from '../models/analytics.types';
 import { RiotApiService } from '../../../services/riot-api.service';
 import { AnalyticsDataService } from '../services/analytics-data.service';
 import { SummonerIconService } from '../services/summoner-icon.service';
+import { PlayerNavService } from '../services/player-nav.service';
+import { winRateTone } from '../services/performance-tone';
 import { EmptyStateComponent } from './empty-state.component';
 
 /**
@@ -30,7 +32,16 @@ import { EmptyStateComponent } from './empty-state.component';
     } @else {
       <ul class="players">
         @for (row of rows(); track row.puuid) {
-          <li class="player">
+          <li
+            class="player"
+            role="button"
+            tabindex="0"
+            [class.linked]="playerNav.canOpen(row.puuid)"
+            [attr.aria-label]="'Open analytics for ' + row.name"
+            (click)="playerNav.open(row.puuid, row.name, row.tagline)"
+            (keydown.enter)="playerNav.open(row.puuid, row.name, row.tagline)"
+            (keydown.space)="playerNav.open(row.puuid, row.name, row.tagline); $event.preventDefault()"
+          >
             <img
               class="player-avatar"
               [src]="avatar(row)"
@@ -52,7 +63,7 @@ import { EmptyStateComponent } from './empty-state.component';
             </div>
 
             <div class="player-record">
-              <span class="player-wr" [class.positive]="row.winRate >= 50">
+              <span class="player-wr" [attr.data-tone]="winRateTone(row.winRate, row.games)">
                 {{ row.winRate | number: '1.0-0' }}%
               </span>
               <span class="player-wl">{{ row.wins }}W {{ row.games - row.wins }}L</span>
@@ -81,6 +92,21 @@ import { EmptyStateComponent } from './empty-state.component';
         border-radius: 10px;
         background: var(--card);
         border: 1px solid var(--border-color);
+        transition:
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+
+      /* The whole row opens that player's own analytics. */
+      .player.linked {
+        cursor: pointer;
+      }
+
+      .player.linked:hover,
+      .player.linked:focus-visible {
+        border-color: var(--outline);
+        background: var(--muted);
+        outline: none;
       }
 
       /* The person, not the champions they happened to pick. */
@@ -135,12 +161,16 @@ import { EmptyStateComponent } from './empty-state.component';
       .player-wr {
         font-size: 12.5px;
         font-weight: 700;
-        color: var(--danger);
+        color: var(--tone-bad);
         font-variant-numeric: tabular-nums;
       }
 
-      .player-wr.positive {
-        color: #2f9e6f;
+      .player-wr[data-tone='good'] {
+        color: var(--tone-good);
+      }
+
+      .player-wr[data-tone='gold'] {
+        color: var(--tone-gold);
       }
 
       .player-wl {
@@ -155,10 +185,14 @@ export class PlayedWithPanelComponent {
   private riotApi = inject(RiotApiService);
   private data = inject(AnalyticsDataService);
   private icons = inject(SummonerIconService);
+  readonly playerNav = inject(PlayerNavService);
 
   rows = input.required<PlayedWithRow[]>();
   mode = input.required<PlayedWithMode>();
   sampleSize = input.required<number>();
+
+  /** Shared stat colouring — see `services/performance-tone.ts`. */
+  readonly winRateTone = winRateTone;
 
   constructor() {
     // Rows cached before the icon was recorded have none; look those few up

@@ -3,8 +3,7 @@
     <div class="head-titles">
       <h2>Champion Pool</h2>
       <p class="subtitle">
-        Across {{ data.matches().length }} cached
-        {{ data.matches().length === 1 ? 'game' : 'games' }}
+        Across {{ data.matches().length }} {{ data.matches().length === 1 ? 'Game' : 'Games' }}
       </p>
     </div>
 
@@ -80,17 +79,21 @@
               </td>
               <td class="col-wl">
                 <div class="wl">
+                  <!-- A zero-width segment cannot hold its own number: the
+                       text spills over the other side of the bar. -->
                   <div class="wl-bar" [style.--win-pct.%]="all.winRate">
-                    <span class="wl-win">{{ all.wins }}</span>
-                    <span class="wl-loss">{{ all.losses }}</span>
+                    <span class="wl-win">{{ all.wins || '' }}</span>
+                    <span class="wl-loss">{{ all.losses || '' }}</span>
                   </div>
-                  <span class="wl-pct" [class.positive]="all.winRate >= 50">
+                  <span class="wl-pct" [attr.data-tone]="winRateTone(all.winRate, all.games)">
                     {{ all.winRate | number: '1.0-0' }}%
                   </span>
                 </div>
               </td>
               <td class="num col-kda">
-                <span class="kda-main">{{ all.kda | number: '1.2-2' }}</span>
+                <span class="kda-main" [attr.data-tone]="kdaTone(all.kda, all.games)">
+                  {{ all.kda | number: '1.2-2' }}
+                </span>
                 <span class="kda-sub">
                   {{ all.kills | number: '1.1-1' }} / {{ all.deaths | number: '1.1-1' }} /
                   {{ all.assists | number: '1.1-1' }}
@@ -124,16 +127,18 @@
               <td class="col-wl">
                 <div class="wl">
                   <div class="wl-bar" [style.--win-pct.%]="row.winRate">
-                    <span class="wl-win">{{ row.wins }}</span>
-                    <span class="wl-loss">{{ row.losses }}</span>
+                    <span class="wl-win">{{ row.wins || '' }}</span>
+                    <span class="wl-loss">{{ row.losses || '' }}</span>
                   </div>
-                  <span class="wl-pct" [class.positive]="row.winRate >= 50">
+                  <span class="wl-pct" [attr.data-tone]="winRateTone(row.winRate, row.games)">
                     {{ row.winRate | number: '1.0-0' }}%
                   </span>
                 </div>
               </td>
               <td class="num col-kda">
-                <span class="kda-main">{{ row.kda | number: '1.2-2' }}</span>
+                <span class="kda-main" [attr.data-tone]="kdaTone(row.kda, row.games)">
+                  {{ row.kda | number: '1.2-2' }}
+                </span>
                 <span class="kda-sub">
                   {{ row.kills | number: '1.1-1' }} / {{ row.deaths | number: '1.1-1' }} /
                   {{ row.assists | number: '1.1-1' }}
@@ -180,7 +185,7 @@
                               <span class="matchup-name">{{ mu.opponent }}</span>
                               <span class="matchup-record">
                                 {{ mu.wins }}W {{ mu.games - mu.wins }}L
-                                <span class="matchup-wr" [class.positive]="mu.winRate >= 50">
+                                <span class="matchup-wr" [attr.data-tone]="winRateTone(mu.winRate, mu.games)">
                                   {{ mu.winRate | number: '1.0-0' }}%
                                 </span>
                               </span>

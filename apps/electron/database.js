@@ -50,13 +50,15 @@ function initDatabase(dataPath) {
       ON lp_snapshots (account_id, timestamp);
 
     CREATE TABLE IF NOT EXISTS match_cache (
-      match_id      TEXT    PRIMARY KEY,
+      match_id      TEXT    NOT NULL,
       account_id    TEXT    NOT NULL,
       timestamp     INTEGER NOT NULL,
       cs_per_min    REAL,
       damage_share  REAL,
       lp_delta      REAL,
-      raw_json      TEXT    NOT NULL
+      raw_json      TEXT    NOT NULL,
+      -- One row per player per game: see the v3 → v4 migration.
+      PRIMARY KEY (match_id, account_id)
     );
 
     CREATE INDEX IF NOT EXISTS idx_match_cache_account
@@ -169,6 +171,79 @@ const MIGRATIONS = [
         ON match_cache (account_id, champion, timestamp);
     `);
   },
+
+  // v3 → v4: key match_cache by (match_id, account_id) instead of match_id.
+  //
+  // A row holds one player's view of a game — their champion, their KDA,
+  // whether they won. With match_id alone as the key, caching a game a second
+  // time for a different player REPLACEd the first player's row, silently
+  // rewriting their history to somebody else's. Harmless while only vault
+  // accounts were ever cached (two tracked accounts in one game is rare);
+  // guaranteed the moment you can open an opponent's profile from a match you
+  // played. SQLite cannot alter a primary key, so the table is rebuilt.
+  (d) => {
+    d.exec(`
+      CREATE TABLE match_cache_v4 (
+        match_id         TEXT    NOT NULL,
+        account_id       TEXT    NOT NULL,
+        timestamp        INTEGER NOT NULL,
+        cs_per_min       REAL,
+        damage_share     REAL,
+        lp_delta         REAL,
+        raw_json         TEXT    NOT NULL,
+        puuid            TEXT,
+        champion         TEXT,
+        position         TEXT,
+        win              INTEGER,
+        kills            INTEGER,
+        deaths           INTEGER,
+        assists          INTEGER,
+        cs               INTEGER,
+        damage_dealt     INTEGER,
+        gold             INTEGER,
+        vision_score     INTEGER,
+        duration_seconds INTEGER,
+        items            TEXT,
+        lp_before        REAL,
+        lp_after         REAL,
+        queue_type       TEXT,
+        queue_id         INTEGER,
+        participant_id   INTEGER,
+        team_id          INTEGER,
+        champion_id      INTEGER,
+        game_version     TEXT,
+        has_detail       INTEGER DEFAULT 0,
+        has_timeline     INTEGER DEFAULT 0,
+        gold_diff_15     INTEGER,
+        cs_diff_15       INTEGER,
+        xp_diff_15       INTEGER,
+        PRIMARY KEY (match_id, account_id)
+      );
+
+      INSERT INTO match_cache_v4 (
+        match_id, account_id, timestamp, cs_per_min, damage_share, lp_delta, raw_json,
+        puuid, champion, position, win, kills, deaths, assists, cs, damage_dealt,
+        gold, vision_score, duration_seconds, items, lp_before, lp_after, queue_type,
+        queue_id, participant_id, team_id, champion_id, game_version,
+        has_detail, has_timeline, gold_diff_15, cs_diff_15, xp_diff_15
+      )
+      SELECT
+        match_id, account_id, timestamp, cs_per_min, damage_share, lp_delta, raw_json,
+        puuid, champion, position, win, kills, deaths, assists, cs, damage_dealt,
+        gold, vision_score, duration_seconds, items, lp_before, lp_after, queue_type,
+        queue_id, participant_id, team_id, champion_id, game_version,
+        has_detail, has_timeline, gold_diff_15, cs_diff_15, xp_diff_15
+      FROM match_cache;
+
+      DROP TABLE match_cache;
+      ALTER TABLE match_cache_v4 RENAME TO match_cache;
+
+      CREATE INDEX IF NOT EXISTS idx_match_cache_account
+        ON match_cache (account_id, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_match_cache_champ
+        ON match_cache (account_id, champion, timestamp);
+    `);
+  },
 ];
 
 function runMigrations() {
@@ -254,11 +329,11 @@ function saveMatchCache(matchId, accountId, computed = {}, rawJson) {
           has_detail, has_timeline, gold_diff_15, cs_diff_15, xp_diff_15)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                ?, ?, ?, ?, ?,
-               COALESCE((SELECT has_detail   FROM match_cache WHERE match_id = ?), 0),
-               COALESCE((SELECT has_timeline FROM match_cache WHERE match_id = ?), 0),
-               COALESCE((SELECT gold_diff_15 FROM match_cache WHERE match_id = ?), NULL),
-               COALESCE((SELECT cs_diff_15   FROM match_cache WHERE match_id = ?), NULL),
-               COALESCE((SELECT xp_diff_15   FROM match_cache WHERE match_id = ?), NULL))`
+               COALESCE((SELECT has_detail   FROM match_cache WHERE match_id = ? LIMIT 1), 0),
+               COALESCE((SELECT has_timeline FROM match_cache WHERE match_id = ? LIMIT 1), 0),
+               COALESCE((SELECT gold_diff_15 FROM match_cache WHERE match_id = ? LIMIT 1), NULL),
+               COALESCE((SELECT cs_diff_15   FROM match_cache WHERE match_id = ? LIMIT 1), NULL),
+               COALESCE((SELECT xp_diff_15   FROM match_cache WHERE match_id = ? LIMIT 1), NULL))`
     )
     .run(
       matchId,
@@ -323,6 +398,22 @@ function getMatchCache(accountId, limit = 20) {
 
 function hasMatchInCache(matchId) {
   return !!getDb().prepare('SELECT 1 FROM match_cache WHERE match_id = ?').get(matchId);
+}
+
+/**
+ * Whether this account already has its own row for a match. Distinct from
+ * `hasMatchInCache`, which only says the game is cached for *somebody* — the
+ * two differ whenever two tracked players shared a game.
+ */
+function hasMatchForAccount(matchId, accountId) {
+  return !!getDb()
+    .prepare('SELECT 1 FROM match_cache WHERE match_id = ? AND account_id = ?')
+    .get(matchId, accountId);
+}
+
+/** Every cached perspective on one match, one row per account holding it. */
+function getMatchCacheRows(matchId) {
+  return getDb().prepare('SELECT * FROM match_cache WHERE match_id = ?').all(matchId);
 }
 
 // ── Match Detail (bans, objectives, full participants) ────────────────────────
@@ -439,13 +530,18 @@ function getMatchesNeedingBackfill(accountId, limit = 500) {
     .all(accountId, limit);
 }
 
-/** Persists denormalised @15 differentials so the Champions table stays a single query. */
-function updateMatchDiffs(matchId, { goldDiff = null, csDiff = null, xpDiff = null } = {}) {
+/**
+ * Persists denormalised @15 differentials so the Champions table stays a single
+ * query. Scoped to one account: a lane differential is measured from a specific
+ * player's side, so it cannot be shared across the other rows for that match.
+ */
+function updateMatchDiffs(matchId, accountId, { goldDiff = null, csDiff = null, xpDiff = null } = {}) {
   getDb()
     .prepare(
-      'UPDATE match_cache SET gold_diff_15 = ?, cs_diff_15 = ?, xp_diff_15 = ? WHERE match_id = ?'
+      `UPDATE match_cache SET gold_diff_15 = ?, cs_diff_15 = ?, xp_diff_15 = ?
+        WHERE match_id = ? AND account_id = ?`
     )
-    .run(goldDiff, csDiff, xpDiff, matchId);
+    .run(goldDiff, csDiff, xpDiff, matchId, accountId);
 }
 
 function safeParse(value, fallback) {
@@ -505,7 +601,9 @@ module.exports = {
   saveMatchCache,
   getMatchCache,
   getMatchCacheRow,
+  getMatchCacheRows,
   hasMatchInCache,
+  hasMatchForAccount,
   updateMatchDiffs,
   // Match detail
   saveMatchDetail,

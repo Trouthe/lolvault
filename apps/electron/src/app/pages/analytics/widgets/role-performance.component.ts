@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { RolePerformanceRow } from '../models/analytics.types';
 import { ROLE_ORDER, roleIcon, roleLabel } from '../services/game-assets';
+import { kdaTone, winRateTone } from '../services/performance-tone';
 import { EmptyStateComponent } from './empty-state.component';
 
 /**
@@ -39,14 +40,16 @@ import { EmptyStateComponent } from './empty-state.component';
               <div class="role-track" [title]="(row.share | number: '1.0-0') + '% of games'">
                 <div
                   class="role-fill"
-                  [class.positive]="row.winRate >= 50"
+                  [attr.data-tone]="winRateTone(row.winRate, row.games)"
                   [style.width.%]="row.games ? row.winRate : 0"
                 ></div>
               </div>
-              <span class="role-kda">{{ row.kda | number: '1.2-2' }} KDA</span>
+              <span class="role-kda" [attr.data-tone]="kdaTone(row.kda, row.games)">
+                {{ row.kda | number: '1.2-2' }} KDA
+              </span>
             </div>
 
-            <span class="role-wr" [class.positive]="row.winRate >= 50" [class.none]="!row.games">
+            <span class="role-wr" [attr.data-tone]="winRateTone(row.winRate, row.games)">
               {{ row.games ? (row.winRate | number: '1.0-0') + '%' : '—' }}
             </span>
           </div>
@@ -56,10 +59,20 @@ import { EmptyStateComponent } from './empty-state.component';
   `,
   styles: [
     `
+      /* Fills whatever height the panel is given so the lanes spread instead of
+         leaving a gap under the last one — the overview pairs this panel with a
+         stacked column whose height it has to match. */
+      :host {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
       .roles {
         display: flex;
         flex-direction: column;
         gap: 5px;
+        flex: 1 1 auto;
       }
 
       .role {
@@ -71,10 +84,13 @@ import { EmptyStateComponent } from './empty-state.component';
         border-radius: 9px;
         background: var(--card);
         border: 1px solid transparent;
+        /* Shares the slack evenly; the row's own align-items keeps its
+           content centred however tall it ends up. */
+        flex: 1 1 auto;
       }
 
       .role.primary {
-        border-color: var(--outline);
+        background-color: var(--muted);
       }
 
       .role.idle {
@@ -138,12 +154,16 @@ import { EmptyStateComponent } from './empty-state.component';
       .role-fill {
         height: 100%;
         border-radius: 999px;
-        background: var(--danger);
+        background: var(--tone-bad);
         transition: width 0.3s ease;
       }
 
-      .role-fill.positive {
-        background: #2f9e6f;
+      .role-fill[data-tone='good'] {
+        background: var(--tone-good);
+      }
+
+      .role-fill[data-tone='gold'] {
+        background: var(--tone-gold);
       }
 
       .role-kda {
@@ -152,19 +172,38 @@ import { EmptyStateComponent } from './empty-state.component';
         font-variant-numeric: tabular-nums;
       }
 
+      .role-kda[data-tone='good'] {
+        color: var(--tone-good);
+        font-weight: 600;
+      }
+
+      .role-kda[data-tone='bad'] {
+        color: var(--tone-bad);
+        font-weight: 600;
+      }
+
+      .role-kda[data-tone='gold'] {
+        color: var(--tone-gold);
+        font-weight: 700;
+      }
+
       .role-wr {
         font-size: 13px;
         font-weight: 700;
         text-align: right;
-        color: var(--danger);
+        color: var(--tone-bad);
         font-variant-numeric: tabular-nums;
       }
 
-      .role-wr.positive {
-        color: #2f9e6f;
+      .role-wr[data-tone='good'] {
+        color: var(--tone-good);
       }
 
-      .role-wr.none {
+      .role-wr[data-tone='gold'] {
+        color: var(--tone-gold);
+      }
+
+      .role-wr[data-tone='neutral'] {
         color: var(--secondary-text);
         opacity: 0.6;
       }
@@ -173,6 +212,10 @@ import { EmptyStateComponent } from './empty-state.component';
 })
 export class RolePerformanceComponent {
   rows = input.required<RolePerformanceRow[]>();
+
+  /** Shared stat colouring — see `services/performance-tone.ts`. */
+  readonly winRateTone = winRateTone;
+  readonly kdaTone = kdaTone;
 
   /** Most-played role, highlighted as the main lane. */
   readonly primaryRole = computed(

@@ -10,6 +10,7 @@ import {
   SegmentedToggleComponent,
 } from '../../widgets/segmented-toggle.component';
 import { ChampionStatRow, QUEUE_FILTER_LABELS, QueueFilter } from '../../models/analytics.types';
+import { kdaTone, winRateTone } from '../../services/performance-tone';
 
 type SortColumn =
   | 'games'
@@ -106,6 +107,10 @@ export class ChampionsScreenComponent {
   });
 
   readonly hasMatches = computed(() => this.data.matches().length > 0);
+
+  /** Shared stat colouring — see `services/performance-tone.ts`. */
+  readonly winRateTone = winRateTone;
+  readonly kdaTone = kdaTone;
 
   setSort(col: SortColumn): void {
     if (this.sortColumn() === col) {

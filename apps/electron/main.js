@@ -1609,6 +1609,7 @@ ipcMain.handle('riot:get-match-detail', async (_event, { matchId, accountId, puu
 // Backfill runs for minutes, so progress is pushed to the renderer as it goes
 // and cancellation is a flag the loop checks between matches.
 const backfillCancelled = new Set();
+const yearHistoryCancelled = new Set();
 
 ipcMain.handle('riot:cancel-backfill', (_event, { accountId }) => {
   backfillCancelled.add(accountId);
@@ -1634,6 +1635,34 @@ ipcMain.handle(
       return { error: err?.message || 'unknown' };
     } finally {
       backfillCancelled.delete(accountId);
+    }
+  }
+);
+
+ipcMain.handle('riot:cancel-year-history', (_event, { accountId }) => {
+  yearHistoryCancelled.add(accountId);
+  return { success: true };
+});
+
+ipcMain.handle(
+  'riot:fetch-year-history',
+  async (event, { accountId, puuid, platform, year }) => {
+    yearHistoryCancelled.delete(accountId);
+    try {
+      return await riotApi.fetchYearHistory(accountId, puuid, platform, {
+        year,
+        shouldCancel: () => yearHistoryCancelled.has(accountId),
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('riot:year-history-progress', { accountId, year, ...progress });
+          }
+        },
+      });
+    } catch (err) {
+      console.error('riot:fetch-year-history error:', err?.message);
+      return { error: err?.message || 'unknown' };
+    } finally {
+      yearHistoryCancelled.delete(accountId);
     }
   }
 );

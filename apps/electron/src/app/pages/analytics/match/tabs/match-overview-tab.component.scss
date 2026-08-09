@@ -123,6 +123,19 @@
   box-shadow: 0 10px 26px rgb(0 0 0 / 32%);
 }
 
+// The 6px offset above is dead space: crossing it on the way to the chart put
+// the pointer outside `.gold` for a frame, `mouseleave` fired and the popover
+// vanished. This invisible bridge is a descendant of `.gold`, so travelling
+// through it never leaves the hover target.
+.gold-pop::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  height: 10px;
+}
+
 .gold-pop-title {
   margin: 0 0 2px;
   font-size: 10.5px;
@@ -379,6 +392,28 @@
   flex-direction: column;
   gap: 0;
   min-width: 0;
+}
+
+// A button rather than a span so it is reachable by keyboard; stripped back to
+// look like the text it replaced.
+.name {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+.name.linked {
+  cursor: pointer;
+}
+
+.name.linked:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .name {

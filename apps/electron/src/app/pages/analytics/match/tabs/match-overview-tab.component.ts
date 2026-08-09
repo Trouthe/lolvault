@@ -11,6 +11,7 @@ import { RiotApiService } from '../../../../services/riot-api.service';
 import { ChampionCatalogService } from '../../../../services/champion-catalog.service';
 import { GameDataService } from '../../../../services/game-data.service';
 import { ChartThemeService } from '../../services/chart-theme.service';
+import { PlayerNavService } from '../../services/player-nav.service';
 import { MatchScoreService, fromDetail } from '../../services/match-score.service';
 import { TF } from '../../models/analytics.types';
 import { OBJECTIVE_ROWS, objectiveIcon, roleIcon } from '../../services/game-assets';
@@ -39,6 +40,7 @@ export class MatchOverviewTabComponent {
   private champions = inject(ChampionCatalogService);
   private gameData = inject(GameDataService);
   private chartTheme = inject(ChartThemeService);
+  readonly playerNav = inject(PlayerNavService);
   private scorer = inject(MatchScoreService);
 
   match = input.required<MatchCacheRow>();

@@ -25,6 +25,7 @@ import { VERSION, BUILD_LABEL } from '../../../environments/version';
 import { ThemeService } from '../../services/theme.service';
 import { FirebaseService } from '../../services/firebase.service';
 import { LcuService } from '../../services/lcu.service';
+import { ChampionCatalogService } from '../../services/champion-catalog.service';
 
 interface CloudSyncBoard {
   id: string;
@@ -119,7 +120,6 @@ export class DashboardComponent implements OnDestroy {
   public deletingAccount = signal<Account | undefined>(undefined);
   public searchQuery = '';
   private _searchQuery = signal('');
-  public championId = signal<string>('');
   public isSortMenuOpen = signal(false);
   public isProfileMenuOpen = signal(false);
   public currentSort = signal<'all' | 'highest' | 'lowest' | 'unranked'>('all');
@@ -169,6 +169,7 @@ export class DashboardComponent implements OnDestroy {
   public themeService = inject(ThemeService);
   private firebaseService = inject(FirebaseService);
   private lcuService = inject(LcuService);
+  private championCatalog = inject(ChampionCatalogService);
 
   public currentUser = toSignal<User | null>(this.authService.currentUser$, {
     initialValue: null,
@@ -177,6 +178,24 @@ export class DashboardComponent implements OnDestroy {
   public profileImageUrl = computed(
     () => this.currentUser()?.photoURL || this.getLocalProfileFallback()
   );
+
+  /**
+   * DDragon id of the champion whose splash backs the dashboard.
+   *
+   * Derived rather than set once at load: the mastery ids arrive asynchronously
+   * (a card refresh, a cloud snapshot, the initial Riot enrichment), so a signal
+   * written only during `loadAccounts()` stayed empty and the Settings toggle
+   * looked broken. `topChampionId` is not persisted, hence the fallback to the
+   * stored top-3 list.
+   */
+  public championId = computed(() => {
+    const withMastery = this.accounts().find(
+      (acc) => acc.topChampionId || acc.topChampionIds?.length
+    );
+    return this.championCatalog.getChampionId(
+      withMastery?.topChampionId || withMastery?.topChampionIds?.[0]
+    );
+  });
 
   // Computed properties
   public displayedBoards = computed(() =>
@@ -885,8 +904,6 @@ export class DashboardComponent implements OnDestroy {
       if (withSyncIds !== loaded) {
         await this.saveAccounts(withSyncIds);
       }
-
-      this.updateMasteryBackground();
     } catch (error) {
       console.error('Error loading accounts:', error);
     }
@@ -1015,7 +1032,6 @@ export class DashboardComponent implements OnDestroy {
       await this.boardService.setBoards(cloudBoards);
       this.accounts.set(mergedAccounts);
       await this.saveAccounts(mergedAccounts);
-      await this.updateMasteryBackground();
     } catch (error) {
       console.error('Failed to apply cloud snapshot locally:', error);
     } finally {
@@ -1318,22 +1334,6 @@ export class DashboardComponent implements OnDestroy {
     );
   }
 
-  private async updateMasteryBackground(): Promise<void> {
-    // topChampionId is not persisted, so fall back to the stored top-3 list —
-    // that keeps the background alive across restarts.
-    const account = this.accounts().find((acc) => acc.topChampionId || acc.topChampionIds?.length);
-    const championKey = account?.topChampionId || account?.topChampionIds?.[0];
-    if (!championKey) return;
-
-    try {
-      const { data } = await import('../../data/champions.json');
-      const entry = Object.entries(data).find(([, c]) => c.key === championKey);
-      if (entry) this.championId.set(entry[1].id);
-    } catch (error) {
-      console.error('Error loading champion data:', error);
-    }
-  }
-
   addAccount(): void {
     this.isModalOpen.set(true);
   }
@@ -1373,7 +1373,6 @@ export class DashboardComponent implements OnDestroy {
   async onAccountsAdded(newAccounts: Account[]): Promise<void> {
     const processed = await this.enrichAccountsWithRiotData(newAccounts);
     await this.updateAccountsAndSave((accounts) => [...accounts, ...processed]);
-    this.updateMasteryBackground();
   }
 
   async onAccountUpdated(updatedAccount: Account): Promise<void> {
@@ -1420,6 +1419,5 @@ export class DashboardComponent implements OnDestroy {
     await this.updateAccountsAndSave((accounts) =>
       accounts.map((acc) => (this.isSameAccount(acc, updatedAccount) ? updatedAccount : acc))
     );
-    this.updateMasteryBackground();
   }
 }

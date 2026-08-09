@@ -4,6 +4,7 @@
   [class.loss]="!won() && !remake()"
   [class.remake]="remake()"
   [class.mvp]="isMvp()"
+  [class.ace]="isAce()"
   [class.is-open]="expanded()"
 >
   <!-- ── Collapsed summary row ─────────────────────────────────────────────
@@ -22,8 +23,17 @@
     <div class="summary">
       <!-- Outcome / queue / LP / time -->
       <div class="col col-meta">
+        @if (isMvp()) {
+          <span class="badge-mvp" title="Top performance on the winning team">MVP</span>
+        } @else if (isAce()) {
+          <span class="badge-ace" title="Top performance on the losing team">ACE</span>
+        }
         <span class="outcome">{{ outcomeLabel() }}</span>
-        <span class="lp" [class.gain]="(match().lp_delta ?? 0) > 0" [class.drop]="(match().lp_delta ?? 0) < 0">
+        <span
+          class="lp"
+          [class.gain]="(match().lp_delta ?? 0) > 0"
+          [class.drop]="(match().lp_delta ?? 0) < 0"
+        >
           @if (match().lp_delta !== null) {
             {{ (match().lp_delta ?? 0) > 0 ? '+' : '' }}{{ match().lp_delta }} LP
           } @else {
@@ -37,12 +47,6 @@
       <!-- Champion, spells, runes. The MVP/ACE crumb rides the top of this
            column so it sits between the outcome text and the portrait. -->
       <div class="col col-champ">
-        @if (isMvp()) {
-          <span class="badge-mvp" title="Top performance on the winning team">MVP</span>
-        } @else if (isAce()) {
-          <span class="badge-ace" title="Top performance on the losing team">ACE</span>
-        }
-
         <div class="champ-portrait">
           <img
             class="champ-icon"
@@ -57,7 +61,13 @@
 
         <div class="loadout">
           @for (spell of summonerSpells(); track spell.id) {
-            <img class="loadout-icon" [src]="spell.icon" [alt]="spell.name" [title]="spell.name" loading="lazy" />
+            <img
+              class="loadout-icon"
+              [src]="spell.icon"
+              [alt]="spell.name"
+              [title]="spell.name"
+              loading="lazy"
+            />
           }
         </div>
         <div class="loadout">
@@ -88,7 +98,9 @@
 
       <!-- CS / vision / role -->
       <div class="col col-stats">
-        <span class="stat">{{ match().cs ?? 0 }} CS ({{ match().cs_per_min | number: '1.1-1' }})</span>
+        <span class="stat"
+          >{{ match().cs ?? 0 }} CS ({{ match().cs_per_min | number: '1.1-1' }})</span
+        >
         @if (match().vision_score !== null) {
           <span class="stat muted">{{ match().vision_score }} vision</span>
         }
@@ -104,7 +116,13 @@
       <div class="col col-items">
         @for (item of items(); track $index) {
           @if (item > 0) {
-            <img class="item" [src]="itemIcon(item)" [alt]="itemName(item)" [title]="itemName(item)" loading="lazy" />
+            <img
+              class="item"
+              [src]="itemIcon(item)"
+              [alt]="itemName(item)"
+              [title]="itemName(item)"
+              loading="lazy"
+            />
           } @else {
             <span class="item item-empty"></span>
           }
@@ -125,9 +143,21 @@
       <div class="col col-teams">
         <ul class="team">
           @for (p of teams().allies; track p.puuid) {
-            <li [class.self]="p.puuid === match().puuid" [title]="p.riotIdGameName + ' — ' + p.championName">
+            <li
+              [class.self]="p.puuid === match().puuid"
+              [title]="p.riotIdGameName + ' — ' + p.championName"
+            >
               <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
-              <span class="team-name">{{ p.riotIdGameName }}</span>
+              <!-- stopPropagation: the whole summary row is the expand toggle,
+                   so a name has to opt out of it to be its own link. -->
+              <button
+                type="button"
+                class="team-name"
+                [class.linked]="playerNav.canOpen(p.puuid)"
+                (click)="openPlayer($event, p)"
+              >
+                {{ p.riotIdGameName }}
+              </button>
             </li>
           }
         </ul>
@@ -135,7 +165,14 @@
           @for (p of teams().enemies; track p.puuid) {
             <li [title]="p.riotIdGameName + ' — ' + p.championName">
               <img [src]="championIcon(p.championName)" [alt]="p.championName" loading="lazy" />
-              <span class="team-name">{{ p.riotIdGameName }}</span>
+              <button
+                type="button"
+                class="team-name"
+                [class.linked]="playerNav.canOpen(p.puuid)"
+                (click)="openPlayer($event, p)"
+              >
+                {{ p.riotIdGameName }}
+              </button>
             </li>
           }
         </ul>
@@ -175,10 +212,18 @@
       } @else {
         @switch (activeTab()) {
           @case ('overview') {
-            <app-match-overview-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+            <app-match-overview-tab
+              [match]="match()"
+              [detail]="detail()!"
+              [timeline]="timeline()"
+            />
           }
           @case ('performance') {
-            <app-match-performance-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />
+            <app-match-performance-tab
+              [match]="match()"
+              [detail]="detail()!"
+              [timeline]="timeline()"
+            />
           }
           @case ('damage') {
             <app-match-damage-tab [match]="match()" [detail]="detail()!" [timeline]="timeline()" />

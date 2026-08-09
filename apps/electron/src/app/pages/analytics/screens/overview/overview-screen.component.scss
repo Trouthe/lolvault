@@ -4,6 +4,10 @@
   gap: 14px;
 }
 
+.queue-filter {
+  align-self: flex-start;
+}
+
 // ── Top band ─────────────────────────────────────────────────────────────────
 
 // Two rows on a six-column grid: three short summary cards above, the two tall
@@ -23,8 +27,43 @@
 }
 
 .panel-roles,
-.panel-champs {
+.panel-stack {
   grid-column: span 3;
+}
+
+// Most Played sits on top of Masteries, and the pair has to come out exactly as
+// tall as the Roles panel beside them. Rather than hand-tuning row counts to
+// match — which breaks the moment a font or a row's padding changes — the two
+// panels keep their natural heights and whichever column is shorter absorbs the
+// difference: Roles by spreading its five lanes, Masteries by centring in the
+// space it is given.
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.panel-champs {
+  flex: 0 0 auto;
+}
+
+// Grows to close the gap, but only the podium moves — the heading stays put at
+// the top of the panel rather than drifting toward its middle.
+.panel-mastery {
+  flex: 1 1 auto;
+}
+
+.panel-mastery app-mastery-podium {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// Lets the lane rows share any height the stack forces on this column.
+.panel-roles app-role-performance {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 @media (max-width: 1080px) {
@@ -39,7 +78,7 @@
   .panel-kda,
   .panel-averages,
   .panel-roles,
-  .panel-champs {
+  .panel-stack {
     grid-column: span 1;
   }
 }
@@ -53,7 +92,7 @@
   .panel-kda,
   .panel-averages,
   .panel-roles,
-  .panel-champs {
+  .panel-stack {
     grid-column: span 1;
   }
 }
@@ -223,6 +262,7 @@
   align-self: center;
   margin-top: 4px;
   padding: 8px 20px;
+  width: 100%;
   border-radius: 9px;
   border: 1px solid var(--border-color);
   background: var(--card);

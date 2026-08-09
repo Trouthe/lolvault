@@ -11,11 +11,15 @@ import {
 import { CommonModule } from '@angular/common';
 import { CompactTimeline, MatchCacheRow, MatchDetail } from '../../../../types/electron';
 import { AnalyticsDataService } from '../services/analytics-data.service';
-import { MatchAggregationService } from '../services/match-aggregation.service';
+import {
+  MatchAggregationService,
+  ParticipantSummary,
+} from '../services/match-aggregation.service';
 import { MatchScoreService, fromDetail, fromSummary } from '../services/match-score.service';
 import { RiotApiService } from '../../../services/riot-api.service';
+import { PlayerNavService } from '../services/player-nav.service';
 import { GameDataService } from '../../../services/game-data.service';
-import { MatchTab } from '../models/analytics.types';
+import { MatchTab, queueName } from '../models/analytics.types';
 import { roleIcon, roleLabel } from '../services/game-assets';
 import { SegmentOption, SegmentedToggleComponent } from '../widgets/segmented-toggle.component';
 import { IconComponent } from '../widgets/icon.component';
@@ -24,15 +28,6 @@ import { MatchPerformanceTabComponent } from './tabs/match-performance-tab.compo
 import { MatchDamageTabComponent } from './tabs/match-damage-tab.component';
 import { MatchBuildTabComponent } from './tabs/match-build-tab.component';
 import { MatchMapTabComponent } from './tabs/match-map-tab.component';
-
-const QUEUE_NAMES: Record<number, string> = {
-  400: 'Normal Draft',
-  420: 'Solo/Duo',
-  430: 'Normal Blind',
-  440: 'Flex 5v5',
-  450: 'ARAM',
-  1700: 'Arena',
-};
 
 /** Root of `raw_json` — the account holder's own full participant record. */
 interface SelfRaw {
@@ -67,6 +62,7 @@ export class MatchCardComponent {
   private data = inject(AnalyticsDataService);
   private scorer = inject(MatchScoreService);
   readonly agg = inject(MatchAggregationService);
+  readonly playerNav = inject(PlayerNavService);
 
   match = input.required<MatchCacheRow>();
   expanded = input.required<boolean>();
@@ -128,11 +124,7 @@ export class MatchCardComponent {
     return this.won() ? 'Victory' : 'Defeat';
   });
 
-  readonly queueName = computed(() => {
-    const id = this.match().queue_id;
-    if (id !== null && id !== undefined && QUEUE_NAMES[id]) return QUEUE_NAMES[id];
-    return this.match().queue_type?.replace(/_/g, ' ') ?? 'Match';
-  });
+  readonly queueName = computed(() => queueName(this.match().queue_id, this.match().queue_type));
 
   /** The account holder's own full participant record, stored on raw_json. */
   private readonly selfRaw = computed<SelfRaw>(() => (this.match().raw_json ?? {}) as SelfRaw);
@@ -306,6 +298,13 @@ export class MatchCardComponent {
 
   onToggle(): void {
     this.toggled.emit();
+  }
+
+  /** Opens a roster member's own analytics without expanding the card. */
+  openPlayer(event: Event, participant: ParticipantSummary): void {
+    if (!this.playerNav.canOpen(participant.puuid)) return;
+    event.stopPropagation();
+    this.playerNav.open(participant.puuid, participant.riotIdGameName, participant.riotIdTagline);
   }
 
   setTab(tab: MatchTab): void {

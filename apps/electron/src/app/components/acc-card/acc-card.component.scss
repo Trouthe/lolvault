@@ -7,7 +7,9 @@
   border-radius: 12px;
   padding: 12px 12px 12px 16px;
   background-color: var(--card);
-  cursor: default;
+  // The whole card opens the account's analytics, so it advertises itself as
+  // clickable rather than looking like inert chrome.
+  cursor: pointer;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease,
@@ -433,9 +435,13 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 12px;
+    // Row gap is smaller than the column gap: when the strip wraps (narrow
+    // cards, one per row) the two lines should read as one block.
+    gap: 8px 12px;
     padding-top: 10px;
-    height: 30px;
+    // Grows with the content instead of clipping it — a fixed height meant the
+    // LP trend spilled outside the card as soon as the strip needed two lines.
+    min-height: 30px;
     border-top: 1px solid var(--border-color);
     min-width: 0;
 

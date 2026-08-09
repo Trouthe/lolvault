@@ -36,31 +36,38 @@
         role="img"
         [attr.aria-label]="'Match events between minute ' + startMinute() + ' and ' + endMinute()"
       >
+        <!-- Kills and deaths wear a chip: the bare glyphs are small, flat and
+             sit on top of a full-spectrum density field, where they disappear.
+             The chip gives them a constant dark ground and a coloured ring. -->
         @for (marker of placedMarkers(); track $index) {
-          <img
+          <span
             class="marker"
             [class.kill]="marker.kind === 'kill'"
             [class.death]="marker.kind === 'death'"
             [class.objective]="marker.kind !== 'kill' && marker.kind !== 'death'"
             [style.left.%]="marker.left"
             [style.top.%]="marker.top"
-            [src]="marker.icon"
-            [alt]="marker.tooltip"
             [title]="marker.tooltip"
-          />
+          >
+            <img class="marker-art" [src]="marker.icon" [alt]="marker.tooltip" />
+          </span>
         }
       </div>
     </div>
 
     <!-- Controls sit under the map -->
     <div class="controls">
-      <app-segmented-toggle
-        [options]="presetOptions"
-        [value]="activePreset()"
-        label="Time window"
-        compact
-        (valueChange)="applyPreset($event)"
-      />
+      <!-- A short game has no phases worth shortcutting to; the sliders below
+           still cover any window the user wants. -->
+      @if (presetOptions().length > 1) {
+        <app-segmented-toggle
+          [options]="presetOptions()"
+          [value]="activePreset()"
+          label="Time window"
+          compact
+          (valueChange)="applyPreset($event)"
+        />
+      }
 
       <div class="range">
         <div class="range-row">
@@ -115,11 +122,6 @@
             <dd>{{ markerCounts().objective }}</dd>
           </div>
         </dl>
-
-        <p class="sample">
-          {{ pointCount() }} position {{ pointCount() === 1 ? 'sample' : 'samples' }} · movement
-          between samples is interpolated
-        </p>
       </div>
     </div>
   }

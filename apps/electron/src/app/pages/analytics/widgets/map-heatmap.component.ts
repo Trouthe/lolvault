@@ -30,6 +30,15 @@ const MINIMAP_SRC = 'assets/game-images/minimap_summoners-rift.png';
 /** Backing-store size; drawn at min(dpr, 2) to avoid pointless cost on hi-DPI. */
 const BASE_SIZE = 512;
 
+/**
+ * Density grid resolution and kernel radius, in cells. 160 cells across the
+ * 512px map is ~3.2px per cell; the Gaussian already smooths the field, so the
+ * grid is painted at its own size and scaled up bilinearly rather than being
+ * computed per screen pixel.
+ */
+const GRID_SIZE = 160;
+const GRID_RADIUS = 7;
+
 interface PlacedMarker extends MapMarker {
   /** Percentage position within the map box. */
   left: number;
@@ -68,15 +77,8 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
     { value: 'enemy', label: 'Enemy team' },
   ];
 
-  readonly presetOptions: SegmentOption<WindowPreset>[] = [
-    { value: 'all', label: 'Full game' },
-    { value: 'early', label: '0-15' },
-    { value: 'mid', label: '15-25' },
-    { value: 'late', label: '25+' },
-  ];
-
   private minimap: HTMLImageElement | null = null;
-  private blob: HTMLCanvasElement | null = null;
+  private gridBuffer: HTMLCanvasElement | null = null;
   private rafHandle = 0;
   private ready = signal(false);
 
@@ -112,10 +114,11 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
     const tl = this.timeline();
     const ids = this.focusIds();
     if (!tl || !ids.length) return null;
-    // Fewer players tracked ⇒ denser interpolation, so a single-player map is
-    // as readable as a whole-team one.
-    const steps = ids.length > 3 ? 4 : 8;
-    return this.heatmap.bucketPositions(tl, ids, steps);
+    // One path resolution for every scope. The field is normalised before it is
+    // coloured, so a team map is no hotter than a solo one just for having ten
+    // times the samples — varying the step count per scope only made the same
+    // route look different depending on who else was selected.
+    return this.heatmap.bucketPositions(tl, ids, 8);
   });
 
   private readonly markers = computed<MapMarker[]>(() => {
@@ -126,6 +129,27 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
   });
 
   readonly maxMinute = computed(() => this.buckets()?.maxMinute ?? 0);
+
+  /**
+   * Phase shortcuts, offered only where they mean something. On a 16-minute
+   * game "15-25" and "25+" select a sliver and nothing at all respectively, so
+   * a window appears only once the game is long enough for it to differ from
+   * the full game, and the mid label names the range it actually covers.
+   */
+  readonly presetOptions = computed<SegmentOption<WindowPreset>[]>(() => {
+    const max = this.maxMinute();
+    const options: SegmentOption<WindowPreset>[] = [{ value: 'all', label: 'Full game' }];
+
+    if (max >= 18) {
+      options.push({ value: 'early', label: '0-15' });
+      options.push({ value: 'mid', label: `15-${Math.min(25, max)}` });
+    }
+    if (max >= 28) {
+      options.push({ value: 'late', label: '25+' });
+    }
+
+    return options;
+  });
 
   /** Markers in the current window, positioned as percentages for DOM overlay. */
   readonly placedMarkers = computed<PlacedMarker[]>(() => {
@@ -158,14 +182,6 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
     return counts;
   });
 
-  readonly pointCount = computed(() => {
-    const buckets = this.buckets();
-    if (!buckets) return 0;
-    return this.heatmap
-      .pointsInRange(buckets, this.startMinute(), this.endMinute())
-      .filter((p) => p.weight === 1).length;
-  });
-
   constructor() {
     // Default the window to the whole game once a timeline arrives.
     effect(() => {
@@ -185,7 +201,6 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
   }
 
   async ngAfterViewInit(): Promise<void> {
-    this.blob = this.createBlob();
     try {
       this.minimap = await this.loadImage(MINIMAP_SRC);
     } catch {
@@ -303,7 +318,7 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
       canvas.width = px;
       canvas.height = px;
     }
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.clearRect(0, 0, BASE_SIZE, BASE_SIZE);
@@ -325,15 +340,17 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Density pass: stamp a cached radial-alpha blob per point onto a greyscale
-   * buffer, then map accumulated alpha through a colour ramp in one pixel pass.
-   * One cheap drawImage per point plus a single getImageData keeps this inside a
-   * frame budget even for the whole-team, fully-interpolated case.
+   * Density pass: sum the window's points into a normalised Gaussian grid, map
+   * it through the colour ramp at grid resolution, then let the canvas scale
+   * the result up. Both halves matter — summing in floating point instead of in
+   * canvas alpha is what stops every busy area saturating to the same red, and
+   * painting 160² pixels instead of a full-resolution read-modify-write is what
+   * keeps a slider drag inside a frame.
    */
   private drawHeat(): void {
     const canvas = this.heatCanvas()?.nativeElement;
     const buckets = this.buckets();
-    if (!canvas || !this.blob) return;
+    if (!canvas) return;
 
     const ctx = this.setupCanvas(canvas);
     if (!ctx || !buckets) return;
@@ -341,35 +358,44 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
     const points = this.heatmap.pointsInRange(buckets, this.startMinute(), this.endMinute());
     if (!points.length) return;
 
-    const blobSize = this.blob.width;
-    const half = blobSize / 2;
+    const field = this.heatmap.densityField(points, GRID_SIZE, GRID_RADIUS);
+    if (!field.ceiling) return;
 
-    for (const p of points) {
-      const { x, y } = this.heatmap.toCanvas(p.x, p.y, BASE_SIZE);
-      ctx.globalAlpha = 0.5 * p.weight;
-      ctx.drawImage(this.blob, x - half, y - half);
-    }
-    ctx.globalAlpha = 1;
+    const buffer = (this.gridBuffer ??= document.createElement('canvas'));
+    buffer.width = GRID_SIZE;
+    buffer.height = GRID_SIZE;
 
-    // Colourise accumulated alpha.
-    const scale = this.dpr();
-    const px = BASE_SIZE * scale;
-    const image = ctx.getImageData(0, 0, px, px);
+    const gridCtx = buffer.getContext('2d');
+    if (!gridCtx) return;
+
+    const image = gridCtx.createImageData(GRID_SIZE, GRID_SIZE);
     const data = image.data;
 
-    for (let i = 0; i < data.length; i += 4) {
-      const alpha = data[i + 3];
-      if (alpha === 0) continue;
-      // Gamma lift so sparse areas remain visible instead of fading to nothing.
-      const t = Math.min(1, Math.pow(alpha / 255, 0.62));
+    for (let i = 0; i < field.values.length; i++) {
+      const value = field.values[i];
+      if (value <= 0) continue;
+
+      // Gamma lift so the thin end of the range stays legible rather than
+      // collapsing into the floor.
+      const t = Math.min(1, Math.pow(value / field.ceiling, 0.55));
+      if (t < 0.02) continue;
+
       const [r, g, b] = this.ramp(t);
-      data[i] = r;
-      data[i + 1] = g;
-      data[i + 2] = b;
-      data[i + 3] = Math.min(235, 70 + t * 185);
+      const offset = i * 4;
+      data[offset] = r;
+      data[offset + 1] = g;
+      data[offset + 2] = b;
+      // Fades out to fully transparent at the fringe. The old floor of 70/255
+      // meant anywhere a player merely walked past got a permanent blue wash
+      // that hid the map underneath.
+      data[offset + 3] = Math.round(Math.min(1, t * 1.3) * 214);
     }
 
-    ctx.putImageData(image, 0, 0);
+    gridCtx.putImageData(image, 0, 0);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(buffer, 0, 0, BASE_SIZE, BASE_SIZE);
   }
 
   /** Cool blue (sparse) → cyan → green → amber → red (dense). */
@@ -396,27 +422,6 @@ export class MapHeatmapComponent implements AfterViewInit, OnDestroy {
       }
     }
     return stops[stops.length - 1].rgb;
-  }
-
-  /** Radial alpha gradient, built once and reused for every point. */
-  private createBlob(): HTMLCanvasElement {
-    const radius = 26;
-    const size = radius * 2;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const gradient = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
-      gradient.addColorStop(0, 'rgba(0,0,0,1)');
-      gradient.addColorStop(0.45, 'rgba(0,0,0,0.55)');
-      gradient.addColorStop(0.75, 'rgba(0,0,0,0.2)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, size, size);
-    }
-    return canvas;
   }
 
   private loadImage(src: string): Promise<HTMLImageElement> {

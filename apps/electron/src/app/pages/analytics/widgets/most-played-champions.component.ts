@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { ChampionStatRow } from '../models/analytics.types';
 import { RiotApiService } from '../../../services/riot-api.service';
+import { kdaTone, winRateTone } from '../services/performance-tone';
 import { EmptyStateComponent } from './empty-state.component';
 
 /** Most-played champions with win rate, KDA and CS/m. */
@@ -29,15 +30,21 @@ import { EmptyStateComponent } from './empty-state.component';
                 <span class="champ-games">{{ row.games }}G</span>
               </div>
               <div class="champ-line sub">
-                <span class="champ-kda">{{ row.kda | number: '1.2-2' }} KDA</span>
+                <span class="champ-kda" [attr.data-tone]="kdaTone(row.kda, row.games)">
+                  {{ row.kda | number: '1.2-2' }} KDA
+                </span>
                 <span class="champ-cs">{{ row.csPerMin | number: '1.1-1' }} CS/m</span>
               </div>
               <div class="champ-bar">
-                <div class="champ-bar-fill" [style.width.%]="row.winRate"></div>
+                <div
+                  class="champ-bar-fill"
+                  [attr.data-tone]="winRateTone(row.winRate, row.games)"
+                  [style.width.%]="row.winRate"
+                ></div>
               </div>
             </div>
 
-            <div class="champ-wr" [class.positive]="row.winRate >= 50">
+            <div class="champ-wr" [attr.data-tone]="winRateTone(row.winRate, row.games)">
               <span class="champ-wr-pct">{{ row.winRate | number: '1.0-0' }}%</span>
               <span class="champ-wr-record">{{ row.wins }}W {{ row.losses }}L</span>
             </div>
@@ -108,6 +115,21 @@ import { EmptyStateComponent } from './empty-state.component';
         white-space: nowrap;
       }
 
+      .champ-kda[data-tone='good'] {
+        color: var(--tone-good);
+        font-weight: 600;
+      }
+
+      .champ-kda[data-tone='bad'] {
+        color: var(--tone-bad);
+        font-weight: 600;
+      }
+
+      .champ-kda[data-tone='gold'] {
+        color: var(--tone-gold);
+        font-weight: 700;
+      }
+
       .champ-line.sub {
         gap: 10px;
         justify-content: flex-start;
@@ -123,7 +145,16 @@ import { EmptyStateComponent } from './empty-state.component';
       .champ-bar-fill {
         height: 100%;
         border-radius: 999px;
-        background: var(--outline);
+        background: var(--tone-bad);
+        transition: width 0.3s ease;
+      }
+
+      .champ-bar-fill[data-tone='good'] {
+        background: var(--tone-good);
+      }
+
+      .champ-bar-fill[data-tone='gold'] {
+        background: var(--tone-gold);
       }
 
       .champ-wr {
@@ -132,11 +163,15 @@ import { EmptyStateComponent } from './empty-state.component';
         align-items: flex-end;
         gap: 1px;
         flex-shrink: 0;
-        color: var(--danger);
+        color: var(--tone-bad);
       }
 
-      .champ-wr.positive {
-        color: #2f9e6f;
+      .champ-wr[data-tone='good'] {
+        color: var(--tone-good);
+      }
+
+      .champ-wr[data-tone='gold'] {
+        color: var(--tone-gold);
       }
 
       .champ-wr-pct {
@@ -157,6 +192,10 @@ export class MostPlayedChampionsComponent {
   private riotApi = inject(RiotApiService);
 
   rows = input.required<ChampionStatRow[]>();
+
+  /** Shared stat colouring — see `services/performance-tone.ts`. */
+  readonly winRateTone = winRateTone;
+  readonly kdaTone = kdaTone;
 
   icon(champion: string): string {
     return this.riotApi.getChampionIconUrl(champion);

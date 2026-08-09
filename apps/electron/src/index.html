@@ -6,6 +6,27 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!--
+      Paint the saved theme before Angular boots. Without this the document has
+      no data-theme until the root component runs, so every --* custom property
+      is undefined for the first frames and the window flashes white.
+    -->
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement;
+          var theme = localStorage.getItem('theme');
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          root.setAttribute('data-theme', theme);
+          root.setAttribute('data-theme-variant', localStorage.getItem('themeVariant') || 'default');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.setAttribute('data-theme-variant', 'default');
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

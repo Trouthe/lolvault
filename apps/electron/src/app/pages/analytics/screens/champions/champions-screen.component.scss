@@ -85,10 +85,20 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  // Well under a typical content width, so the table fits without scrolling
-  // in normal use and only scrolls on genuinely narrow windows.
-  min-width: 720px;
+  // Every stat column below is sized, so the minimum is their sum plus the
+  // room the champion column needs for an icon and a long name (Nunu &
+  // Willump). Below this the container scrolls rather than squeezing.
+  min-width: 830px;
   table-layout: fixed;
+}
+
+// There is no global border-box reset. Under `table-layout: fixed` a column's
+// declared width would otherwise exclude its 24px of horizontal padding, so the
+// eight sized columns overran the table by ~190px and the auto-width champion
+// column — the one that absorbs the remainder — collapsed to nothing.
+.pool th,
+.pool td {
+  box-sizing: border-box;
 }
 
 thead th {
@@ -148,27 +158,28 @@ tbody tr:last-child td {
   font-variant-numeric: tabular-nums;
 }
 
+// Takes whatever the sized columns leave over. `min-width` does nothing under
+// fixed layout — the floor comes from `.pool`'s own min-width instead.
 .col-champ {
   text-align: left !important;
   width: auto;
-  min-width: 160px;
   padding-right: 20px !important;
 }
 
 .col-wl {
-  width: 154px;
+  width: 150px;
 }
 
 .col-kda {
-  width: 104px;
+  width: 96px;
 }
 
 .col-num {
-  width: 92px;
+  width: 88px;
 }
 
 .col-penta {
-  width: 78px;
+  width: 72px;
 }
 
 .col-expand {
@@ -217,7 +228,13 @@ tbody tr:last-child td {
   object-fit: cover;
 }
 
+// Truncates inside the cell instead of overflowing it — the column is sized by
+// the table, so a long name has nowhere to push.
 .champ-name {
+  display: inline-block;
+  max-width: calc(100% - 40px);
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 600;
   font-size: 12.5px;
   vertical-align: middle;
@@ -255,6 +272,8 @@ tbody tr:last-child td {
   color: #fff;
 }
 
+// `overflow: hidden` keeps a near-zero segment from letting its number bleed
+// across the other half of the bar.
 .wl-win {
   display: flex;
   align-items: center;
@@ -262,6 +281,7 @@ tbody tr:last-child td {
   width: var(--win-pct, 50%);
   background: #2f6fd0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .wl-loss {
@@ -271,22 +291,43 @@ tbody tr:last-child td {
   flex: 1;
   background: #d6455d;
   min-width: 0;
+  overflow: hidden;
 }
 
 .wl-pct {
   min-width: 32px;
   text-align: right;
   font-weight: 700;
-  color: var(--secondary-text);
+  color: var(--tone-bad);
 
-  &.positive {
-    color: #2f9e6f;
+  &[data-tone='good'] {
+    color: var(--tone-good);
+  }
+
+  &[data-tone='gold'] {
+    color: var(--tone-gold);
+  }
+
+  &[data-tone='neutral'] {
+    color: var(--secondary-text);
   }
 }
 
 .kda-main {
   display: block;
   font-weight: 700;
+}
+
+.kda-main[data-tone='good'] {
+  color: var(--tone-good);
+}
+
+.kda-main[data-tone='bad'] {
+  color: var(--tone-bad);
+}
+
+.kda-main[data-tone='gold'] {
+  color: var(--tone-gold);
 }
 
 .kda-sub {
@@ -371,9 +412,14 @@ tbody tr:last-child td {
 .matchup-wr {
   margin-left: 4px;
   font-weight: 700;
+  color: var(--tone-bad);
 
-  &.positive {
-    color: #2f9e6f;
+  &[data-tone='good'] {
+    color: var(--tone-good);
+  }
+
+  &[data-tone='gold'] {
+    color: var(--tone-gold);
   }
 }
 

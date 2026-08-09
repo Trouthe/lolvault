@@ -32,49 +32,92 @@
   }
 }
 
-// ── MVP treatment ────────────────────────────────────────────────────────────
-// A 2px spectrum border around the whole card, drawn as a gradient backdrop
-// with the card content inset over it so the animation runs on the edge itself.
-.card.mvp {
+// ── MVP and ACE treatments ───────────────────────────────────────────────────
+// Both wear a 2px edge painted as a masked ring overlay rather than a real
+// border. A border would change the card's geometry: the badge and the expander
+// rail are clipped to the padding box by `overflow: hidden`, so a 2px border
+// pushes the badge down off the top edge and leaves the rail's 9px corner
+// sitting inside an 8px card corner. The ring keeps every card 1px.
+//
+// MVP is the rarer of the two and the only one that moves: its ring and its
+// background drift through the same spectrum together. ACE is the losing-team
+// equivalent, so it gets its own colour — purple, clear of both the win navy
+// and the loss crimson — but holds still.
+.card.mvp,
+.card.ace {
   border-color: transparent;
+}
+
+// A dark spectrum wash instead of the flat result colour, so an MVP game is
+// recognisable from the background alone. Every stop is deliberately low in
+// lightness: the row's text sits directly on it.
+.card.mvp {
   background:
-    padding-box,
-    linear-gradient(100deg, #8d333b, #755a34, #25794b, #1e628a, #613d75, #8d333b) border-box;
-  background-size:
-    auto,
-    300% 100%;
-  border: 2px solid transparent;
+    linear-gradient(100deg, #2c1338, #14203f, #0d2f36, #2f2416, #2c1338) 0 0 / 300% 100%,
+    #101425;
   animation: mvp-sweep 3.4s linear infinite;
+}
+
+// ACE keeps the loss card's crimson: it is still a loss, and the ring plus the
+// chip already say the rest. Only MVP earns a background of its own.
+
+.card.mvp::after,
+.card.ace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 2px;
+  // Punch out the middle so only the 2px padding ring paints.
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card.mvp::after {
+  background: linear-gradient(100deg, #ff5f6d, #ffc371, #47e08d, #38b6ff, #b06fd6, #ff5f6d);
+  background-size: 300% 100%;
+  animation: mvp-sweep 3.4s linear infinite;
+}
+
+.card.ace::after {
+  background: linear-gradient(120deg, #7d4bc4, #c07fe8, #6b3fb0);
 }
 
 @keyframes mvp-sweep {
   to {
-    background-position:
-      0 0,
-      -300% 0;
+    background-position: -300% 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card.mvp {
+  .card.mvp,
+  .card.mvp::after {
     animation: none;
-    background-position:
-      0 0,
-      40% 0;
+    background-position: 40% 0;
   }
 }
 
-// The crumb hangs off the top of the champion column — between the outcome
-// text and the portrait rather than sitting on top of "Victory".
+// The crumb hangs from the card's top edge, between the outcome text and the
+// portrait rather than sitting on top of "Victory". z-index puts it over the
+// MVP ring so it reads as notched into the edge instead of floating below it.
 .badge-mvp,
 .badge-ace {
   position: absolute;
-  top: -10px;
-  left: -8px;
+  top: 0;
+  left: 6rem;
   z-index: 3;
-  padding: 1px 9px 2px;
+  padding: 2px 9px 3px;
   border-radius: 0 0 6px 6px;
   font-size: 9px;
+  line-height: 1;
   font-weight: 800;
   letter-spacing: 0.6px;
   color: #14110f;
@@ -99,9 +142,11 @@
   }
 }
 
+// Static, and purple to match its ring — the ACE is the losing team's best
+// game, worth marking but not worth animating next to an MVP.
 .badge-ace {
-  background: var(--outline);
-  color: var(--primary-text);
+  background: linear-gradient(120deg, #c07fe8, #8b55cf);
+  color: #17091f;
 }
 
 // ── Summary row ──────────────────────────────────────────────────────────────
@@ -163,17 +208,23 @@
 }
 
 // Secondary text on a tinted card needs more weight than the theme's default
-// grey, which is tuned for the neutral surface.
+// grey, which is tuned for the neutral surface. `--secondary-text` is a mid
+// grey — on saturated navy or crimson it drops close to the background, so
+// every muted label on a tinted card is re-derived from the foreground instead.
 .win .queue,
 .win .ago,
 .win .kda-ratio,
 .win .kda-kp,
 .win .team-name,
+.win .stat.muted,
+.win .stat.role,
 .loss .queue,
 .loss .ago,
 .loss .kda-ratio,
 .loss .kda-kp,
-.loss .team-name {
+.loss .team-name,
+.loss .stat.muted,
+.loss .stat.role {
   color: color-mix(in oklch, var(--primary-text) 74%, transparent);
 }
 
@@ -211,6 +262,13 @@
 .lp-none {
   opacity: 0.6;
   font-weight: 600;
+}
+
+// "No LP" at 60% of a mid grey is unreadable on the saturated cards.
+.win .lp-none,
+.loss .lp-none {
+  color: color-mix(in oklch, var(--primary-text) 62%, transparent);
+  opacity: 1;
 }
 
 .queue,
@@ -407,18 +465,37 @@
   }
 }
 
+// A button rather than a span so it is reachable by keyboard; stripped back to
+// look like the text it replaced.
 .team-name {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
   font-size: 9.5px;
   color: var(--secondary-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  cursor: default;
 }
 
 .team li.self .team-name {
   color: var(--primary-text);
   font-weight: 700;
+}
+
+.team-name.linked {
+  cursor: pointer;
+}
+
+.team-name.linked:hover {
+  color: var(--primary-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 // ── Expander ─────────────────────────────────────────────────────────────────
@@ -451,6 +528,19 @@
   color: #fbe6ea;
 }
 
+// The rail follows the card, not the result: a crimson rail beside a purple ACE
+// card, or a flat blue one beside the MVP's drifting gradient, both read as a
+// mismatched strip bolted to the edge.
+.ace .expander {
+  background: color-mix(in oklch, #a163d8 42%, transparent);
+  color: #f3e6fb;
+}
+
+.mvp .expander {
+  background: color-mix(in oklch, var(--primary-text) 14%, transparent);
+  color: #eef2fb;
+}
+
 .head:hover .expander {
   color: var(--primary-text);
 }
@@ -462,6 +552,16 @@
 
 .loss .head:hover .expander {
   background: color-mix(in oklch, #d6455d 58%, transparent);
+  color: #fff;
+}
+
+.ace .head:hover .expander {
+  background: color-mix(in oklch, #a163d8 62%, transparent);
+  color: #fff;
+}
+
+.mvp .head:hover .expander {
+  background: color-mix(in oklch, var(--primary-text) 26%, transparent);
   color: #fff;
 }
 
@@ -532,7 +632,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px 14px 16px;
-  border-top: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 3px;
   // Opaque: the detail panel stays neutral instead of inheriting the card's
   // now-saturated result colour.
   background: var(--background);

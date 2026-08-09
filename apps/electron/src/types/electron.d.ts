@@ -226,6 +226,20 @@ export interface ElectronAPI {
 
   onBackfillProgress: (callback: (data: BackfillProgress) => void) => void;
 
+  /** Pulls one calendar year of match ids and caches whatever is missing. */
+  riotFetchYearHistory: (args: {
+    accountId: string;
+    puuid: string;
+    platform: string;
+    year: number;
+  }) => Promise<
+    { scanned: number; added: number; failed: number; cancelled: boolean } | { error: string }
+  >;
+
+  riotCancelYearHistory: (args: { accountId: string }) => Promise<{ success: boolean }>;
+
+  onYearHistoryProgress: (callback: (data: YearHistoryProgress) => void) => void;
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
     activeVaultId: string | null;
@@ -271,6 +285,12 @@ export interface BackfillProgress {
   failed: number;
   etaSeconds: number;
   done: boolean;
+}
+
+export interface YearHistoryProgress extends BackfillProgress {
+  year: number;
+  /** `scanning` walks the id endpoint; `fetching` pulls match detail. */
+  phase: 'scanning' | 'fetching';
 }
 
 /**

@@ -27,7 +27,7 @@
   flex-direction: column;
   gap: 8px;
   // Match the map's height so the two columns balance.
-  max-height: 620px;
+  max-height: 502px;
 }
 
 .feed-head {
@@ -56,13 +56,44 @@
 .feed {
   list-style: none;
   margin: 0;
-  padding: 0 4px 0 0;
+  padding: 0 8px 0 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
   min-height: 0;
+
+  // Firefox fallback; the WebKit rules below are what Electron actually uses.
   scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--primary-text) 20%, transparent) transparent;
+}
+
+// Slim, dark and unobtrusive: a track that reads as part of the panel and a
+// thumb derived from the foreground, so it follows every theme rather than
+// pinning to one grey.
+.feed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.feed::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--primary-text) 5%, transparent);
+  border-radius: 999px;
+  margin: 2px 0;
+}
+
+.feed::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary-text) 20%, transparent);
+  transition: background 0.15s ease;
+}
+
+.feed:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--primary-text) 32%, transparent);
+}
+
+.feed::-webkit-scrollbar-thumb:hover,
+.feed::-webkit-scrollbar-thumb:active {
+  background: color-mix(in oklch, var(--primary-text) 48%, transparent);
 }
 
 .event {
@@ -78,11 +109,11 @@
 
 // Colour keyed to which side benefited, so the feed skims at a glance.
 .event.friendly {
-  border-left-color: #2f6fd0;
+  background: color-mix(in oklch, #2f6fd0 25%, transparent);
 }
 
 .event.hostile {
-  border-left-color: #d6455d;
+  background: color-mix(in oklch, #d6455d 25%, transparent);
 }
 
 .event-time {
@@ -154,14 +185,8 @@
 .event-champ {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: 99px;
   object-fit: cover;
-}
-
-// The victim reads as defeated.
-.event-champ.dead {
-  filter: grayscale(1);
-  opacity: 0.65;
 }
 
 .event-arrow {
