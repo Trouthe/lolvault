@@ -17,14 +17,14 @@
 
   &.win {
     --result-bg: #001d47;
-    border-color: color-mix(in oklch, #2f6fd0 62%, var(--border-color));
+    border-color: #2f6fd0;
   }
 
   &.loss {
     // Paired to the win navy above — both are flat, dark and saturated, so the
     // two results read as one colour each. Tune the pair together.
     --result-bg: #4a0011;
-    border-color: color-mix(in oklch, #d6455d 62%, var(--border-color));
+    border-color: #d6455d;
   }
 
   &.is-open {
@@ -38,8 +38,8 @@
 .card.mvp {
   border-color: transparent;
   background:
-    var(--result-bg) padding-box,
-    linear-gradient(100deg, #ff5f6d, #ffc371, #47e08d, #38b6ff, #b06fd6, #ff5f6d) border-box;
+    padding-box,
+    linear-gradient(100deg, #8d333b, #755a34, #25794b, #1e628a, #613d75, #8d333b) border-box;
   background-size:
     auto,
     300% 100%;
