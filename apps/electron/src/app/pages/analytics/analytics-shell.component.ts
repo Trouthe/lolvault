@@ -21,6 +21,8 @@ import { SettingsService } from '../../services/settings.service';
 import { RiotApiService } from '../../services/riot-api.service';
 import { EmptyStateComponent } from './widgets/empty-state.component';
 import { IconComponent } from './widgets/icon.component';
+import { SkeletonComponent } from './widgets/skeleton.component';
+import { OverviewSkeletonComponent } from './widgets/overview-skeleton.component';
 import { absoluteLpToLabel } from './widgets/lp-climb-chart.component';
 import { SegmentOption, SegmentedToggleComponent } from './widgets/segmented-toggle.component';
 import { QueueCardComponent } from './widgets/queue-card.component';
@@ -37,6 +39,8 @@ import { InsightsScreenComponent } from './screens/insights/insights-screen.comp
     CommonModule,
     EmptyStateComponent,
     IconComponent,
+    SkeletonComponent,
+    OverviewSkeletonComponent,
     SegmentedToggleComponent,
     QueueCardComponent,
     MostPlayedChampionsComponent,
@@ -115,6 +119,12 @@ export class AnalyticsShellComponent {
    * restate what the rank card already says.
    */
   readonly peakRank = computed(() => {
+    // The two halves of that comparison arrive at different times: snapshots
+    // come from the local database, the current rank from Riot a moment later.
+    // Deciding before both are in made the badge appear and then vanish as the
+    // rank landed and revealed the peak was not a peak after all.
+    if (this.data.loading()) return null;
+
     const snaps = this.data.lpSnapshots();
     if (!snaps.length) return null;
 
@@ -248,6 +258,11 @@ export class AnalyticsShellComponent {
    * Someone else's profile is a detour, so it steps back to wherever you came
    * from; a vault account is a destination, so it returns to the dashboard.
    */
+  /** Leaves the click-through trail outright, however deep it goes. */
+  goHome(): void {
+    void this.router.navigate(['/dashboard']);
+  }
+
   goBack(): void {
     // `visited` only counts profiles opened inside this session, so a page
     // reached by reload or deep link still has somewhere sensible to go.

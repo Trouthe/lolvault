@@ -2,10 +2,46 @@
   <!-- ── Left rail (scrollbar hidden; bottom fade signals more content) ───── -->
   <div class="rail-wrap">
   <aside class="rail">
-    <button class="rail-back" type="button" (click)="goBack()">
-      <app-icon name="arrow-left" [size]="14" />
-      <span>{{ data.external() ? 'Back' : 'Back to Accounts' }}</span>
-    </button>
+    <!-- Back steps through the profiles you clicked into; Home leaves the trail
+         entirely, which matters once you are several players deep. -->
+    <div class="rail-nav">
+      <button class="rail-back" type="button" (click)="goBack()">
+        <app-icon name="arrow-left" [size]="14" />
+        <span>{{ data.external() ? 'Back' : 'Back to Accounts' }}</span>
+      </button>
+      @if (data.external()) {
+        <button
+          class="rail-home"
+          type="button"
+          title="Back to your accounts"
+          aria-label="Back to your accounts"
+          (click)="goHome()"
+        >
+          <app-icon name="home" [size]="14" />
+        </button>
+      }
+    </div>
+
+    @if (data.loading() && !data.account()) {
+      <!-- Identity, rank cards and rail panels in outline, so the rail has its
+           real shape from the first frame instead of snapping in later. -->
+      <div class="rail-skeleton" aria-busy="true" aria-label="Loading account">
+        <div class="rs-identity">
+          <app-skeleton width="62px" height="62px" circle />
+          <div class="rs-identity-text">
+            <app-skeleton width="70%" height="18px" />
+            <app-skeleton width="45%" height="11px" />
+          </div>
+        </div>
+        @for (card of [1, 2]; track card) {
+          <app-skeleton height="62px" radius="11px" />
+        }
+        <app-skeleton width="90px" height="10px" />
+        @for (row of [1, 2, 3]; track row) {
+          <app-skeleton height="52px" radius="10px" />
+        }
+      </div>
+    }
 
     @if (data.account(); as account) {
       <!-- Identity: portrait left, details right -->
@@ -121,10 +157,7 @@
     </nav>
 
     @if (data.loading()) {
-      <div class="loading">
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading analytics…</p>
-      </div>
+      <app-overview-skeleton />
     } @else if (data.failure() === 'no-api-key') {
       <app-empty-state
         icon="key"

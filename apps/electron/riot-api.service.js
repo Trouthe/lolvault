@@ -208,8 +208,11 @@ const QUEUE_LABELS = {
   1700: 'ARENA',
 };
 
-/** Queues fetched by default — enough to back the Overview mode toggle. */
-const DEFAULT_QUEUES = [420, 440, 400, 430, 450];
+/**
+ * Ceiling on one year's sweep. Well above what any human plays in a year, and
+ * a hard stop on paging if Riot ever returns something unexpected.
+ */
+const MAX_YEAR_MATCHES = 2000;
 
 function queueLabel(queueId) {
   return QUEUE_LABELS[queueId] || (queueId != null ? `QUEUE_${queueId}` : null);
@@ -375,31 +378,57 @@ function persistMatch(matchId, accountId, puuid, match) {
 }
 
 /**
- * Fetches new matches across the requested queues, inserts them into SQLite,
- * then returns cached rows for the account sorted by timestamp DESC.
+ * Pages Riot's match-id endpoint, unfiltered by queue.
+ *
+ * `count` caps at 100 per request, so anything larger is paged. `startTime` and
+ * `endTime` are epoch *seconds* and optional; Riot's matchlist only carries
+ * timestamps from 16 June 2021, so windows earlier than that return nothing.
  */
-async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20, queues) {
+async function listMatchIds(lol, puuid, region, { count = 20, startTime, endTime, maxPages = 20 } = {}) {
+  const PAGE = 100;
+  const ids = [];
+  const wanted = Math.max(1, count);
+
+  for (let page = 0; page < maxPages && ids.length < wanted; page++) {
+    const query = { start: page * PAGE, count: Math.min(PAGE, wanted - ids.length) };
+    if (startTime !== undefined) query.startTime = startTime;
+    if (endTime !== undefined) query.endTime = endTime;
+
+    let batch = [];
+    try {
+      const { response } = await withRetry(() => lol.MatchV5.list(puuid, region, query), {
+        interactive: false,
+      });
+      batch = Array.isArray(response) ? response : [];
+    } catch (err) {
+      console.warn('[RiotAPI] Match list page failed:', err?.message);
+      break;
+    }
+
+    ids.push(...batch);
+    if (batch.length < query.count) break;
+  }
+
+  return [...new Set(ids)];
+}
+
+/**
+ * Fetches the newest matches, inserts them into SQLite, then returns cached
+ * rows for the account sorted by timestamp DESC.
+ *
+ * The listing is deliberately *not* filtered by queue. It used to fan out over
+ * a hardcoded list of five, which cost five requests instead of one and — far
+ * worse — silently dropped every game played in any other mode: Arena, Clash,
+ * Swiftplay, URF, rotating modes, bot games. Those missing games are exactly
+ * the holes that showed up as empty weeks on the activity heatmap for someone
+ * who plays every day. Omitting `queue` returns all of them, newest first.
+ */
+async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20) {
   try {
     const { lol } = createClients();
     const region = PLATFORM_TO_REGION[platform] || 'EUROPE';
-    const queueList = Array.isArray(queues) && queues.length ? queues : DEFAULT_QUEUES;
 
-    // MatchV5.list accepts a single queue per call, so fan out across queues.
-    const idSets = await Promise.all(
-      queueList.map(async (queue) => {
-        try {
-          const { response } = await withRetry(() =>
-            lol.MatchV5.list(puuid, region, { queue, count })
-          );
-          return Array.isArray(response) ? response : [];
-        } catch (err) {
-          console.warn(`[RiotAPI] Match list failed for queue ${queue}:`, err?.message);
-          return [];
-        }
-      })
-    );
-
-    const matchIds = [...new Set(idSets.flat())];
+    const matchIds = await listMatchIds(lol, puuid, region, { count });
     if (matchIds.length === 0) return db.getMatchCache(accountId, count);
 
     // Re-fetch rows that exist but predate the detail table, so older cached
@@ -430,11 +459,10 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20,
 /**
  * Pulls one calendar year of match history and caches anything not already held.
  *
- * The normal history fetch asks for the newest `count` ids per queue, which is
- * fine for a match list but leaves the activity heatmap with a few recent weeks
- * and eleven empty months. This walks the year properly: page the id endpoint
- * per queue between the year's bounds, then fetch the detail for whatever is
- * missing.
+ * The routine history fetch asks for the newest handful of games, which is fine
+ * for a match list but leaves the activity heatmap with a few recent weeks and
+ * eleven empty months. This walks the year properly: page the id endpoint
+ * between the year's bounds, then fetch the detail for whatever is missing.
  *
  * Listing ids is cheap; the detail calls are not — one request per game against
  * a ~0.83 req/s budget. Hence the progress reporting and the cancel check, and
@@ -455,42 +483,20 @@ async function fetchYearHistory(
   const startTime = Math.floor(new Date(year, 0, 1).getTime() / 1000);
   const endTime = Math.floor(new Date(year + 1, 0, 1).getTime() / 1000);
 
-  const PAGE = 100;
-  const MAX_PAGES_PER_QUEUE = 10;
+  onProgress({ phase: 'scanning', processed: 0, total: 0, failed: 0, etaSeconds: 0, done: false });
 
-  const ids = new Set();
+  // Unfiltered by queue: a year is only complete if it includes every mode the
+  // player touched, not the handful we happen to have listed.
+  const ids = await listMatchIds(lol, puuid, region, {
+    count: MAX_YEAR_MATCHES,
+    startTime,
+    endTime,
+    maxPages: MAX_YEAR_MATCHES / 100,
+  });
 
-  for (const queue of DEFAULT_QUEUES) {
-    for (let page = 0; page < MAX_PAGES_PER_QUEUE; page++) {
-      if (shouldCancel()) return { scanned: ids.size, added: 0, failed: 0, cancelled: true };
+  if (shouldCancel()) return { scanned: ids.length, added: 0, failed: 0, cancelled: true };
 
-      let batch = [];
-      try {
-        const { response } = await withRetry(
-          () =>
-            lol.MatchV5.list(puuid, region, {
-              queue,
-              start: page * PAGE,
-              count: PAGE,
-              startTime,
-              endTime,
-            }),
-          { interactive: false }
-        );
-        batch = Array.isArray(response) ? response : [];
-      } catch (err) {
-        console.warn(`[RiotAPI] Year listing failed for queue ${queue}:`, err?.message);
-        break;
-      }
-
-      for (const id of batch) ids.add(id);
-      if (batch.length < PAGE) break;
-    }
-
-    onProgress({ phase: 'scanning', processed: 0, total: ids.size, failed: 0, etaSeconds: 0, done: false });
-  }
-
-  const missing = [...ids].filter((id) => !db.hasMatchForAccount(id, accountId));
+  const missing = ids.filter((id) => !db.hasMatchForAccount(id, accountId));
   const total = missing.length;
 
   onProgress({
@@ -501,13 +507,13 @@ async function fetchYearHistory(
     etaSeconds: limiter.estimateSeconds(total),
     done: total === 0,
   });
-  if (total === 0) return { scanned: ids.size, added: 0, failed: 0, cancelled: false };
+  if (total === 0) return { scanned: ids.length, added: 0, failed: 0, cancelled: false };
 
   let added = 0;
   let failed = 0;
 
   for (const matchId of missing) {
-    if (shouldCancel()) return { scanned: ids.size, added, failed, cancelled: true };
+    if (shouldCancel()) return { scanned: ids.length, added, failed, cancelled: true };
 
     try {
       const { response: match } = await withRetry(() => lol.MatchV5.get(matchId, region), {
@@ -531,7 +537,7 @@ async function fetchYearHistory(
     });
   }
 
-  return { scanned: ids.size, added, failed, cancelled: false };
+  return { scanned: ids.length, added, failed, cancelled: false };
 }
 
 // ── Match timeline ────────────────────────────────────────────────────────────
@@ -749,5 +755,5 @@ module.exports = {
   validateApiKey,
   getDDragonVersion,
   queueLabel,
-  DEFAULT_QUEUES,
+  MAX_YEAR_MATCHES,
 };
