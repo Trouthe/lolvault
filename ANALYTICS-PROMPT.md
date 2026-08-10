@@ -164,9 +164,9 @@ The LP Trend is breaking onto another line and breaking the UI when it's one car
 - **CHAMPIONS SCREEN:**
   - Don't show a 0 if it's all wins, it's messing it up
 - **MATCH CARD:**
-  - i want the MVP match card's background to kinda change as well i dont like it staying blue like it is now. 
+  - i want the MVP match card's background to kinda change as well i dont like it staying blue like it is now.
   - The ACE should be purple or something and also give the border thing like the MVP please, idk if you want to do an animation for it because i think the mvp is more special than the ace so the ace is static and the mvp only is animated.
 - **OVERVIEW SCREEN:**
-  - We should showcase a filter for the queue type or game type if it's aram, ranked solo ranked flex etcetc. because we could also be showing games that are not ranked you know? 
-  - Remove the "39 cached games" text just say 39 Games brotha 
-  - Honeslty under the MOST PLAYED, like a bento grid typa thing the middle top overview thing gonna be, i want you to showcase the top 3 masteries champs i got on this account please, i think that's best thing to do, and showcase them horizontally, showing the left and right masteried champions icons smaller than the middle one icon which would be the most masteried one, and maybe showcase the score under it and showcase the mastery icon to the lect of the score –look it up through the cdragon bs– so now the structure would be ROLES -> MOST PLAYED / MASTERIES on top of each other to the right of the ROLES, and the most played and masteries on top of each other should be equal to the height of the ROLES so we dont have empty and weird spaces. 
+  - We should showcase a filter for the queue type or game type if it's aram, ranked solo ranked flex etcetc. because we could also be showing games that are not ranked you know?
+  - Remove the "39 cached games" text just say 39 Games brotha
+  - Honeslty under the MOST PLAYED, like a bento grid typa thing the middle top overview thing gonna be, i want you to showcase the top 3 masteries champs i got on this account please, i think that's best thing to do, and showcase them horizontally, showing the left and right masteried champions icons smaller than the middle one icon which would be the most masteried one, and maybe showcase the score under it and showcase the mastery icon to the lect of the score –look it up through the cdragon bs– so now the structure would be ROLES -> MOST PLAYED / MASTERIES on top of each other to the right of the ROLES, and the most played and masteries on top of each other should be equal to the height of the ROLES so we dont have empty and weird spaces.

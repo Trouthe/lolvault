@@ -1,4 +1,4 @@
 // IMPORTANT: THIS FILE IS AUTO GENERATED! DO NOT MANUALLY EDIT OR CHECKIN!
-export const VERSION = '0.4.6';
-export const REVISION = '118';
-export const BUILD_LABEL = 'e.831-118';
+export const VERSION = '0.10.0';
+export const REVISION = '123';
+export const BUILD_LABEL = 'e.831-123';

@@ -1375,9 +1375,21 @@ function getDataPath() {
   // torn down and rebuilt from scratch, over and over.
   //
   // Runtime state therefore lives outside the watched tree entirely.
-  migrateDevDataOnce();
-  if (!fs.existsSync(DEV_DATA_PATH)) fs.mkdirSync(DEV_DATA_PATH, { recursive: true });
-  return DEV_DATA_PATH;
+  //
+  // Falls back to userData if that directory cannot be created. `__dirname` is
+  // only writable when the app is running from a checkout; load the same code
+  // from inside an asar and the mkdir fails with ENOTDIR. Startup must not
+  // depend on that — this function is called from an async bootstrap, so
+  // throwing here takes down the whole app before it opens a window.
+  try {
+    migrateDevDataOnce();
+    if (!fs.existsSync(DEV_DATA_PATH)) fs.mkdirSync(DEV_DATA_PATH, { recursive: true });
+    return DEV_DATA_PATH;
+  } catch (err) {
+    const fallback = path.join(app.getPath('userData'), 'data');
+    console.warn(`[dev-data] ${DEV_DATA_PATH} unusable (${err?.message}); using ${fallback}`);
+    return fallback;
+  }
 }
 
 // Handle loading accounts

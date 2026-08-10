@@ -582,6 +582,17 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20)
  * whole pipeline: it turns a Riot request into a local read.
  */
 function hydrateFromLocal(matchId, accountId, puuid) {
+  try {
+    return writeRowFromLocal(matchId, accountId, puuid);
+  } catch (err) {
+    // A row we could not rebuild locally is not a failure — it just falls
+    // through to being fetched like any other. Never abort the sweep for it.
+    console.warn('[RiotAPI] Local hydrate failed for', matchId, err?.message);
+    return false;
+  }
+}
+
+function writeRowFromLocal(matchId, accountId, puuid) {
   const detail = db.getMatchDetail(matchId);
   if (!detail?.participants?.length) return false;
 
