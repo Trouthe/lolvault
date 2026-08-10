@@ -58,3 +58,10 @@ backend/functions/lib/
 apps/electron/src/app/data/boards.json
 apps/electron/src/app/data/accounts.json
 apps/electron/src/app/data/riot-session-vault/
+# Electron dev runtime state (SQLite vault, accounts, sessions).
+# Kept out of src/ so ng serve does not reload the app on every database write.
+apps/electron/.dev-data/
+apps/electron/src/app/data/lolvault.db
+apps/electron/src/app/data/lolvault.db-wal
+apps/electron/src/app/data/lolvault.db-shm
+apps/electron/src/app/data/boards.json

@@ -3,6 +3,23 @@ import { Injectable, signal } from '@angular/core';
 const STORAGE_KEY = 'lv:summoner-icons';
 
 /**
+ * Ceiling on icon lookups per session.
+ *
+ * Every other participant field the app renders — name, tagline, champion,
+ * team, KDA — comes free with the match itself, and matches cached since
+ * `profileIcon` was recorded carry the icon inline too. So this endpoint is
+ * only ever a patch for old rows, and it is not worth a single interactive
+ * request more than that: an unresolved icon degrades to the default portrait,
+ * which nobody notices, whereas a request spent here is a request not spent on
+ * a game the user actually asked for.
+ *
+ * The panel that calls this shows five players, so in practice the cap is
+ * never approached. It exists so that stays true if a caller ever asks for
+ * more.
+ */
+const SESSION_LOOKUP_BUDGET = 20;
+
+/**
  * Resolves a PUUID to its summoner icon id, for players we only know from
  * cached match rows.
  *
@@ -21,6 +38,9 @@ export class SummonerIconService {
   private readonly pending = new Set<string>();
   private readonly failed = new Set<string>();
 
+  /** Lookups spent this session, against `SESSION_LOOKUP_BUDGET`. */
+  private spent = 0;
+
   /** Cached icon id, or null when we have not resolved this player yet. */
   iconFor(puuid: string): number | null {
     return this.resolved()[puuid] ?? null;
@@ -30,7 +50,9 @@ export class SummonerIconService {
   request(puuid: string, platform: string): void {
     if (!puuid || !platform) return;
     if (this.resolved()[puuid] || this.pending.has(puuid) || this.failed.has(puuid)) return;
+    if (this.spent >= SESSION_LOOKUP_BUDGET) return;
 
+    this.spent++;
     this.pending.add(puuid);
     void this.fetch(puuid, platform);
   }

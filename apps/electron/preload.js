@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   riotCancelYearHistory: (args) => ipcRenderer.invoke('riot:cancel-year-history', args),
   onYearHistoryProgress: (cb) =>
     ipcRenderer.on('riot:year-history-progress', (_e, data) => cb(data)),
+  // Rows arrive in batches during the sweep so the page can fill in live.
+  onYearHistoryRows: (cb) => ipcRenderer.on('riot:year-history-rows', (_e, data) => cb(data)),
 
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => ipcRenderer.invoke('lcu:get-state'),

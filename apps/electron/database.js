@@ -408,6 +408,31 @@ function getMatchCache(accountId, limit = 20) {
   }));
 }
 
+/**
+ * Cached rows for a specific set of match ids, same shape as `getMatchCache`.
+ *
+ * Used to stream newly-fetched games to the renderer during a long sweep: the
+ * page merges these few rows instead of re-reading and re-rendering the whole
+ * history every time one more game lands.
+ */
+function getMatchCacheByIds(accountId, matchIds) {
+  if (!Array.isArray(matchIds) || matchIds.length === 0) return [];
+
+  const placeholders = matchIds.map(() => '?').join(',');
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM match_cache
+        WHERE account_id = ? AND match_id IN (${placeholders})
+        ORDER BY timestamp DESC`
+    )
+    .all(accountId, ...matchIds);
+
+  return rows.map((row) => ({
+    ...row,
+    raw_json: safeParse(row.raw_json, row.raw_json),
+  }));
+}
+
 function hasMatchInCache(matchId) {
   return !!getDb().prepare('SELECT 1 FROM match_cache WHERE match_id = ?').get(matchId);
 }
@@ -631,6 +656,7 @@ module.exports = {
   // Match cache
   saveMatchCache,
   getMatchCache,
+  getMatchCacheByIds,
   getMatchCacheRow,
   getMatchCacheRows,
   purgeForeignMatchRows,

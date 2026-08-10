@@ -90,6 +90,10 @@
       "lcu-monitor.js",
       "riot-api.service.js",
       "src/app/data/**/*",
+      "!src/app/data/lolvault.db*",
+      "!src/app/data/accounts.json",
+      "!src/app/data/boards.json",
+      "!src/app/data/riot-session-vault${/*}",
       {
         "from": "../../node_modules",
         "to": "node_modules",
@@ -125,7 +129,11 @@
         "from": "src/app/data",
         "to": "data",
         "filter": [
-          "**/*"
+          "**/*",
+          "!lolvault.db*",
+          "!accounts.json",
+          "!boards.json",
+          "!riot-session-vault${/*}"
         ]
       }
     ],

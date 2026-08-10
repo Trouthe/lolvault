@@ -116,37 +116,43 @@
     </div>
   </div>
 
-  <!-- ── Activity heatmap (full calendar year) ────────────────────────────── -->
+  <!-- ── Activity heatmap (ranked solo/duo, full calendar year) ───────────── -->
   <article class="panel">
     <header class="panel-head">
-      <h3>Heatmap</h3>
-      @if (activity(); as grid) {
-        <span class="panel-note">
-          {{ grid.totalGames }} games in {{ selectedYear() }}
-          @if (grid.totalGames) {
-            · {{ (grid.totalWins / grid.totalGames) * 100 | number: '1.0-0' }}% WR
-          }
-        </span>
-      }
+      <h3>
+        Heatmap
+        <!-- The queue scope is not guessable from the grid, and it is the whole
+             reason the numbers here differ from the match list below. -->
+        <button
+          type="button"
+          class="info"
+          aria-label="What this heatmap counts"
+          [attr.aria-describedby]="'heatmap-info'"
+        >
+          <app-icon name="info" [size]="12" />
+          <span class="info-tip" id="heatmap-info" role="tooltip">
+            Ranked Solo/Duo only. Other queues are excluded so the grid tracks
+            one climb — they still appear in Match History below.
+          </span>
+        </button>
+      </h3>
+      <span class="panel-note">
+        {{ activity().totalGames }} ranked games in {{ selectedYear() }}
+        @if (activity().totalGames) {
+          · {{ (activity().totalWins / activity().totalGames) * 100 | number: '1.0-0' }}% WR
+        }
+      </span>
     </header>
-    @if (activity(); as grid) {
-      <app-activity-heatmap
-        [weeks]="grid.weeks"
-        [monthLabels]="grid.monthLabels"
-        [years]="activityYears()"
-        [year]="selectedYear()"
-        [busiestDay]="grid.busiestDay"
-        (yearChange)="activityYear.set($event)"
-      />
-      <app-history-depth [year]="selectedYear()" />
-    } @else {
-      <app-empty-state
-        inline
-        icon="calendar"
-        title="No games cached yet"
-        hint="Days fill in as games are pulled from Riot."
-      />
-    }
+
+    <app-activity-heatmap
+      [weeks]="activity().weeks"
+      [monthLabels]="activity().monthLabels"
+      [years]="activityYears()"
+      [year]="selectedYear()"
+      [busiestDay]="activity().busiestDay"
+      (yearChange)="activityYear.set($event)"
+    />
+    <app-history-depth [year]="selectedYear()" />
   </article>
 
   <!-- ── Match history ────────────────────────────────────────────────────── -->

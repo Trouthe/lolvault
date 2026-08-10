@@ -156,7 +156,10 @@
       }
     </nav>
 
-    @if (data.loading()) {
+    <!-- The skeleton stands in for a screen with nothing on it, and only that.
+         Once real panels have painted, later work updates them in place — a
+         page that replaces itself with its own outline reads as a reload. -->
+    @if (data.loading() && !data.hydrated()) {
       <app-overview-skeleton />
     } @else if (data.failure() === 'no-api-key') {
       <app-empty-state

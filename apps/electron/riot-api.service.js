@@ -101,6 +101,48 @@ async function riotFetch(url, overrideKey, opts) {
   return withRetry(doFetch, opts);
 }
 
+// ── Short-lived response cache ────────────────────────────────────────────────
+
+/**
+ * Rank and mastery are re-read on every profile open, and neither moves between
+ * two visits a minute apart. Uncached, they were two unconditional Riot requests
+ * per page load — for a user who opens three profiles a day, more traffic than
+ * their actual games cost.
+ *
+ * Deliberately in-memory rather than in SQLite: this exists to collapse repeat
+ * loads inside one session, and a restart is exactly when a fresh read is
+ * cheapest to justify.
+ */
+const RANK_TTL_MS = 10 * 60 * 1000;
+
+/** Icon and level move far more slowly than LP, so they are held far longer. */
+const SUMMONER_TTL_MS = 6 * 60 * 60 * 1000;
+
+const volatileCache = new Map();
+
+function cacheGet(key) {
+  const hit = volatileCache.get(key);
+  if (!hit) return undefined;
+  if (Date.now() > hit.expires) {
+    volatileCache.delete(key);
+    return undefined;
+  }
+  return hit.value;
+}
+
+function cacheSet(key, value, ttl = RANK_TTL_MS) {
+  volatileCache.set(key, { value, expires: Date.now() + ttl });
+  return value;
+}
+
+/** Drops cached rank/mastery for a puuid so a manual refresh really refreshes. */
+function invalidatePlayerCache(puuid) {
+  if (!puuid) return;
+  for (const key of volatileCache.keys()) {
+    if (key.endsWith(`:${puuid}`)) volatileCache.delete(key);
+  }
+}
+
 // ── Summoner by Riot ID ───────────────────────────────────────────────────────
 
 /**
@@ -143,10 +185,16 @@ async function getSummonerByRiotId(gameName, tagLine, platform) {
 
 /** Returns { id, accountId, puuid, profileIconId, summonerLevel } or null. */
 async function getSummonerByPuuid(puuid, platform) {
+  // Doubles as the icon-resolution path for co-players, so the same handful of
+  // people you queue with are not looked up once per profile you visit.
+  const key = `summoner:${platform}:${puuid}`;
+  const cached = cacheGet(key);
+  if (cached !== undefined) return cached;
+
   try {
     const { lol } = createClients();
     const { response } = await withRetry(() => lol.Summoner.getByPUUID(puuid, platform));
-    return response;
+    return cacheSet(key, response, SUMMONER_TTL_MS);
   } catch (err) {
     if (err?.code === 'NO_KEY') return { error: 'no_key' };
     const status = err?.status || Number(err?.message);
@@ -161,14 +209,18 @@ async function getSummonerByPuuid(puuid, platform) {
 
 /** Returns array of queue entries (may be empty for unranked) or { error }. */
 async function getRankedByPuuid(puuid, platform) {
+  const key = `ranked:${platform}:${puuid}`;
+  const cached = cacheGet(key);
+  if (cached !== undefined) return cached;
+
   try {
     const url = `https://${platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/${encodeURIComponent(puuid)}`;
-    return await riotFetch(url);
+    return cacheSet(key, await riotFetch(url));
   } catch (err) {
     if (err?.code === 'NO_KEY') return { error: 'no_key' };
     const status = err?.status || Number(err?.message);
     if (status === 403 || status === 401) return { error: 'invalid_key' };
-    if (status === 404) return [];
+    if (status === 404) return cacheSet(key, []);
     console.error('[RiotAPI] getRankedByPuuid error:', err?.message);
     return { error: err?.message || 'unknown' };
   }
@@ -178,9 +230,13 @@ async function getRankedByPuuid(puuid, platform) {
 
 /** Returns top mastery champion array or [] on error. */
 async function getTopMasteryChampions(puuid, platform) {
+  const key = `mastery:${platform}:${puuid}`;
+  const cached = cacheGet(key);
+  if (cached !== undefined) return cached;
+
   try {
     const url = `https://${platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}/top`;
-    return await riotFetch(url);
+    return cacheSet(key, await riotFetch(url));
   } catch (err) {
     if (err?.code === 'NO_KEY') return { error: 'no_key' };
     const status = err?.status || Number(err?.message);
@@ -214,6 +270,16 @@ const QUEUE_LABELS = {
  */
 const MAX_YEAR_MATCHES = 2000;
 
+/**
+ * Ceiling on how many pre-detail-table rows one routine refresh will upgrade.
+ * The work is worth doing but it is not why the user opened the page, so it is
+ * spread across visits instead of turning a page open into a bulk fetch.
+ */
+const DETAIL_UPGRADES_PER_REFRESH = 5;
+
+/** Ranked Solo/Duo. The queue the activity heatmap reports on. */
+const RANKED_SOLO_QUEUE = 420;
+
 function queueLabel(queueId) {
   return QUEUE_LABELS[queueId] || (queueId != null ? `QUEUE_${queueId}` : null);
 }
@@ -241,6 +307,24 @@ function summariseParticipant(p) {
     teamPosition: p.teamPosition || '',
     visionScore: p.visionScore ?? 0,
   };
+}
+
+/** Keys `summariseParticipant` produces, for projecting a stored detail row. */
+const SUMMARY_KEYS = Object.keys(summariseParticipant({ items: [] }));
+
+/**
+ * Narrows an already-stored `match_detail` participant back to the summary
+ * shape.
+ *
+ * Not `summariseParticipant` — that reads Riot's wire format (`item0`…`item6`,
+ * `totalMinionsKilled`), which the stored record has already folded into
+ * `items` and `cs`. Re-running it on a stored row would quietly produce an
+ * array of seven undefined items.
+ */
+function toSummary(participant) {
+  const out = {};
+  for (const key of SUMMARY_KEYS) out[key] = participant[key];
+  return out;
 }
 
 /**
@@ -378,13 +462,22 @@ function persistMatch(matchId, accountId, puuid, match) {
 }
 
 /**
- * Pages Riot's match-id endpoint, unfiltered by queue.
+ * Pages Riot's match-id endpoint.
  *
  * `count` caps at 100 per request, so anything larger is paged. `startTime` and
  * `endTime` are epoch *seconds* and optional; Riot's matchlist only carries
  * timestamps from 16 June 2021, so windows earlier than that return nothing.
+ *
+ * `queue` narrows the listing to a single queue id server-side. This is the
+ * cheapest filter available anywhere in the pipeline: an id excluded here is an
+ * id we never spend a request fetching. Omit it to get every mode.
  */
-async function listMatchIds(lol, puuid, region, { count = 20, startTime, endTime, maxPages = 20 } = {}) {
+async function listMatchIds(
+  lol,
+  puuid,
+  region,
+  { count = 20, startTime, endTime, queue, maxPages = 20 } = {}
+) {
   const PAGE = 100;
   const ids = [];
   const wanted = Math.max(1, count);
@@ -393,6 +486,7 @@ async function listMatchIds(lol, puuid, region, { count = 20, startTime, endTime
     const query = { start: page * PAGE, count: Math.min(PAGE, wanted - ids.length) };
     if (startTime !== undefined) query.startTime = startTime;
     if (endTime !== undefined) query.endTime = endTime;
+    if (queue !== undefined && queue !== null) query.queue = queue;
 
     let batch = [];
     try {
@@ -431,13 +525,30 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20)
     const matchIds = await listMatchIds(lol, puuid, region, { count });
     if (matchIds.length === 0) return db.getMatchCache(accountId, count);
 
-    // Re-fetch rows that exist but predate the detail table, so older cached
-    // matches gain bans/objectives/damage breakdown rather than staying partial.
-    const newMatchIds = matchIds.filter(
-      (id) => !db.hasMatchForAccount(id, accountId) || !db.hasMatchDetail(id)
-    );
+    const outstanding = [];
+    // Rows that exist but predate the detail table are worth upgrading, so they
+    // gain bans/objectives/damage breakdown rather than staying partial. Capped,
+    // though: on a cache written before that table existed the unbounded version
+    // silently re-fetched swathes of history on an ordinary page open.
+    let upgrades = 0;
 
-    for (const matchId of newMatchIds) {
+    for (const id of matchIds) {
+      const mine = db.hasMatchForAccount(id, accountId);
+
+      if (!mine) {
+        // Already held under another account — rebuild ours from disk, free.
+        if (hydrateFromLocal(id, accountId, puuid)) continue;
+        outstanding.push(id);
+        continue;
+      }
+
+      if (!db.hasMatchDetail(id) && upgrades < DETAIL_UPGRADES_PER_REFRESH) {
+        upgrades++;
+        outstanding.push(id);
+      }
+    }
+
+    for (const matchId of outstanding) {
       try {
         const { response: match } = await withRetry(() => lol.MatchV5.get(matchId, region));
         persistMatch(matchId, accountId, puuid, match);
@@ -457,23 +568,133 @@ async function fetchAndCacheMatchHistory(accountId, puuid, platform, count = 20)
 }
 
 /**
+ * Writes this account's `match_cache` row for a game we already hold in full,
+ * without going to Riot.
+ *
+ * A match reaches the database once per *account* but its detail row is shared.
+ * So when two tracked accounts played the same game — or when you open the
+ * profile of someone you queued with — every stat the row needs is already on
+ * disk. `match_detail.participants` carries the per-player numbers and a
+ * sibling `match_cache` row carries the kickoff timestamp, which detail does
+ * not store.
+ *
+ * Returns true when the row was written. This is the only free path in the
+ * whole pipeline: it turns a Riot request into a local read.
+ */
+function hydrateFromLocal(matchId, accountId, puuid) {
+  const detail = db.getMatchDetail(matchId);
+  if (!detail?.participants?.length) return false;
+
+  const mine = detail.participants.find((p) => p.puuid === puuid);
+  if (!mine) return false;
+
+  // Detail has no game start time; any sibling row for the same match does.
+  const sibling = db.getMatchCacheRows(matchId).find((r) => r.timestamp > 0);
+  if (!sibling) return false;
+
+  const duration = detail.gameDuration ?? sibling.duration_seconds ?? 0;
+  const minutes = duration / 60;
+  const cs = mine.cs ?? 0;
+
+  const damageOf = (p) => p.totalDamageDealtToChampions ?? 0;
+  const teamDamage = detail.participants
+    .filter((p) => p.teamId === mine.teamId)
+    .reduce((sum, p) => sum + damageOf(p), 0);
+
+  db.saveMatchCache(
+    matchId,
+    accountId,
+    {
+      puuid,
+      champion: mine.championName || null,
+      championId: mine.championId ?? null,
+      participantId: mine.participantId ?? null,
+      teamId: mine.teamId ?? null,
+      position: mine.teamPosition || null,
+      win: mine.win,
+      kills: mine.kills ?? null,
+      deaths: mine.deaths ?? null,
+      assists: mine.assists ?? null,
+      cs,
+      csPerMin: minutes > 0 ? Math.round((cs / minutes) * 10) / 10 : 0,
+      damageDealt: damageOf(mine),
+      damageShare: teamDamage > 0 ? Math.round((damageOf(mine) / teamDamage) * 1000) / 1000 : 0,
+      gold: mine.goldEarned ?? null,
+      visionScore: mine.visionScore ?? null,
+      durationSeconds: duration || null,
+      items: mine.items ?? null,
+      lpBefore: null,
+      lpAfter: null,
+      lpDelta: null,
+      queueId: detail.queueId ?? sibling.queue_id ?? null,
+      queueType: queueLabel(detail.queueId ?? sibling.queue_id),
+      gameVersion: detail.gameVersion ?? sibling.game_version ?? null,
+      timestamp: sibling.timestamp,
+    },
+    { ...mine, _allParticipants: detail.participants.map(toSummary) }
+  );
+
+  return true;
+}
+
+/**
+ * Batches freshly-cached rows towards the renderer.
+ *
+ * The screen used to stand still for the whole sweep and then replace every row
+ * at once, which read as the page rebuilding itself. Emitting as we go lets the
+ * heatmap fill in live — but one IPC message per match would be ~11 KB of
+ * `raw_json` a thousand times over, so writes are grouped by count or by time,
+ * whichever comes first.
+ */
+function createRowStream(accountId, emit) {
+  const FLUSH_ROWS = 20;
+  const FLUSH_MS = 900;
+
+  let batch = [];
+  let lastFlush = Date.now();
+
+  const flush = () => {
+    if (!batch.length) return;
+    const ids = batch;
+    batch = [];
+    lastFlush = Date.now();
+    emit(db.getMatchCacheByIds(accountId, ids));
+  };
+
+  return {
+    add(matchId) {
+      batch.push(matchId);
+      if (batch.length >= FLUSH_ROWS || Date.now() - lastFlush >= FLUSH_MS) flush();
+    },
+    flush,
+  };
+}
+
+/**
  * Pulls one calendar year of match history and caches anything not already held.
  *
- * The routine history fetch asks for the newest handful of games, which is fine
- * for a match list but leaves the activity heatmap with a few recent weeks and
- * eleven empty months. This walks the year properly: page the id endpoint
- * between the year's bounds, then fetch the detail for whatever is missing.
+ * The routine history fetch asks for the newest handful of games, which leaves
+ * the activity heatmap with a few recent weeks and eleven empty months. This
+ * walks the year properly: page the id endpoint between the year's bounds, then
+ * fetch the detail for whatever is missing.
  *
- * Listing ids is cheap; the detail calls are not — one request per game against
- * a ~0.83 req/s budget. Hence the progress reporting and the cancel check, and
- * hence this being a thing the user asks for rather than something that happens
- * on page load.
+ * Three things keep the cost down, in descending order of value:
+ *
+ * 1. `queue` narrows the *listing* server-side. The heatmap reads ranked
+ *    solo/duo, so a player who also plays ARAM and normals never spends a
+ *    request on games the grid would not count. On a mixed account this is
+ *    routinely a 3–5× cut, and it costs nothing to apply.
+ * 2. Anything already held for another account is rebuilt from disk for free —
+ *    see `hydrateFromLocal`.
+ * 3. Only what survives both is fetched, at one request per game against a
+ *    ~0.83 req/s budget. Hence the ETA, the cancel check, and the row stream
+ *    that lets the page fill in while it runs.
  */
 async function fetchYearHistory(
   accountId,
   puuid,
   platform,
-  { year, onProgress = () => {}, shouldCancel = () => false } = {}
+  { year, queue, onProgress = () => {}, onRows = () => {}, shouldCancel = () => false } = {}
 ) {
   const { lol } = createClients();
   const region = PLATFORM_TO_REGION[platform] || 'EUROPE';
@@ -483,37 +704,65 @@ async function fetchYearHistory(
   const startTime = Math.floor(new Date(year, 0, 1).getTime() / 1000);
   const endTime = Math.floor(new Date(year + 1, 0, 1).getTime() / 1000);
 
-  onProgress({ phase: 'scanning', processed: 0, total: 0, failed: 0, etaSeconds: 0, done: false });
+  const report = (extra) =>
+    onProgress({
+      phase: 'fetching',
+      processed: 0,
+      total: 0,
+      failed: 0,
+      reused: 0,
+      scanned: 0,
+      etaSeconds: 0,
+      done: false,
+      ...extra,
+    });
 
-  // Unfiltered by queue: a year is only complete if it includes every mode the
-  // player touched, not the handful we happen to have listed.
+  report({ phase: 'scanning' });
+
   const ids = await listMatchIds(lol, puuid, region, {
     count: MAX_YEAR_MATCHES,
     startTime,
     endTime,
+    queue,
     maxPages: MAX_YEAR_MATCHES / 100,
   });
 
-  if (shouldCancel()) return { scanned: ids.length, added: 0, failed: 0, cancelled: true };
+  if (shouldCancel()) {
+    return { scanned: ids.length, added: 0, reused: 0, failed: 0, cancelled: true };
+  }
 
-  const missing = ids.filter((id) => !db.hasMatchForAccount(id, accountId));
-  const total = missing.length;
+  const stream = createRowStream(accountId, onRows);
 
-  onProgress({
-    phase: 'fetching',
-    processed: 0,
-    total,
-    failed: 0,
-    etaSeconds: limiter.estimateSeconds(total),
-    done: total === 0,
-  });
-  if (total === 0) return { scanned: ids.length, added: 0, failed: 0, cancelled: false };
+  // Free pass: anything already on disk under another account becomes this
+  // account's row without a request. Done before the ETA is quoted so the
+  // number the user sees is what they will actually wait for.
+  let reused = 0;
+  const outstanding = [];
+  for (const id of ids) {
+    if (db.hasMatchForAccount(id, accountId)) continue;
+    if (hydrateFromLocal(id, accountId, puuid)) {
+      reused++;
+      stream.add(id);
+      continue;
+    }
+    outstanding.push(id);
+  }
+  stream.flush();
+
+  const total = outstanding.length;
+  report({ processed: 0, total, reused, scanned: ids.length, etaSeconds: limiter.estimateSeconds(total), done: total === 0 });
+  if (total === 0) {
+    return { scanned: ids.length, added: 0, reused, failed: 0, cancelled: false };
+  }
 
   let added = 0;
   let failed = 0;
 
-  for (const matchId of missing) {
-    if (shouldCancel()) return { scanned: ids.length, added, failed, cancelled: true };
+  for (const matchId of outstanding) {
+    if (shouldCancel()) {
+      stream.flush();
+      return { scanned: ids.length, added, reused, failed, cancelled: true };
+    }
 
     try {
       const { response: match } = await withRetry(() => lol.MatchV5.get(matchId, region), {
@@ -521,23 +770,26 @@ async function fetchYearHistory(
       });
       persistMatch(matchId, accountId, puuid, match);
       added++;
+      stream.add(matchId);
     } catch (err) {
       failed++;
       console.warn('[RiotAPI] Year fetch failed for', matchId, err?.message);
     }
 
     const processed = added + failed;
-    onProgress({
-      phase: 'fetching',
+    report({
       processed,
       total,
       failed,
+      reused,
+      scanned: ids.length,
       etaSeconds: limiter.estimateSeconds(total - processed),
       done: processed >= total,
     });
   }
 
-  return { scanned: ids.length, added, failed, cancelled: false };
+  stream.flush();
+  return { scanned: ids.length, added, reused, failed, cancelled: false };
 }
 
 // ── Match timeline ────────────────────────────────────────────────────────────
@@ -754,6 +1006,9 @@ module.exports = {
   backfillMatchData,
   validateApiKey,
   getDDragonVersion,
+  invalidatePlayerCache,
+  hydrateFromLocal,
   queueLabel,
   MAX_YEAR_MATCHES,
+  RANKED_SOLO_QUEUE,
 };

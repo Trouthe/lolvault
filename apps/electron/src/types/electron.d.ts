@@ -238,13 +238,21 @@ export interface ElectronAPI {
     puuid: string;
     platform: string;
     year: number;
+    /** Riot queue id to narrow the listing server-side. Omit for every mode. */
+    queue?: number;
   }) => Promise<
-    { scanned: number; added: number; failed: number; cancelled: boolean } | { error: string }
+    | { scanned: number; added: number; reused: number; failed: number; cancelled: boolean }
+    | { error: string }
   >;
 
   riotCancelYearHistory: (args: { accountId: string }) => Promise<{ success: boolean }>;
 
   onYearHistoryProgress: (callback: (data: YearHistoryProgress) => void) => void;
+
+  /** Batches of freshly-cached rows, pushed during a year sweep. */
+  onYearHistoryRows: (
+    callback: (data: { accountId: string; year: number; rows: MatchCacheRow[] }) => void
+  ) => void;
 
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
@@ -297,6 +305,10 @@ export interface YearHistoryProgress extends BackfillProgress {
   year: number;
   /** `scanning` walks the id endpoint; `fetching` pulls match detail. */
   phase: 'scanning' | 'fetching';
+  /** Match ids the year listing returned, before anything was filtered out. */
+  scanned: number;
+  /** Games rebuilt from data already on disk — these cost no Riot request. */
+  reused: number;
 }
 
 /**

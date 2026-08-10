@@ -1295,6 +1295,52 @@ ipcMain.handle('start-google-system-sign-in', async (_event, options = {}) => {
   });
 });
 
+/**
+ * Runtime files that used to live in `src/app/data` and now belong in
+ * `.dev-data`. Everything *not* listed here (champions.json, item.json,
+ * core-actions/…) is bundled static content and stays in the source tree.
+ */
+const DEV_RUNTIME_ENTRIES = [
+  'lolvault.db',
+  'lolvault.db-wal',
+  'lolvault.db-shm',
+  'accounts.json',
+  'boards.json',
+  RIOT_SESSION_VAULT_DIR_NAME,
+];
+
+const LEGACY_DEV_DATA_PATH = path.join(__dirname, 'src', 'app', 'data');
+const DEV_DATA_PATH = path.join(__dirname, '.dev-data');
+
+/**
+ * Copies runtime data out of the source tree on first run after the move.
+ *
+ * Non-destructive on both ends: nothing is copied over an existing file, and
+ * the originals are left alone. A dev who rolls back to an older build still
+ * finds their vault where it was.
+ */
+let devDataMigrated = false;
+
+function migrateDevDataOnce() {
+  if (devDataMigrated) return;
+  devDataMigrated = true;
+
+  try {
+    if (!fs.existsSync(LEGACY_DEV_DATA_PATH)) return;
+    if (!fs.existsSync(DEV_DATA_PATH)) fs.mkdirSync(DEV_DATA_PATH, { recursive: true });
+
+    for (const entry of DEV_RUNTIME_ENTRIES) {
+      const from = path.join(LEGACY_DEV_DATA_PATH, entry);
+      const to = path.join(DEV_DATA_PATH, entry);
+      if (!fs.existsSync(from) || fs.existsSync(to)) continue;
+      fs.cpSync(from, to, { recursive: true });
+      console.log('[dev-data] migrated', entry);
+    }
+  } catch (err) {
+    console.warn('[dev-data] migration skipped:', err?.message);
+  }
+}
+
 // Helper function to get the correct data path
 function getDataPath() {
   if (app.isPackaged) {
@@ -1316,10 +1362,22 @@ function getDataPath() {
 
     // Otherwise, store data next to the executable
     return path.join(exeDir, 'data');
-  } else {
-    // In development, use the src/app/data directory
-    return path.join(__dirname, 'src/app/data');
   }
+
+  // Development. Deliberately NOT `src/app/data`, even though that is where the
+  // bundled static JSON lives.
+  //
+  // `ng serve` watches the whole source tree. The SQLite database is written on
+  // every persisted match, so with the database inside `src/` a year backfill
+  // — hundreds of writes, one per game — triggered hundreds of dev-server
+  // rebuilds, each of which reloads the renderer. The analytics screen appeared
+  // to "keep refreshing" for the entire fetch, because it genuinely was being
+  // torn down and rebuilt from scratch, over and over.
+  //
+  // Runtime state therefore lives outside the watched tree entirely.
+  migrateDevDataOnce();
+  if (!fs.existsSync(DEV_DATA_PATH)) fs.mkdirSync(DEV_DATA_PATH, { recursive: true });
+  return DEV_DATA_PATH;
 }
 
 // Handle loading accounts
@@ -1655,15 +1713,24 @@ ipcMain.handle('riot:cancel-year-history', (_event, { accountId }) => {
 
 ipcMain.handle(
   'riot:fetch-year-history',
-  async (event, { accountId, puuid, platform, year }) => {
+  async (event, { accountId, puuid, platform, year, queue }) => {
     yearHistoryCancelled.delete(accountId);
     try {
       return await riotApi.fetchYearHistory(accountId, puuid, platform, {
         year,
+        // Undefined means every mode; the heatmap asks for ranked solo only.
+        queue: queue ?? undefined,
         shouldCancel: () => yearHistoryCancelled.has(accountId),
         onProgress: (progress) => {
           if (!event.sender.isDestroyed()) {
             event.sender.send('riot:year-history-progress', { accountId, year, ...progress });
+          }
+        },
+        // Games are pushed as they land so the page fills in during the sweep
+        // rather than replacing everything at the end.
+        onRows: (rows) => {
+          if (rows?.length && !event.sender.isDestroyed()) {
+            event.sender.send('riot:year-history-rows', { accountId, year, rows });
           }
         },
       });

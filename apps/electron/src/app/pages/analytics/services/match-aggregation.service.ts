@@ -432,9 +432,8 @@ export class MatchAggregationService {
     totalWins: number;
     /** Busiest day in the year, used to scale the colour ramp. */
     busiestDay: number;
-  } | null {
+  } {
     const stamps = matches.map((m) => m.timestamp).filter((t) => t > 0);
-    if (!stamps.length) return null;
 
     const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     const startOfDay = (t: number) => {
@@ -455,7 +454,10 @@ export class MatchAggregationService {
     }
 
     const today = startOfDay(Date.now());
-    const earliest = startOfDay(Math.min(...stamps));
+    // With nothing cached, every past day is genuinely "no data" rather than
+    // "played nothing" — and the grid still renders, so the control that fills
+    // it in is reachable instead of being hidden behind an empty state.
+    const earliest = stamps.length ? startOfDay(Math.min(...stamps)) : today;
 
     // Grid columns are calendar weeks starting Monday.
     const mondayOf = (d: Date) => {

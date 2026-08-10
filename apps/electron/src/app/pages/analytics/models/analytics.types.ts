@@ -42,9 +42,15 @@ export type MatchTab = 'overview' | 'performance' | 'damage' | 'build' | 'map';
 /** Queue filter used by the Overview most-played toggle. */
 export type QueueFilter = 'all' | 'solo' | 'flex' | 'normal';
 
+/**
+ * Ranked Solo/Duo. The activity heatmap reports on this queue alone, and the
+ * year sweep passes it to Riot's id listing so other modes never cost a request.
+ */
+export const RANKED_SOLO_QUEUE = 420;
+
 export const QUEUE_FILTER_IDS: Record<QueueFilter, number[] | null> = {
   all: null,
-  solo: [420],
+  solo: [RANKED_SOLO_QUEUE],
   flex: [440],
   normal: [400, 430],
 };

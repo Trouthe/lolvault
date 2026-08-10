@@ -92,6 +92,16 @@ export class AnalyticsDataService {
   /** True when viewing somebody else's profile rather than a vault account. */
   readonly external = signal(false);
 
+  /**
+   * True once this profile has painted real content at least once.
+   *
+   * `loading` gates the skeleton, and the skeleton is only ever correct for a
+   * screen that has nothing on it. Any later work — a background refresh, a
+   * year sweep, a re-entry into the same profile — updates panels in place. A
+   * page that has already drawn must never be replaced by its own outline.
+   */
+  readonly hydrated = signal(false);
+
   /** A history refresh is running behind an already-painted page. */
   readonly refreshing = signal(false);
 
@@ -107,6 +117,15 @@ export class AnalyticsDataService {
 
   private backfillListenerBound = false;
   private yearHistoryListenerBound = false;
+
+  /**
+   * Cache key the streaming year-history listener is currently filtering on.
+   *
+   * The listener is registered once for the lifetime of the app — `ipcRenderer`
+   * has no unsubscribe here — so it reads the key from this field rather than
+   * closing over whichever account happened to be open when it was bound.
+   */
+  private streamingKey = '';
 
   /**
    * Cache namespace for the account being viewed. For a vault entry this is the
@@ -131,6 +150,7 @@ export class AnalyticsDataService {
   private beginLoad(): number {
     this.loadToken++;
     this.loading.set(true);
+    this.hydrated.set(false);
     this.refreshing.set(false);
     this.failure.set(null);
     this.errorMessage.set(null);
@@ -139,6 +159,55 @@ export class AnalyticsDataService {
 
   private isCurrent(token: number): boolean {
     return token === this.loadToken;
+  }
+
+  /** Clears `loading` exactly once, the first time real content is available. */
+  private markPainted(): void {
+    this.loading.set(false);
+    this.hydrated.set(true);
+  }
+
+  /**
+   * Folds rows into `matches` by match id, newest first.
+   *
+   * Deliberately a merge rather than a `set`. Replacing the array wholesale
+   * hands every downstream computed a completely new object graph, so panels
+   * that did not change still recompute and repaint — which is what made a
+   * background fetch look like the page reloading. Rows that are genuinely
+   * unchanged keep their identity here, so Angular has nothing to re-render for
+   * them.
+   */
+  private mergeMatches(incoming: MatchCacheRow[]): void {
+    if (!incoming.length) return;
+
+    this.matches.update((current) => {
+      const byId = new Map(current.map((row) => [row.match_id, row]));
+      let changed = false;
+
+      for (const row of incoming) {
+        const existing = byId.get(row.match_id);
+        if (existing && !this.rowDiffers(existing, row)) continue;
+        byId.set(row.match_id, row);
+        changed = true;
+      }
+
+      if (!changed) return current;
+      return [...byId.values()].sort((a, b) => b.timestamp - a.timestamp);
+    });
+  }
+
+  /**
+   * Cheap staleness check for a cached row. Compares the fields a re-fetch can
+   * actually move rather than deep-equalling an 11 KB `raw_json` blob.
+   */
+  private rowDiffers(a: MatchCacheRow, b: MatchCacheRow): boolean {
+    return (
+      a.timestamp !== b.timestamp ||
+      a.win !== b.win ||
+      a.has_detail !== b.has_detail ||
+      a.has_timeline !== b.has_timeline ||
+      a.gold_diff_15 !== b.gold_diff_15
+    );
   }
 
   /** Loads everything for a vault entry. Safe to call repeatedly. */
@@ -302,7 +371,7 @@ export class AnalyticsDataService {
     // leaves the panel empty rather than failing the whole load.
     this.mastery.set(Array.isArray(mastery) ? mastery : []);
 
-    this.loading.set(false);
+    this.markPainted();
     void this.refreshHistory(token, accountId, puuid, platform, historyCount);
   }
 
@@ -336,7 +405,7 @@ export class AnalyticsDataService {
         limit: MATCH_CACHE_LIMIT,
       });
       if (!this.isCurrent(token)) return;
-      this.matches.set(Array.isArray(all) && all.length ? all : (fresh as MatchCacheRow[]));
+      this.mergeMatches(Array.isArray(all) && all.length ? all : (fresh as MatchCacheRow[]));
     } catch (err: unknown) {
       if (this.isCurrent(token) && !this.matches().length) this.fail(err);
     } finally {
@@ -410,9 +479,13 @@ export class AnalyticsDataService {
     const accountId = this.cacheKey;
     if (!accountId || !puuid || this.backfillRunning()) return;
 
+    this.streamingKey = accountId;
+
     if (!this.backfillListenerBound) {
+      // Bound once for the app's lifetime, so it filters on the field rather
+      // than on whichever account was open when it was registered.
       window.electronAPI.onBackfillProgress((progress) => {
-        if (progress.accountId === accountId) this.backfill.set(progress);
+        if (progress.accountId === this.streamingKey) this.backfill.set(progress);
       });
       this.backfillListenerBound = true;
     }
@@ -430,29 +503,43 @@ export class AnalyticsDataService {
         accountId,
         limit: MATCH_CACHE_LIMIT,
       });
-      if (Array.isArray(refreshed) && refreshed.length) this.matches.set(refreshed);
+      if (Array.isArray(refreshed)) this.mergeMatches(refreshed);
     } finally {
       this.backfillRunning.set(false);
     }
   }
 
   /**
-   * Pulls a full calendar year of games so the heatmap has something to show
-   * outside the last few weeks. Streams progress into `yearHistory`.
+   * Pulls a calendar year of games so the heatmap has something to show outside
+   * the last few weeks.
+   *
+   * `queue` narrows the sweep server-side — the heatmap passes ranked solo/duo,
+   * which is both what it reports on and, on a mixed account, several times
+   * cheaper than listing every mode.
+   *
+   * Games are merged into `matches` as they land rather than in one block at
+   * the end, so the grid fills in while the fetch runs. That matters at this
+   * duration: a year on a rate-limited key is minutes, and a screen that shows
+   * nothing for minutes and then rebuilds itself reads as a page reload.
    */
-  async fetchYear(year: number): Promise<void> {
+  async fetchYear(year: number, queue?: number): Promise<void> {
     const puuid = this.puuid();
     const accountId = this.cacheKey;
     if (!puuid || !accountId || this.yearHistoryRunning()) return;
 
+    this.streamingKey = accountId;
+
     if (!this.yearHistoryListenerBound) {
       // Subscribing to a channel the running main process does not publish is
       // harmless; invoking a handler it lacks is not.
-      void optionalIpc(async () =>
+      void optionalIpc(async () => {
         window.electronAPI.onYearHistoryProgress((progress) => {
-          if (progress.accountId === accountId) this.yearHistory.set(progress);
-        })
-      );
+          if (progress.accountId === this.streamingKey) this.yearHistory.set(progress);
+        });
+        window.electronAPI.onYearHistoryRows?.(({ accountId: id, rows }) => {
+          if (id === this.streamingKey) this.mergeMatches(rows);
+        });
+      });
       this.yearHistoryListenerBound = true;
     }
 
@@ -464,6 +551,7 @@ export class AnalyticsDataService {
           puuid,
           platform: this.platform(),
           year,
+          queue,
         })
       );
       if (result === null) {
@@ -472,11 +560,14 @@ export class AnalyticsDataService {
         );
         return;
       }
+
+      // A main process without the row stream sent nothing during the sweep, so
+      // reconcile once at the end. With streaming on, this is a no-op merge.
       const refreshed = await window.electronAPI.riotGetCachedMatches({
         accountId,
         limit: MATCH_CACHE_LIMIT,
       });
-      if (Array.isArray(refreshed) && refreshed.length) this.matches.set(refreshed);
+      if (Array.isArray(refreshed)) this.mergeMatches(refreshed);
     } finally {
       this.yearHistoryRunning.set(false);
       this.yearHistory.set(null);
@@ -499,7 +590,9 @@ export class AnalyticsDataService {
   reset(): void {
     this.loadToken++;
     this.refreshing.set(false);
+    this.hydrated.set(false);
     this.cacheKey = '';
+    this.streamingKey = '';
     this.external.set(false);
     this.yearHistory.set(null);
     this.timelineCache.clear();

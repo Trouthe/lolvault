@@ -5,6 +5,7 @@ import { AnalyticsDataService } from '../../services/analytics-data.service';
 import { MatchAggregationService } from '../../services/match-aggregation.service';
 import { MatchScoreService, fromSummary } from '../../services/match-score.service';
 import { EmptyStateComponent } from '../../widgets/empty-state.component';
+import { IconComponent } from '../../widgets/icon.component';
 import { WinRateDialComponent } from '../../widgets/win-rate-dial.component';
 import { RolePerformanceComponent } from '../../widgets/role-performance.component';
 import { ActivityHeatmapComponent } from '../../widgets/activity-heatmap.component';
@@ -22,6 +23,7 @@ import { queueName } from '../../models/analytics.types';
   imports: [
     CommonModule,
     EmptyStateComponent,
+    IconComponent,
     WinRateDialComponent,
     RolePerformanceComponent,
     ActivityHeatmapComponent,
@@ -115,6 +117,21 @@ export class OverviewScreenComponent {
   /** Selected heatmap year; defaults to the most recent year with data. */
   readonly activityYear = signal<number | null>(null);
 
+  /**
+   * Games the heatmap reports on: ranked solo/duo, always.
+   *
+   * Deliberately not tied to the queue toggle above it. The grid is a record of
+   * a climb, and a climb happens in one queue — mixing ARAM and normals into it
+   * turns "how did the season go" into "how often did I open the game", which
+   * the match list already answers. Fixing the queue also makes filling the
+   * grid dramatically cheaper: the year sweep can ask Riot for queue 420 alone
+   * instead of listing every mode and paying a request for games the grid would
+   * not count. The (i) beside the title says so on screen.
+   */
+  readonly rankedMatches = computed(() =>
+    this.agg.filterByQueue(this.data.matches(), 'solo')
+  );
+
   // Years come from the unfiltered pool: switching to ARAM should not make a
   // year vanish from the picker just because it holds no ARAM games.
   readonly activityYears = computed(() => this.agg.activityYears(this.data.matches()));
@@ -124,7 +141,7 @@ export class OverviewScreenComponent {
   );
 
   readonly activity = computed(() =>
-    this.agg.activityGrid(this.matches(), this.selectedYear())
+    this.agg.activityGrid(this.rankedMatches(), this.selectedYear())
   );
 
   /**

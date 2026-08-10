@@ -32,7 +32,14 @@
                 "glob": "**/*",
                 "input": "src/app/data",
                 "output": "data",
-                "ignore": ["accounts.json", "boards.json"]
+                "ignore": [
+                  "accounts.json",
+                  "boards.json",
+                  "lolvault.db",
+                  "lolvault.db-wal",
+                  "lolvault.db-shm",
+                  "riot-session-vault/**"
+                ]
               },
               {
                 "glob": "**/*",

@@ -1,15 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnalyticsDataService } from '../services/analytics-data.service';
+import { RANKED_SOLO_QUEUE } from '../models/analytics.types';
 
 /**
- * Pulls a whole calendar year of games so the heatmap has a year to show.
+ * Pulls a calendar year of ranked solo/duo games so the heatmap has a year to
+ * show.
  *
- * The routine history fetch only asks Riot for the newest handful of games per
- * queue, which leaves the grid with a few busy weeks and eleven blank months.
- * Filling it in costs one request per game against a ~0.83 req/s budget, so it
- * is an explicit action with a stated ETA and a cancel button rather than
- * something that quietly runs on page load.
+ * The routine history fetch only asks Riot for the newest handful of games,
+ * which leaves the grid with a few busy weeks and eleven blank months. Filling
+ * it in costs one request per game against a ~0.83 req/s budget, so it is an
+ * explicit action with a stated ETA and a cancel button rather than something
+ * that quietly runs on page load.
+ *
+ * The wait is the design problem here, not the fetch. Minutes of progress bar
+ * with nothing else moving reads as a hang, so games are merged into the grid
+ * as they arrive: the bar is a secondary signal and the heatmap filling in is
+ * the primary one.
  */
 @Component({
   selector: 'app-history-depth',
@@ -23,19 +30,19 @@ import { AnalyticsDataService } from '../services/analytics-data.service';
             <div class="depth-line">
               <span class="depth-title">
                 @if (progress.phase === 'scanning') {
-                  Scanning {{ year() }} for games…
+                  Scanning {{ year() }} for ranked games…
                 } @else {
-                  Fetching {{ year() }} games…
+                  Filling in {{ year() }}…
                 }
               </span>
-              @if (progress.phase === 'fetching') {
+              @if (progress.phase === 'fetching' && progress.total) {
                 <span class="depth-count">{{ progress.processed }} / {{ progress.total }}</span>
               }
             </div>
             <div class="depth-track">
               <div
                 class="depth-fill"
-                [class.indeterminate]="progress.phase === 'scanning'"
+                [class.indeterminate]="progress.phase === 'scanning' || !progress.total"
                 [style.width.%]="
                   progress.phase === 'fetching' && progress.total
                     ? (progress.processed / progress.total) * 100
@@ -43,24 +50,35 @@ import { AnalyticsDataService } from '../services/analytics-data.service';
                 "
               ></div>
             </div>
-            @if (progress.phase === 'fetching') {
-              <span class="depth-note">
-                About {{ formatEta(progress.etaSeconds) }} remaining
+            <span class="depth-note">
+              @if (progress.phase === 'scanning') {
+                Asking Riot which ranked games you played — a few seconds.
+              } @else {
+                <!-- The ETA is the honest one: Riot's own limit, not ours. -->
+                About {{ formatEta(progress.etaSeconds) }} left at Riot's rate limit · days
+                fill in above as games arrive
+                @if (progress.reused) {
+                  · {{ progress.reused }} already on disk
+                }
                 @if (progress.failed > 0) {
                   · {{ progress.failed }} failed
                 }
-              </span>
-            }
+              }
+            </span>
           } @else {
             <span class="depth-title">Starting…</span>
+            <div class="depth-track">
+              <div class="depth-fill indeterminate" style="width: 100%"></div>
+            </div>
           }
         </div>
         <button type="button" class="depth-btn ghost" (click)="cancel()">Cancel</button>
       } @else {
         <div class="depth-body">
           <span class="depth-note">
-            Only games already pulled from Riot appear above. Loading {{ year() }} in full costs
-            one request per game, so it can take a while — and it only has to run once.
+            Only games already pulled from Riot appear above. Loading {{ year() }} costs one
+            request per ranked game and runs at Riot's rate limit — the grid fills in as it
+            goes, you can keep browsing, and it only has to run once.
           </span>
         </div>
         <button type="button" class="depth-btn" (click)="load()">Load {{ year() }}</button>
@@ -192,7 +210,10 @@ export class HistoryDepthComponent {
   readonly supported = computed(() => this.year() >= 2021);
 
   async load(): Promise<void> {
-    await this.data.fetchYear(this.year());
+    // Ranked solo/duo only, matching what the grid above actually counts. Riot
+    // applies this to the id listing itself, so games in other modes never cost
+    // a request at all.
+    await this.data.fetchYear(this.year(), RANKED_SOLO_QUEUE);
   }
 
   async cancel(): Promise<void> {
