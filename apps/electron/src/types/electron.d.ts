@@ -120,6 +120,24 @@ export interface ElectronAPI {
     lp: number;
   }) => Promise<{ success: boolean; error?: string }>;
 
+  // SQLite — Daily rank series
+  getRankSnapshots: (
+    accountId: string,
+    queue?: string
+  ) => Promise<{ success: boolean; snapshots: RankSnapshot[] }>;
+  recordRankSnapshot: (data: {
+    accountId: string;
+    queue: string;
+    entry: {
+      tier: string;
+      division?: string;
+      rank?: string;
+      leaguePoints: number;
+      wins?: number;
+      losses?: number;
+    };
+  }) => Promise<{ success: boolean; error?: string }>;
+
   // SQLite — Match Cache
   getMatchCache: (
     accountId: string,
@@ -290,6 +308,32 @@ export interface LpSnapshot {
   division: string;
   lp: number;
   absolute_lp: number;
+}
+
+/**
+ * One day of an account's rank in one queue.
+ *
+ * Unlike `LpSnapshot` this is a *daily* row: the recorder writes as often as it
+ * likes and the row upserts, so a series has at most one point per day and
+ * `games`/`difference` are already computed relative to the previous day.
+ */
+export interface RankSnapshot {
+  account_id: string;
+  queue: string;
+  /** Local calendar day, 'YYYY-MM-DD'. */
+  day: string;
+  tier: string;
+  division: string;
+  league_points: number;
+  /** Absolute LP across all tiers — the value to plot. */
+  score: number;
+  wins: number | null;
+  losses: number | null;
+  /** Games played this day; 0 when no win/loss baseline was available. */
+  games: number;
+  /** Score delta versus the previous recorded day. */
+  difference: number;
+  observed_at: number;
 }
 
 export interface BackfillProgress {

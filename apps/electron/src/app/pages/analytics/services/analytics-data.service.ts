@@ -6,6 +6,7 @@ import {
   LpSnapshot,
   MatchCacheRow,
   MatchDetail,
+  RankSnapshot,
   YearHistoryProgress,
 } from '../../../../types/electron';
 import { RiotApiService } from '../../../services/riot-api.service';
@@ -87,6 +88,12 @@ export class AnalyticsDataService {
   readonly ranked = signal<RankedEntry[]>([]);
   readonly matches = signal<MatchCacheRow[]>([]);
   readonly lpSnapshots = signal<LpSnapshot[]>([]);
+  /**
+   * Daily rank series — one point per day rather than per app-open moment.
+   * Preferred over `lpSnapshots` for anything drawn over time; the older signal
+   * stays for the rail sparkline until that moves across too.
+   */
+  readonly rankSnapshots = signal<RankSnapshot[]>([]);
   readonly mastery = signal<MasteryEntry[]>([]);
 
   /** True when viewing somebody else's profile rather than a vault account. */
@@ -257,6 +264,13 @@ export class AnalyticsDataService {
       if (!this.isCurrent(token)) return;
       this.lpSnapshots.set(lpResult?.snapshots ?? []);
 
+      // Optional: a main process from before the daily series exists has no
+      // handler for this, and an empty graph is a far better outcome than a
+      // dead analytics page.
+      const rankResult = await optionalIpc(() => window.electronAPI.getRankSnapshots(vaultId));
+      if (!this.isCurrent(token)) return;
+      this.rankSnapshots.set(rankResult?.snapshots ?? []);
+
       await this.loadRiotData(token, vaultId, puuid, platform, 30);
     } catch (err: unknown) {
       if (this.isCurrent(token)) this.fail(err);
@@ -278,6 +292,7 @@ export class AnalyticsDataService {
     const token = this.beginLoad();
     this.external.set(true);
     this.lpSnapshots.set([]);
+    this.rankSnapshots.set([]);
 
     try {
       if (!puuid) {
@@ -600,6 +615,7 @@ export class AnalyticsDataService {
     this.matches.set([]);
     this.ranked.set([]);
     this.lpSnapshots.set([]);
+    this.rankSnapshots.set([]);
     this.mastery.set([]);
     this.backfill.set(null);
     this.account.set(null);

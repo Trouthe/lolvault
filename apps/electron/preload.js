@@ -40,6 +40,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLpSnapshots: (accountId) => ipcRenderer.invoke('db-get-lp-snapshots', accountId),
   saveLpSnapshot: (data) => ipcRenderer.invoke('db-save-lp-snapshot', data),
 
+  // SQLite — Daily rank series
+  getRankSnapshots: (accountId, queue) =>
+    ipcRenderer.invoke('db-get-rank-snapshots', accountId, queue),
+  recordRankSnapshot: (data) => ipcRenderer.invoke('db-record-rank-snapshot', data),
+
   // SQLite — Match Cache
   getMatchCache: (accountId, limit) => ipcRenderer.invoke('db-get-match-cache', accountId, limit),
   saveMatch: (data) => ipcRenderer.invoke('db-save-match', data),

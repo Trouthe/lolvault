@@ -1554,6 +1554,26 @@ ipcMain.handle('db-save-lp-snapshot', (_event, { accountId, tier, division, lp }
   }
 });
 
+// Daily rank series
+ipcMain.handle('db-get-rank-snapshots', (_event, accountId, queue) => {
+  try {
+    return { success: true, snapshots: db.getRankSnapshots(accountId, queue ?? 'RANKED_SOLO_5x5') };
+  } catch (error) {
+    console.error('db-get-rank-snapshots error:', error);
+    return { success: false, error: error.message, snapshots: [] };
+  }
+});
+
+ipcMain.handle('db-record-rank-snapshot', (_event, { accountId, queue, entry }) => {
+  try {
+    db.recordRankSnapshot(accountId, queue, entry);
+    return { success: true };
+  } catch (error) {
+    console.error('db-record-rank-snapshot error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Match Cache
 ipcMain.handle('db-get-match-cache', (_event, accountId, limit) => {
   try {
