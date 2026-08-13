@@ -38,6 +38,39 @@ const PLATFORM_TO_REGION = {
   vn2: 'SEA',
 };
 
+/**
+ * Server label as stored on an account → Riot platform slug.
+ *
+ * The renderer keeps its own copy in services/riot-api.service.ts because it
+ * cannot import from the main process. Keep the two in step; anything reached
+ * from main.js (the rank recorder, for one) needs this one.
+ */
+const SERVER_TO_PLATFORM = {
+  EUW: 'euw1',
+  EUNE: 'eun1',
+  NA: 'na1',
+  KR: 'kr',
+  BR: 'br1',
+  JP: 'jp1',
+  LAN: 'la1',
+  LAS: 'la2',
+  OCE: 'oc1',
+  TR: 'tr1',
+  RU: 'ru',
+  PH: 'ph2',
+  SG: 'sg2',
+  TW: 'tw2',
+  VN: 'vn2',
+};
+
+function serverToPlatform(server) {
+  if (!server) return 'euw1';
+  const upper = String(server).toUpperCase();
+  // Already a platform slug (someone else's profile carries one, never a label).
+  if (PLATFORM_TO_REGION[String(server).toLowerCase()]) return String(server).toLowerCase();
+  return SERVER_TO_PLATFORM[upper] || 'euw1';
+}
+
 // ── API key ───────────────────────────────────────────────────────────────────
 
 function getApiKey() {
@@ -1006,6 +1039,7 @@ async function getDDragonVersion() {
 module.exports = {
   getApiKey,
   saveApiKey,
+  serverToPlatform,
   getSummonerByRiotId,
   getSummonerByPuuid,
   getRankedByPuuid,

@@ -7,6 +7,7 @@ const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const db = require('./database');
 const { startLcuMonitor, stopLcuMonitor, getLcuState } = require('./lcu-monitor');
+const { startRankRecorder, stopRankRecorder } = require('./rank-recorder');
 const riotApi = require('./riot-api.service');
 const rateLimiter = require('./rate-limiter');
 
@@ -146,6 +147,9 @@ app.whenReady().then(() => {
   createWindow();
   setupAutoUpdater();
   startLcuMonitor(mainWindow, getDataPath, decryptAccount);
+  // Records rank on a timer regardless of whether the League client is running,
+  // so history does not depend on the user having played with the app open.
+  startRankRecorder(getDataPath);
 
   // Re-emit current LCU state after the renderer finishes loading so Angular
   // can seed its live state even if the LCU connected before it bootstrapped.
@@ -167,7 +171,10 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => stopLcuMonitor());
+app.on('before-quit', () => {
+  stopLcuMonitor();
+  stopRankRecorder();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
