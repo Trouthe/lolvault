@@ -13,6 +13,7 @@
     "watch": "ng build --watch --configuration development",
     "lint": "ng lint",
     "test": "ng test",
+    "test:db": "node test/run-main-tests.js",
     "electron": "electron .",
     "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:4200 && electron .\"",
     "build-electron": "ng build && electron .",

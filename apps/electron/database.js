@@ -256,6 +256,71 @@ const MIGRATIONS = [
   (d) => {
     d.exec(`DELETE FROM match_cache WHERE account_id LIKE 'player:%';`);
   },
+
+  // v5 → v6: daily rank series.
+  //
+  // `lp_snapshots` is append-only on a raw timestamp, so it records whichever
+  // moments the app happened to be open for — three rows in one hour, then
+  // nothing for six weeks. That shape cannot answer "what did I climb this
+  // week", and it is not what a rank graph wants to draw.
+  //
+  // This table holds one row per account per queue per *day*, keyed so that
+  // writing twenty times a day is harmless: the row upserts and the last write
+  // wins. That is what makes an aggressive heartbeat safe to add. `games` and
+  // `difference` are computed at write time, so reading a series back is a
+  // single indexed scan with no arithmetic.
+  //
+  // Existing snapshots are folded in rather than discarded — anyone with
+  // history keeps it, collapsed to the final reading of each day.
+  (d) => {
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS rank_snapshots (
+        account_id    TEXT    NOT NULL,
+        queue         TEXT    NOT NULL,   -- RANKED_SOLO_5x5 | RANKED_FLEX_SR
+        day           TEXT    NOT NULL,   -- 'YYYY-MM-DD', local time
+        tier          TEXT    NOT NULL,
+        division      TEXT    NOT NULL,
+        league_points INTEGER NOT NULL,
+        score         INTEGER NOT NULL,   -- absolute LP, see computeAbsoluteLp
+        wins          INTEGER,            -- season totals, when the source has them
+        losses        INTEGER,
+        games         INTEGER NOT NULL DEFAULT 0,  -- delta of wins+losses vs previous row
+        difference    INTEGER NOT NULL DEFAULT 0,  -- delta of score vs previous row
+        observed_at   INTEGER NOT NULL,   -- ms of the last write on this day
+        PRIMARY KEY (account_id, queue, day)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_rank_snapshots_series
+        ON rank_snapshots (account_id, queue, day);
+
+      -- Fold existing snapshots into daily rows. SQLite resolves the bare
+      -- columns from the row that produced MAX(timestamp), so each day keeps
+      -- its final reading. Every historical snapshot came from solo queue.
+      INSERT OR IGNORE INTO rank_snapshots
+        (account_id, queue, day, tier, division, league_points, score, observed_at)
+      SELECT account_id,
+             'RANKED_SOLO_5x5',
+             date(timestamp / 1000, 'unixepoch', 'localtime'),
+             tier, division, lp, absolute_lp,
+             MAX(timestamp)
+        FROM lp_snapshots
+       GROUP BY account_id, date(timestamp / 1000, 'unixepoch', 'localtime');
+
+      -- Backfill score deltas. The first row of a series subtracts itself and
+      -- correctly lands on 0. \`games\` stays 0: lp_snapshots never carried
+      -- win/loss counts, and inventing them would be worse than the gap.
+      UPDATE rank_snapshots
+         SET difference = score - COALESCE((
+               SELECT prev.score
+                 FROM rank_snapshots prev
+                WHERE prev.account_id = rank_snapshots.account_id
+                  AND prev.queue      = rank_snapshots.queue
+                  AND prev.day        < rank_snapshots.day
+                ORDER BY prev.day DESC
+                LIMIT 1
+             ), score);
+    `);
+  },
 ];
 
 function runMigrations() {
@@ -297,6 +362,126 @@ function getLatestLpSnapshot(accountId) {
   return getDb()
     .prepare('SELECT * FROM lp_snapshots WHERE account_id = ? ORDER BY timestamp DESC LIMIT 1')
     .get(accountId);
+}
+
+// ── Daily rank series ─────────────────────────────────────────────────────────
+
+/**
+ * Local calendar day as 'YYYY-MM-DD'.
+ *
+ * Local rather than UTC on purpose: a session that ends at 01:00 belongs to the
+ * night the player thinks they played, not to the next UTC date. Built by hand
+ * instead of via toLocaleDateString so the format cannot drift with locale.
+ */
+function localDay(timestamp = Date.now()) {
+  const d = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Records one reading of an account's rank into the daily series.
+ *
+ * Safe to call as often as you like: the row is keyed by day and upserts, so a
+ * heartbeat every few minutes produces the same series as one call a day, just
+ * fresher. Callers therefore never need to ask "is it time yet".
+ *
+ * `games` and `difference` are measured against the last row *before today*, so
+ * re-writing today's row does not compound them.
+ *
+ * @param {string} accountId
+ * @param {string} queue        Riot queueType, e.g. 'RANKED_SOLO_5x5'
+ * @param {object} entry        { tier, division|rank, leaguePoints, wins?, losses? }
+ * @param {number} [when]       ms epoch of the reading; defaults to now
+ * @returns {object|null}       The row as written, or null if unranked
+ */
+function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
+  if (!accountId || !queue || !entry) return null;
+
+  const tier = entry.tier;
+  // league-v4 calls it `rank`, the LCU calls it `division`. Accept either so
+  // callers don't have to remember which source they're holding.
+  const division = entry.division ?? entry.rank;
+  const leaguePoints = entry.leaguePoints ?? entry.lp;
+
+  // Unranked and placement accounts have no point on a rank axis. Writing a
+  // zero would drag the whole graph to Iron, so write nothing at all.
+  if (!tier || tier === 'UNRANKED' || tier === 'NONE' || leaguePoints == null) return null;
+
+  const wins = Number.isFinite(entry.wins) ? entry.wins : null;
+  const losses = Number.isFinite(entry.losses) ? entry.losses : null;
+  const score = computeAbsoluteLp(tier, division, leaguePoints);
+  const day = localDay(when);
+
+  const prev = getDb()
+    .prepare(
+      `SELECT score, wins, losses FROM rank_snapshots
+        WHERE account_id = ? AND queue = ? AND day < ?
+        ORDER BY day DESC LIMIT 1`
+    )
+    .get(accountId, queue, day);
+
+  const difference = prev ? score - prev.score : 0;
+
+  // Only claim a game count when both ends of the comparison actually have one.
+  // A negative delta means the season rolled over; report 0 rather than a lie.
+  const games =
+    prev && wins != null && losses != null && prev.wins != null && prev.losses != null
+      ? Math.max(0, wins + losses - (prev.wins + prev.losses))
+      : 0;
+
+  getDb()
+    .prepare(
+      `INSERT INTO rank_snapshots
+         (account_id, queue, day, tier, division, league_points, score,
+          wins, losses, games, difference, observed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (account_id, queue, day) DO UPDATE SET
+         tier          = excluded.tier,
+         division      = excluded.division,
+         league_points = excluded.league_points,
+         score         = excluded.score,
+         wins          = excluded.wins,
+         losses        = excluded.losses,
+         games         = excluded.games,
+         difference    = excluded.difference,
+         observed_at   = excluded.observed_at`
+    )
+    .run(
+      accountId,
+      queue,
+      day,
+      tier,
+      division,
+      leaguePoints,
+      score,
+      wins,
+      losses,
+      games,
+      difference,
+      when
+    );
+
+  return { accountId, queue, day, tier, division, leaguePoints, score, games, difference };
+}
+
+/** Daily rank series for one account and queue, oldest first. */
+function getRankSnapshots(accountId, queue = 'RANKED_SOLO_5x5') {
+  return getDb()
+    .prepare(
+      `SELECT * FROM rank_snapshots
+        WHERE account_id = ? AND queue = ?
+        ORDER BY day ASC`
+    )
+    .all(accountId, queue);
+}
+
+/** Queues an account has any recorded history for. */
+function getRankSnapshotQueues(accountId) {
+  return getDb()
+    .prepare('SELECT DISTINCT queue FROM rank_snapshots WHERE account_id = ? ORDER BY queue')
+    .all(accountId)
+    .map((r) => r.queue);
 }
 
 // ── Match Cache ───────────────────────────────────────────────────────────────
@@ -653,6 +838,11 @@ module.exports = {
   saveLpSnapshot,
   getLpSnapshots,
   getLatestLpSnapshot,
+  // Daily rank series
+  localDay,
+  recordRankSnapshot,
+  getRankSnapshots,
+  getRankSnapshotQueues,
   // Match cache
   saveMatchCache,
   getMatchCache,
