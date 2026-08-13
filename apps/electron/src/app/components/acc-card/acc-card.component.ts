@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { Account, LpTrendPoint } from '../../models/interfaces/Account';
+import { RankedInfo } from '../../models/interfaces/Riot';
 import { CardLayout, SettingsService } from '../../services/settings.service';
 import { RiotApiService } from '../../services/riot-api.service';
 import { ChampionCatalogService } from '../../services/champion-catalog.service';
@@ -47,6 +48,9 @@ const SPARK_TENSION = 0.18;
 
 /** The trend only ever describes the last 7 days of recorded readings. */
 const LP_TREND_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Queues we keep a daily rank history for. */
+const TRACKED_RANK_QUEUES = ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR'];
 
 /** Gradient ids must be unique per card instance or the fills collide. */
 let sparkInstanceCounter = 0;
@@ -363,8 +367,11 @@ export class AccCardComponent implements OnDestroy {
 
       const vaultId = acc.syncId || String(acc.id);
 
-      // Record where this account sits now, then read the series back for the trend
-      const lpTrend = await this.syncLpTrend(vaultId, soloQueue);
+      // Record where this account sits now, then read the series back for the
+      // trend. The whole ranked payload goes in: flex history is already paid
+      // for by the same request, and wins/losses are what make a day's game
+      // count knowable.
+      const lpTrend = await this.syncLpTrend(vaultId, rankedInfo);
 
       // Previous games + most played lane from the cached match history
       const { recentResults, mainLane } = await this.loadMatchDerivedStats(
@@ -403,14 +410,42 @@ export class AccCardComponent implements OnDestroy {
   }
 
   /**
-   * Appends a snapshot when the account actually moved, then returns the
-   * absolute-LP series used to draw the trend line.
+   * Records where the account stands now, then returns the absolute-LP series
+   * used to draw the trend line.
+   *
+   * Two destinations with deliberately different rules:
+   *
+   * - The daily series takes **every** ranked queue, unconditionally. Its rows
+   *   are keyed by day and upsert, so writing on every refresh cannot bloat it,
+   *   and writing unconditionally is the point: a day where you went 1W-1L nets
+   *   zero LP but is real activity, and the equality check below would throw it
+   *   away. That check is why a played-but-flat day used to leave no trace.
+   * - `lp_snapshots` keeps the moved-only guard. It is append-only on a raw
+   *   timestamp with no day key, so recording every refresh really would grow
+   *   it without bound.
    */
   private async syncLpTrend(
     vaultId: string,
-    soloQueue: { tier: string; rank: string; leaguePoints: number } | undefined
+    rankedInfo: RankedInfo[] | undefined
   ): Promise<LpTrendPoint[]> {
+    const soloQueue = rankedInfo?.find((q) => q.queueType === 'RANKED_SOLO_5x5');
+
     try {
+      for (const entry of rankedInfo ?? []) {
+        if (!TRACKED_RANK_QUEUES.includes(entry.queueType)) continue;
+        try {
+          await window.electronAPI.recordRankSnapshot({
+            accountId: vaultId,
+            queue: entry.queueType,
+            entry,
+          });
+        } catch (error) {
+          // The main process has its own lifetime and may predate this channel.
+          // Losing a daily row is not worth failing a card refresh over.
+          console.warn('Could not record rank snapshot:', error);
+        }
+      }
+
       if (soloQueue) {
         const existing = await window.electronAPI.getLpSnapshots(vaultId);
         const latest = existing?.snapshots?.[existing.snapshots.length - 1];
