@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import { LpSnapshot } from '../../../../types/electron';
+import { RankSnapshot } from '../../../../types/electron';
 import { ChartThemeService } from '../services/chart-theme.service';
 import { EmptyStateComponent } from './empty-state.component';
 
@@ -49,12 +49,29 @@ export function daysAgoLabel(timestamp: number): string {
 }
 
 /**
- * LP progression over time.
+ * 'YYYY-MM-DD' to a local-midnight timestamp.
  *
- * Snapshots are wall-clock samples taken while the app is running (see
- * lcu-monitor.js), not per-match records — so this shows the shape of a climb,
- * and the tooltip reports the snapshot's own date/rank/LP rather than implying
- * per-game precision.
+ * `new Date('2026-08-06')` is parsed as *UTC* midnight, which renders as the
+ * 5th anywhere west of Greenwich — the chart would label every point a day
+ * early. Rows are keyed on the local day, so they have to be read back as one.
+ */
+export function dayToLocalTime(day: string): number {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(year, month - 1, date).getTime();
+}
+
+/**
+ * Rank progression over time.
+ *
+ * Reads the daily series, so there is exactly one point per day the account was
+ * recorded, and the tooltip can report what that day actually was: the rank it
+ * ended on, how many games were played, and the LP swing. Still not per-match
+ * precision — Riot publishes no LP history, so a day is the finest grain that
+ * can be recorded honestly.
+ *
+ * Days with no games have no row. The line is drawn straight between recorded
+ * days rather than interpolated, so an inactive stretch reads as flat instead
+ * of as a slow climb that never happened.
  */
 @Component({
   selector: 'app-lp-climb-chart',
@@ -80,7 +97,7 @@ export function daysAgoLabel(timestamp: number): string {
       <app-empty-state
         inline
         icon="chart-line"
-        title="Not enough LP history yet"
+        title="Not enough rank history yet"
         [hint]="emptyHint()"
       />
     }
@@ -97,19 +114,19 @@ export function daysAgoLabel(timestamp: number): string {
 export class LpClimbChartComponent {
   private chartTheme = inject(ChartThemeService);
 
-  snapshots = input.required<LpSnapshot[]>();
+  snapshots = input.required<RankSnapshot[]>();
   height = input<number>(210);
 
   readonly emptyHint = computed(() =>
     this.snapshots().length === 1
-      ? 'Only one LP reading so far. The climb graph appears once a second snapshot is recorded.'
-      : 'LP is recorded while LoL Vault is running during your games. Play a ranked game with the app open to start tracking.'
+      ? 'Only one day recorded so far. The graph appears once a second day is on record.'
+      : 'Rank is recorded while LoL Vault is open. Riot publishes no rank history, so this can only show days recorded from here on.'
   );
 
   readonly series = computed(() => [
     {
-      name: 'LP',
-      data: this.snapshots().map((s) => ({ x: s.timestamp, y: s.absolute_lp })),
+      name: 'Rank',
+      data: this.snapshots().map((s) => ({ x: dayToLocalTime(s.day), y: s.score })),
     },
   ]);
 
@@ -146,25 +163,35 @@ export class LpClimbChartComponent {
       },
       tooltip: {
         ...base.tooltip,
-        // Custom tooltip: rank, LP and how long ago — what the spec asked for.
+        // Rank the day ended on, plus what it took to get there. The games and
+        // LP swing are the reason the series is stored per day rather than per
+        // reading — without them a flat day is indistinguishable from an
+        // unplayed one.
         custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
           const snap = snaps[dataPointIndex];
           if (!snap) return '';
-          const date = new Date(snap.timestamp);
-          const dateStr = date.toLocaleDateString(undefined, {
+
+          const time = dayToLocalTime(snap.day);
+          const dateStr = new Date(time).toLocaleDateString(undefined, {
             weekday: 'short',
             day: 'numeric',
             month: 'short',
           });
-          const timeStr = date.toLocaleTimeString(undefined, {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+
+          const sign = snap.difference > 0 ? '+' : '';
+          const trend = snap.difference > 0 ? 'up' : snap.difference < 0 ? 'down' : 'flat';
+          const games = snap.games === 1 ? '1 game' : `${snap.games} games`;
+
           return `
             <div class="lp-tip">
-              <div class="lp-tip-rank">${absoluteLpToLabel(snap.absolute_lp)}</div>
-              <div class="lp-tip-when">${daysAgoLabel(snap.timestamp)}</div>
-              <div class="lp-tip-date">${dateStr} · ${timeStr}</div>
+              <div class="lp-tip-rank">${absoluteLpToLabel(snap.score)}</div>
+              ${
+                snap.games > 0 || snap.difference !== 0
+                  ? `<div class="lp-tip-delta ${trend}">${sign}${snap.difference} LP · ${games}</div>`
+                  : ''
+              }
+              <div class="lp-tip-when">${daysAgoLabel(time)}</div>
+              <div class="lp-tip-date">${dateStr}</div>
             </div>`;
         },
       },

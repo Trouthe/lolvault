@@ -12,6 +12,7 @@ import { ActivityHeatmapComponent } from '../../widgets/activity-heatmap.compone
 import { MostPlayedChampionsComponent } from '../../widgets/most-played-champions.component';
 import { MasteryPodiumComponent } from '../../widgets/mastery-podium.component';
 import { HistoryDepthComponent } from '../../widgets/history-depth.component';
+import { LpClimbChartComponent } from '../../widgets/lp-climb-chart.component';
 import { MatchCardComponent } from '../../match/match-card.component';
 import { BackfillControlComponent } from '../../widgets/backfill-control.component';
 import { SegmentOption, SegmentedToggleComponent } from '../../widgets/segmented-toggle.component';
@@ -30,6 +31,7 @@ import { queueName } from '../../models/analytics.types';
     MostPlayedChampionsComponent,
     MasteryPodiumComponent,
     HistoryDepthComponent,
+    LpClimbChartComponent,
     MatchCardComponent,
     BackfillControlComponent,
     SegmentedToggleComponent,
@@ -44,6 +46,28 @@ export class OverviewScreenComponent {
 
   readonly matchLimit = signal(10);
   readonly expandedMatchId = signal<string | null>(null);
+
+  /**
+   * Net LP across the recorded series, for the panel header.
+   *
+   * Spans first to last *recorded* day rather than a fixed window: the series
+   * only holds days the account was actually seen, so "last 30 days" would
+   * quietly report a shorter span than it claims whenever recording was
+   * interrupted. Null until there are two days to compare.
+   */
+  readonly rankTrend = computed<{ net: number; days: string } | null>(() => {
+    const series = this.data.rankSnapshots();
+    if (series.length < 2) return null;
+
+    const first = series[0];
+    const last = series[series.length - 1];
+    const count = series.length;
+
+    return {
+      net: last.score - first.score,
+      days: count === 1 ? '1 day' : `${count} days`,
+    };
+  });
 
   /** Selected queue id, or `all`. Everything on this screen respects it. */
   readonly queueFilter = signal<number | 'all'>('all');

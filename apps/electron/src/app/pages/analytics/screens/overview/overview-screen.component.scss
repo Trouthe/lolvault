@@ -200,6 +200,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+// Net LP on the rank panel, same up/down convention as the rail sparkline.
+.panel-note.up {
+  color: #2f9e6f;
+  opacity: 1;
+}
+
+.panel-note.down {
+  color: var(--danger);
+  opacity: 1;
+}
+
 // ── KDA ──────────────────────────────────────────────────────────────────────
 
 // The headline number sits beside its breakdown rather than above it, so the

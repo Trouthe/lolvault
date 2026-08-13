@@ -116,6 +116,21 @@
     </div>
   </div>
 
+  <!-- ── Rank progression (ranked solo/duo, one point per recorded day) ───── -->
+  @if (!data.external()) {
+    <article class="panel">
+      <header class="panel-head">
+        <h3>Rank Progression</h3>
+        @if (rankTrend(); as trend) {
+          <span class="panel-note" [class.up]="trend.net > 0" [class.down]="trend.net < 0">
+            {{ trend.net > 0 ? '+' : '' }}{{ trend.net }} LP over {{ trend.days }}
+          </span>
+        }
+      </header>
+      <app-lp-climb-chart [snapshots]="data.rankSnapshots()" [height]="230" />
+    </article>
+  }
+
   <!-- ── Activity heatmap (ranked solo/duo, full calendar year) ───────────── -->
   <article class="panel">
     <header class="panel-head">
