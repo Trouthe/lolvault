@@ -12,7 +12,7 @@
 const lc = require('league-connect');
 const path = require('path');
 const fs = require('fs');
-const { computeAbsoluteLp, saveLpSnapshot } = require('./database');
+const { computeAbsoluteLp, saveLpSnapshot, recordRankSnapshot } = require('./database');
 
 // ── Injected dependencies (set by startLcuMonitor) ───────────────────────────
 let _mainWindow = null;
@@ -140,25 +140,45 @@ async function identifySummoner() {
 
 // ── LP snapshotting ───────────────────────────────────────────────────────────
 
+/** Queues worth keeping a rank history for. */
+const TRACKED_QUEUES = ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR'];
+
+/** Pulls one queue's entry out of either shape the LCU returns. */
+function readQueue(stats, queueType) {
+  if (stats.queueMap && stats.queueMap[queueType]) return stats.queueMap[queueType];
+  if (Array.isArray(stats.queues)) {
+    return stats.queues.find((q) => q.queueType === queueType) || null;
+  }
+  return null;
+}
+
+const isRanked = (q) => q && q.tier && q.tier !== 'UNRANKED' && q.tier !== 'NONE';
+
 /**
- * Fetches /lol-ranked/v1/current-ranked-stats, extracts RANKED_SOLO_5x5 data,
- * saves a row to SQLite, and returns { tier, division, lp, absoluteLP } or null
- * if the account is unranked or the endpoint is unavailable.
+ * Fetches /lol-ranked/v1/current-ranked-stats and records the account's rank.
+ *
+ * One request already carries every queue, so flex is recorded alongside solo
+ * for free. The daily series takes both; `lp_snapshots` and the returned value
+ * stay solo-only, since the pre/post-game LP delta is a solo-queue notion.
+ *
+ * @returns {{tier, division, lp, absoluteLP}|null} solo rank, or null if unranked
  */
 async function snapshotLp(label) {
   try {
     const stats = await lcuGet('/lol-ranked/v1/current-ranked-stats');
 
-    // The LCU can return data under either `queues[]` or `queueMap`
-    let solo = null;
-    if (stats.queueMap && stats.queueMap['RANKED_SOLO_5x5']) {
-      solo = stats.queueMap['RANKED_SOLO_5x5'];
-    } else if (Array.isArray(stats.queues)) {
-      solo = stats.queues.find((q) => q.queueType === 'RANKED_SOLO_5x5') || null;
+    if (_activeVaultId) {
+      for (const queueType of TRACKED_QUEUES) {
+        const entry = readQueue(stats, queueType);
+        // recordRankSnapshot guards unranked itself, but skipping here keeps
+        // the log honest about what was actually written.
+        if (isRanked(entry)) recordRankSnapshot(_activeVaultId, queueType, entry);
+      }
     }
 
-    if (!solo || !solo.tier || solo.tier === 'UNRANKED' || solo.tier === 'NONE') {
-      log(`LP snapshot (${label}): account is unranked, skipping`);
+    const solo = readQueue(stats, 'RANKED_SOLO_5x5');
+    if (!isRanked(solo)) {
+      log(`LP snapshot (${label}): account is unranked in solo, skipping`);
       return null;
     }
 
@@ -319,6 +339,14 @@ async function connectAndMonitor() {
   } catch (e) {
     warn('identifySummoner error:', e.message);
     // Carry on — we can still track phases even if identification failed
+  }
+
+  // Record rank on connect. Games played on another machine, or with LoL Vault
+  // closed, are invisible to the phase handlers below — this is the first
+  // moment we can see where the account actually stands, and the daily row
+  // upserts, so taking it costs nothing if today is already recorded.
+  if (_activeVaultId) {
+    await snapshotLp('client-connect');
   }
 
   // Subscribe to gameflow and block until the client closes
