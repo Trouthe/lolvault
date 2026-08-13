@@ -610,15 +610,32 @@ Set `ETag` and let the browser 304. That is the entire fast path.
 
 ---
 
-## 8. Recommended order of work
+## 8. Order of work — and what is already done
 
-1. **Rotate that API key and get it out of `environment.ts`.** Unrelated to LP, blocks nothing, takes ten minutes, prevents a real problem.
-2. **Tier 0 — `rank_snapshots` daily table + 6-hour heartbeat + app-launch snapshot.** This is ~90% of the perceived value for ~5% of the work. From the day it ships your graph is dense and honest instead of three points clustered in an hour.
-3. **Mount `LpClimbChartComponent`.** It's written. It works. Nothing renders it.
-4. **Precompute `games` and `difference` at write time.** Free, and it's what makes the read path trivial later.
-5. **Tier 1 — Firebase scheduled recorder.** History accrues with the app closed and syncs to web.
-6. **Apply for a production key.** Long lead time; start it in parallel with step 5.
-7. **Tier 2 — ladder crawler.** Only once you actually want arbitrary-player history, and only with a production key and Postgres.
+### ✅ Shipped (Tier 0, complete)
+
+| | What | Commit |
+|---|---|---|
+| ✅ | `rank_snapshots` daily table, keyed `(account_id, queue, day)`, with `games`/`difference` computed at write time and existing `lp_snapshots` folded in | `76d1df5` |
+| ✅ | IPC + preload + `RankSnapshot` type, read guarded by `optionalIpc` | `0d487ab` |
+| ✅ | LCU monitor writes daily rows, records flex alongside solo, snapshots on client connect | `443cb1a` |
+| ✅ | `rank-recorder.js` — one pass 15s after launch, then every 6 hours, via the Riot API so it works with the client closed | `5c2a2d1` |
+| ✅ | Zero-net-LP days no longer discarded by the acc-card dedupe rule | `5417b5b` |
+| ✅ | `LpClimbChartComponent` mounted on the overview, retargeted to the daily series | `4bba7cb` |
+
+Covered by `npm run test:db --workspace=apps/electron` — 39 assertions across the migration and the recorder's degradation paths.
+
+**The recorder is live from this point on.** Everything above changes what gets written down going forward; none of it can recover the past, and nothing ever will.
+
+### ⏭️ Next
+
+1. **Apply for a production key.** Long lead time and it gates everything below, so start it first even though it finishes last. Needs a public-facing product and a privacy policy.
+2. **Tier 1 — server-side per-account recorder.** Lifts the heartbeat off the desktop app so history accrues with LoL Vault closed and syncs to web. §6.2 sketches this on Firebase scheduled functions; **the plan is now Railway**, which changes the host but not the design — same one-request-per-account-per-pass, same daily upsert keyed on `(puuid, queue, day)`.
+3. **Tier 2 — ladder crawler.** Only once arbitrary-player history is actually wanted, and only with a production key and Postgres behind it.
+
+### Deliberately skipped
+
+**Rotating the committed API key.** Raised in §5 and waived: the production key will live server-side on the Railway backend, so the bundled dev key is not the pattern that ships. Worth revisiting only if a real key ever reaches `environment.ts` again.
 
 ---
 
