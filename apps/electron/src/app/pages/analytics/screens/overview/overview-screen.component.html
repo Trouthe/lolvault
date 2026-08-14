@@ -123,7 +123,7 @@
         <h3>Rank Progression</h3>
         @if (rankTrend(); as trend) {
           <span class="panel-note" [class.up]="trend.net > 0" [class.down]="trend.net < 0">
-            {{ trend.net > 0 ? '+' : '' }}{{ trend.net }} LP over {{ trend.days }}
+            {{ trend.net > 0 ? '+' : '' }}{{ trend.net }} LP since {{ trend.since }}
           </span>
         }
       </header>

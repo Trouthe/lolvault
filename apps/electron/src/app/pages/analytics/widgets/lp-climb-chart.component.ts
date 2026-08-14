@@ -141,12 +141,21 @@ export class LpClimbChartComponent {
       ...base,
       chart: { ...base.chart, type: 'area' as const },
       colors: [palette.gold],
-      stroke: { curve: 'straight' as const, width: 2 },
+      // Stepped, never sloped. A straight segment between two readings two
+      // months apart draws a steady climb across a gap where nothing was
+      // recorded and the rank may not have moved at all. Stepping holds the
+      // last known value until the next real reading, which is the only thing
+      // actually known — and it is what a day of dense readings looks like
+      // anyway, since LP moves in discrete jumps rather than continuously.
+      stroke: { curve: 'stepline' as const, width: 2 },
       fill: {
         type: 'gradient' as const,
         gradient: { shadeIntensity: 1, opacityFrom: 0.28, opacityTo: 0.02, stops: [0, 100] },
       },
-      markers: { size: 0, hover: { size: 5 } },
+      // Mark real samples while the series is short, so a sparse history reads
+      // as "four readings" rather than as a continuous recording. Past ~60
+      // points the dots stop being informative and start being noise.
+      markers: { size: snaps.length <= 60 ? 3 : 0, hover: { size: 5 } },
       dataLabels: { enabled: false },
       xaxis: {
         type: 'datetime' as const,

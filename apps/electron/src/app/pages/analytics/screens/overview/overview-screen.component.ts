@@ -50,22 +50,28 @@ export class OverviewScreenComponent {
   /**
    * Net LP across the recorded series, for the panel header.
    *
-   * Spans first to last *recorded* day rather than a fixed window: the series
-   * only holds days the account was actually seen, so "last 30 days" would
-   * quietly report a shorter span than it claims whenever recording was
-   * interrupted. Null until there are two days to compare.
+   * Labelled with the date the series *starts*, not with how many rows it has.
+   * "over 4 days" was read as "in the last four days" when it actually meant
+   * "across the four days we happened to record" — for an account first seen in
+   * June and next seen in August, that is a two-month gain described as four
+   * days of work. Naming the start date cannot be misread that way.
+   *
+   * Null until there are two days to compare.
    */
-  readonly rankTrend = computed<{ net: number; days: string } | null>(() => {
+  readonly rankTrend = computed<{ net: number; since: string } | null>(() => {
     const series = this.data.rankSnapshots();
     if (series.length < 2) return null;
 
     const first = series[0];
     const last = series[series.length - 1];
-    const count = series.length;
+    const [y, m, d] = first.day.split('-').map(Number);
 
     return {
       net: last.score - first.score,
-      days: count === 1 ? '1 day' : `${count} days`,
+      since: new Date(y, m - 1, d).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+      }),
     };
   });
 
