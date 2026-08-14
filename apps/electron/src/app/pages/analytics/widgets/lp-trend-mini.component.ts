@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RankSnapshot } from '../../../../types/electron';
-import { absoluteLpToLabel, dayToLocalTime } from './lp-climb-chart.component';
+import { absoluteLpToLabel, dayToLocalTime } from '../../../models/rank-scale';
 
 const DAY_MS = 86_400_000;
 const W = 100;

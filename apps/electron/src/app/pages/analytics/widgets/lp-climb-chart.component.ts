@@ -2,63 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { RankSnapshot } from '../../../../types/electron';
+import { absoluteLpToLabel, dayToLocalTime, daysAgoLabel } from '../../../models/rank-scale';
 import { ChartThemeService } from '../services/chart-theme.service';
 import { EmptyStateComponent } from './empty-state.component';
-
-const DIVISIONS = ['IV', 'III', 'II', 'I'];
-const TIER_ORDER = [
-  { name: 'IRON', min: 0 },
-  { name: 'BRONZE', min: 400 },
-  { name: 'SILVER', min: 800 },
-  { name: 'GOLD', min: 1200 },
-  { name: 'PLATINUM', min: 1600 },
-  { name: 'EMERALD', min: 2000 },
-  { name: 'DIAMOND', min: 2400 },
-  { name: 'MASTER', min: 2800 },
-];
-
-/**
- * Converts the stored absolute LP scale back to a readable rank label.
- * Mirrors `computeAbsoluteLp` in apps/electron/database.js (400 LP per tier,
- * 100 per division). Master+ has no divisions, so LP counts up from 2800.
- */
-export function absoluteLpToLabel(absolute: number): string {
-  for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
-    const tier = TIER_ORDER[i];
-    if (absolute >= tier.min) {
-      if (tier.name === 'MASTER') return `Master ${absolute - tier.min} LP`;
-      const within = absolute - tier.min;
-      const division = DIVISIONS[Math.min(Math.floor(within / 100), 3)];
-      return `${titleCase(tier.name)} ${division} ${within % 100} LP`;
-    }
-  }
-  return `${absolute} LP`;
-}
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-}
-
-/** "Today", "Yesterday", or "N days ago". */
-export function daysAgoLabel(timestamp: number): string {
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const days = Math.round((startOfDay(new Date()) - startOfDay(new Date(timestamp))) / 86_400_000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  return `${days} days ago`;
-}
-
-/**
- * 'YYYY-MM-DD' to a local-midnight timestamp.
- *
- * `new Date('2026-08-06')` is parsed as *UTC* midnight, which renders as the
- * 5th anywhere west of Greenwich — the chart would label every point a day
- * early. Rows are keyed on the local day, so they have to be read back as one.
- */
-export function dayToLocalTime(day: string): number {
-  const [year, month, date] = day.split('-').map(Number);
-  return new Date(year, month - 1, date).getTime();
-}
 
 /**
  * Rank progression over time.

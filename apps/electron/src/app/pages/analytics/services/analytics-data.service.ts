@@ -3,7 +3,6 @@ import { Account } from '../../../models/interfaces/Account';
 import {
   BackfillProgress,
   CompactTimeline,
-  LpSnapshot,
   MatchCacheRow,
   MatchDetail,
   RankSnapshot,
@@ -87,11 +86,14 @@ export class AnalyticsDataService {
   readonly platform = signal<string>('euw1');
   readonly ranked = signal<RankedEntry[]>([]);
   readonly matches = signal<MatchCacheRow[]>([]);
-  readonly lpSnapshots = signal<LpSnapshot[]>([]);
   /**
-   * Daily rank series — one point per day rather than per app-open moment.
-   * Preferred over `lpSnapshots` for anything drawn over time; the older signal
-   * stays for the rail sparkline until that moves across too.
+   * Daily rank series, every queue — one row per day the account was recorded.
+   *
+   * Holds all queues rather than solo alone so a single read feeds the overview
+   * chart, the peak badge and each rail queue card; every consumer filters to
+   * the queue it means. This replaced the raw `lp_snapshots` readings, which
+   * had no queue column and clustered around whenever the app happened to be
+   * open.
    */
   readonly rankSnapshots = signal<RankSnapshot[]>([]);
   readonly mastery = signal<MasteryEntry[]>([]);
@@ -260,10 +262,6 @@ export class AnalyticsDataService {
       }
       this.puuid.set(puuid);
 
-      const lpResult = await window.electronAPI.getLpSnapshots(vaultId);
-      if (!this.isCurrent(token)) return;
-      this.lpSnapshots.set(lpResult?.snapshots ?? []);
-
       // Optional: a main process from before the daily series exists has no
       // handler for this, and an empty graph is a far better outcome than a
       // dead analytics page.
@@ -291,7 +289,6 @@ export class AnalyticsDataService {
   async loadPlayer(puuid: string, platform: string, displayName?: string): Promise<void> {
     const token = this.beginLoad();
     this.external.set(true);
-    this.lpSnapshots.set([]);
     this.rankSnapshots.set([]);
 
     try {
@@ -614,7 +611,6 @@ export class AnalyticsDataService {
     this.detailCache.clear();
     this.matches.set([]);
     this.ranked.set([]);
-    this.lpSnapshots.set([]);
     this.rankSnapshots.set([]);
     this.mastery.set([]);
     this.backfill.set(null);

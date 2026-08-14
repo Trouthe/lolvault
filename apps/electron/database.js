@@ -363,7 +363,17 @@ function getDb() {
   return db;
 }
 
-// ── LP Snapshots ──────────────────────────────────────────────────────────────
+// ── LP Snapshots — the raw reading log ────────────────────────────────────────
+//
+// Every reading, at full timestamp resolution. Nothing renders from this any
+// more: `rank_snapshots` below is what the UI reads, and it deliberately keeps
+// only the last reading of each day.
+//
+// Still written, because that daily rounding is lossy in one direction that
+// matters. Attributing LP to an individual match needs readings either side of
+// that match, not a day-end summary — and Riot serves no LP history, so a
+// reading not taken now can never be recovered. Cheap to keep, impossible to
+// reconstruct.
 
 function saveLpSnapshot(accountId, tier, division, lp) {
   const absoluteLp = computeAbsoluteLp(tier, division, lp);

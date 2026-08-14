@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { Account, LpTrendPoint } from '../../models/interfaces/Account';
 import { RankedInfo } from '../../models/interfaces/Riot';
+import { dayToLocalTime } from '../../models/rank-scale';
 import { CardLayout, SettingsService } from '../../services/settings.service';
 import { RiotApiService } from '../../services/riot-api.service';
 import { ChampionCatalogService } from '../../services/champion-catalog.service';
@@ -465,13 +466,17 @@ export class AccCardComponent implements OnDestroy {
         }
       }
 
-      const result = await window.electronAPI.getLpSnapshots(vaultId);
+      // Read the trend back from the daily series, not from what we just wrote.
+      // The raw log only holds readings this app happened to take; the daily
+      // series also holds everything the heartbeat and the LCU recorded while
+      // the dashboard was closed, which is most of it.
+      const result = await window.electronAPI.getRankSnapshots(vaultId, 'RANKED_SOLO_5x5');
       const cutoff = Date.now() - LP_TREND_WINDOW_MS;
 
       // Only the 7-day window is ever rendered, so that is all we carry around.
       return (result?.snapshots ?? [])
-        .filter((snapshot) => snapshot.timestamp >= cutoff)
-        .map((snapshot) => ({ t: snapshot.timestamp, lp: snapshot.absolute_lp }));
+        .map((row) => ({ t: dayToLocalTime(row.day), lp: row.score }))
+        .filter((point) => point.t >= cutoff);
     } catch (error) {
       console.error('Error syncing LP trend:', error);
       return [];

@@ -23,7 +23,7 @@ import { EmptyStateComponent } from './widgets/empty-state.component';
 import { IconComponent } from './widgets/icon.component';
 import { SkeletonComponent } from './widgets/skeleton.component';
 import { OverviewSkeletonComponent } from './widgets/overview-skeleton.component';
-import { absoluteLpToLabel } from './widgets/lp-climb-chart.component';
+import { absoluteLpToLabel, dayToLocalTime } from '../../models/rank-scale';
 import { SegmentOption, SegmentedToggleComponent } from './widgets/segmented-toggle.component';
 import { QueueCardComponent } from './widgets/queue-card.component';
 import { MostPlayedChampionsComponent } from './widgets/most-played-champions.component';
@@ -125,14 +125,19 @@ export class AnalyticsShellComponent {
     // rank landed and revealed the peak was not a peak after all.
     if (this.data.loading()) return null;
 
-    const snaps = this.data.lpSnapshots();
+    // Solo only, and explicitly so: the old table had no queue column and its
+    // contents were assumed to be solo, which would now quietly let a flex
+    // high-water mark masquerade as the solo peak.
+    const snaps = this.data.rankSnapshots().filter((s) => s.queue === 'RANKED_SOLO_5x5');
     if (!snaps.length) return null;
 
-    const best = snaps.reduce((a, b) => (b.absolute_lp > a.absolute_lp ? b : a));
+    // All-time, deliberately spanning season resets. A peak is the best you
+    // have ever been; unlike a climb, it does not restart with the ladder.
+    const best = snaps.reduce((a, b) => (b.score > a.score ? b : a));
     const current = this.soloCurrentAbsoluteLp();
-    if (current !== null && best.absolute_lp <= current) return null;
+    if (current !== null && best.score <= current) return null;
 
-    const label = absoluteLpToLabel(best.absolute_lp);
+    const label = absoluteLpToLabel(best.score);
     const [tier, division] = label.split(' ');
     const roman: Record<string, string> = { IV: '4', III: '3', II: '2', I: '1' };
 
@@ -140,7 +145,7 @@ export class AnalyticsShellComponent {
       full: label,
       short: `${tier?.charAt(0) ?? ''}${roman[division] ?? ''}`,
       emblem: tier ? `assets/emblems/${tier}.png` : '',
-      when: new Date(best.timestamp).toLocaleDateString(undefined, {
+      when: new Date(dayToLocalTime(best.day)).toLocaleDateString(undefined, {
         month: 'short',
         year: 'numeric',
       }),
