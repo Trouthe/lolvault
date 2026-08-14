@@ -18,6 +18,18 @@
  * matters for bulk work.
  */
 
+// TODO: REPLACE WITH PROD KEY — these constants must change with it.
+//
+// They encode a *development* key's budget. A production key is not throttled
+// by Riot at these rates, but it would still be throttled here, because this
+// limiter is what actually paces every request the app makes. Swapping the key
+// in environment.ts and stopping there leaves the app running at ~1/60th of the
+// throughput it is paying for, with nothing failing to indicate why.
+//
+// Riot's published production limits are 500 req / 10 s and 30,000 req / 10 min
+// (both work out to 50 req/s sustained, versus 0.83 here). Confirm against the
+// X-App-Rate-Limit header on a live response before trusting them — limits can
+// be set per key — then replace the two windows below with those figures.
 const PER_SECOND_LIMIT = 20;
 const PER_SECOND_WINDOW_MS = 1000;
 
