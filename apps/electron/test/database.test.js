@@ -146,13 +146,21 @@ check('decay unknown stays null', db.getRankSnapshots('acc1')[8].inactive, null)
 db.recordRankSnapshot('acc1', 'RANKED_FLEX_SR',
   { tier: 'GOLD', rank: 'I', leaguePoints: 30, wins: 10, losses: 5 }, at(2026, 8, 6, 11));
 check('flex is its own series', db.getRankSnapshots('acc1', 'RANKED_FLEX_SR').length, 1);
-check('solo is unaffected by a flex write', db.getRankSnapshots('acc1').length, 9);
+check('solo is unaffected by a flex write',
+  db.getRankSnapshots('acc1', 'RANKED_SOLO_5x5').length, 9);
 check('queues are discoverable', db.getRankSnapshotQueues('acc1'),
+  ['RANKED_FLEX_SR', 'RANKED_SOLO_5x5']);
+
+// Omitting the queue returns every queue — one read feeds the whole profile.
+check('no queue returns all queues', db.getRankSnapshots('acc1').length, 10);
+check('all-queue rows carry their queue',
+  [...new Set(db.getRankSnapshots('acc1').map((r) => r.queue))].sort(),
   ['RANKED_FLEX_SR', 'RANKED_SOLO_5x5']);
 
 // ── Migrations are idempotent ─────────────────────────────────────────────────
 db.initDatabase(dir);
-check('re-initialising leaves the series intact', db.getRankSnapshots('acc1').length, 9);
+check('re-initialising leaves the series intact',
+  db.getRankSnapshots('acc1', 'RANKED_SOLO_5x5').length, 9);
 
 // ── Teardown ──────────────────────────────────────────────────────────────────
 console.log(`\n${failures === 0 ? 'ALL PASS' : `${failures} FAILURE(S)`}`);

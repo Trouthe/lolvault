@@ -512,15 +512,30 @@ function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
   };
 }
 
-/** Daily rank series for one account and queue, oldest first. */
-function getRankSnapshots(accountId, queue = 'RANKED_SOLO_5x5') {
-  return getDb()
-    .prepare(
-      `SELECT * FROM rank_snapshots
-        WHERE account_id = ? AND queue = ?
-        ORDER BY day ASC`
-    )
-    .all(accountId, queue);
+/**
+ * Daily rank series for one account, oldest first.
+ *
+ * `queue` narrows to one queue; omit it for every queue the account has, which
+ * is what the profile wants — one request feeds the solo chart and each queue
+ * card, and callers filter rather than each doing its own round trip.
+ */
+function getRankSnapshots(accountId, queue = null) {
+  const db = getDb();
+  return queue
+    ? db
+        .prepare(
+          `SELECT * FROM rank_snapshots
+            WHERE account_id = ? AND queue = ?
+            ORDER BY day ASC`
+        )
+        .all(accountId, queue)
+    : db
+        .prepare(
+          `SELECT * FROM rank_snapshots
+            WHERE account_id = ?
+            ORDER BY queue ASC, day ASC`
+        )
+        .all(accountId);
 }
 
 /** Queues an account has any recorded history for. */

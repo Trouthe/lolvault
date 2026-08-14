@@ -1564,7 +1564,9 @@ ipcMain.handle('db-save-lp-snapshot', (_event, { accountId, tier, division, lp }
 // Daily rank series
 ipcMain.handle('db-get-rank-snapshots', (_event, accountId, queue) => {
   try {
-    return { success: true, snapshots: db.getRankSnapshots(accountId, queue ?? 'RANKED_SOLO_5x5') };
+    // No queue means every queue — the profile filters client-side so one call
+    // feeds the solo chart and each queue card.
+    return { success: true, snapshots: db.getRankSnapshots(accountId, queue ?? null) };
   } catch (error) {
     console.error('db-get-rank-snapshots error:', error);
     return { success: false, error: error.message, snapshots: [] };

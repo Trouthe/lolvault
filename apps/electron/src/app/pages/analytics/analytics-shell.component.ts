@@ -211,8 +211,16 @@ export class AnalyticsShellComponent {
   }
 
   /** LP snapshots only track solo/duo today, so other queues get none. */
+  /**
+   * Recorded days for one queue's card.
+   *
+   * Was solo-only, because the old `lp_snapshots` table had no queue column and
+   * everything in it was assumed to be solo — so the flex card could never show
+   * a trend no matter how much flex was played. The daily series is keyed by
+   * queue, so each card now gets its own history.
+   */
   snapshotsFor(queueType: string) {
-    return queueType === 'RANKED_SOLO_5x5' ? this.data.lpSnapshots() : [];
+    return this.data.rankSnapshots().filter((s) => s.queue === queueType);
   }
 
   // ── Rail panels ────────────────────────────────────────────────────────────

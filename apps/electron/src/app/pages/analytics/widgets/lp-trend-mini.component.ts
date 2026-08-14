@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LpSnapshot } from '../../../../types/electron';
-import { absoluteLpToLabel } from './lp-climb-chart.component';
+import { RankSnapshot } from '../../../../types/electron';
+import { absoluteLpToLabel, dayToLocalTime } from './lp-climb-chart.component';
 
 const DAY_MS = 86_400_000;
 const W = 100;
@@ -14,20 +14,28 @@ const H = 38;
 const PAD_X = 3;
 const PAD_Y = 4;
 
+/** A reading reduced to what the sparkline needs: when, and how much LP. */
+interface Point {
+  t: number;
+  lp: number;
+}
+
 interface Plotted {
   x: number;
   y: number;
-  snapshot: LpSnapshot;
+  snapshot: Point;
 }
 
 /**
- * Compact LP trend for the rail's ranked card.
+ * Compact rank trend for the rail's queue cards.
  *
- * Points are placed by **timestamp**, not by index. LP snapshots are captured
- * opportunistically while the app runs, so they cluster: a typical history is a
- * couple of readings months apart and three within the same hour. Spacing those
- * evenly would draw a steady climb that never happened — the time axis keeps a
- * long flat stretch flat and a single-session jump sharp.
+ * Points are placed by **date**, not by index. The series only holds days the
+ * account was actually recorded, so spacing points evenly would compress a
+ * two-month gap into the same width as an overnight climb. The time axis keeps
+ * a long flat stretch flat and a single jump sharp.
+ *
+ * Reads the daily series, so it works for any queue — flex included, which the
+ * old solo-only wiring left permanently blank.
  *
  * Drawn as inline SVG rather than a chart component: it is a sparkline with no
  * axes or interaction, so ApexCharts would cost far more than it gives.
@@ -267,7 +275,7 @@ interface Plotted {
   ],
 })
 export class LpTrendMiniComponent {
-  snapshots = input.required<LpSnapshot[]>();
+  snapshots = input.required<RankSnapshot[]>();
   windowDays = input<number>(30);
 
   readonly W = W;
@@ -277,23 +285,25 @@ export class LpTrendMiniComponent {
   readonly hovered = signal<number | null>(null);
 
   /**
-   * Snapshots to draw, oldest first.
+   * Readings to draw, oldest first.
    *
-   * Consecutive readings with identical LP are collapsed — the monitor samples
-   * repeatedly during a session and those duplicates add nothing but clutter.
-   * If the requested window holds fewer than two distinct readings, the whole
-   * history is used instead and the header says so.
+   * The daily series already holds at most one row per day, so the old
+   * collapse-consecutive-duplicates pass is gone with the noise it existed to
+   * hide. It would now delete real information: a day that ended on the LP it
+   * started on is a day that was *played* to a draw, not a repeated sample.
+   *
+   * If the requested window holds fewer than two readings the whole history is
+   * used instead, and the header says so.
    */
   private readonly source = computed(() => {
-    const all = [...this.snapshots()].sort((a, b) => a.timestamp - b.timestamp);
+    const all: Point[] = this.snapshots()
+      .map((s) => ({ t: dayToLocalTime(s.day), lp: s.score }))
+      .sort((a, b) => a.t - b.t);
 
-    const dedupe = (list: LpSnapshot[]) =>
-      list.filter((s, i) => i === 0 || s.absolute_lp !== list[i - 1].absolute_lp);
-
-    const windowed = dedupe(all.filter((s) => s.timestamp >= Date.now() - this.windowDays() * DAY_MS));
+    const windowed = all.filter((p) => p.t >= Date.now() - this.windowDays() * DAY_MS);
     if (windowed.length >= 2) return { points: windowed, windowed: true };
 
-    return { points: dedupe(all), windowed: false };
+    return { points: all, windowed: false };
   });
 
   readonly windowLabel = computed(() =>
@@ -305,11 +315,11 @@ export class LpTrendMiniComponent {
     const points = this.source().points;
     if (points.length < 2) return [];
 
-    const first = points[0].timestamp;
-    const last = points[points.length - 1].timestamp;
+    const first = points[0].t;
+    const last = points[points.length - 1].t;
     const span = last - first || 1;
 
-    const values = points.map((p) => p.absolute_lp);
+    const values = points.map((p) => p.lp);
     const min = Math.min(...values);
     const max = Math.max(...values);
     // A flat history would divide by zero; draw it mid-height instead.
@@ -320,8 +330,8 @@ export class LpTrendMiniComponent {
     const innerH = H - PAD_Y * 2;
 
     return points.map((snapshot) => ({
-      x: PAD_X + ((snapshot.timestamp - first) / span) * innerW,
-      y: flat ? H / 2 : H - PAD_Y - ((snapshot.absolute_lp - min) / range) * innerH,
+      x: PAD_X + ((snapshot.t - first) / span) * innerW,
+      y: flat ? H / 2 : H - PAD_Y - ((snapshot.lp - min) / range) * innerH,
       snapshot,
     }));
   });
@@ -342,11 +352,11 @@ export class LpTrendMiniComponent {
   readonly netLp = computed(() => {
     const pts = this.source().points;
     if (pts.length < 2) return 0;
-    return pts[pts.length - 1].absolute_lp - pts[0].absolute_lp;
+    return pts[pts.length - 1].lp - pts[0].lp;
   });
 
   private readonly bounds = computed(() => {
-    const values = this.source().points.map((p) => p.absolute_lp);
+    const values = this.source().points.map((p) => p.lp);
     return { min: Math.min(...values), max: Math.max(...values) };
   });
 
@@ -366,9 +376,9 @@ export class LpTrendMiniComponent {
   readonly lowLabel = computed(() => this.rangeLabels().low);
   readonly highLabel = computed(() => this.rangeLabels().high);
 
-  readonly startLabel = computed(() => this.dateLabel(this.source().points[0]?.timestamp));
+  readonly startLabel = computed(() => this.dateLabel(this.source().points[0]?.t));
   readonly endLabel = computed(() =>
-    this.dateLabel(this.source().points[this.source().points.length - 1]?.timestamp)
+    this.dateLabel(this.source().points[this.source().points.length - 1]?.t)
   );
 
   readonly ariaLabel = computed(
@@ -382,7 +392,7 @@ export class LpTrendMiniComponent {
     const point = this.plotted()[index];
     if (!point) return null;
 
-    const { timestamp, absolute_lp } = point.snapshot;
+    const { t: timestamp, lp: absolute_lp } = point.snapshot;
     return {
       x: point.x,
       rank: absoluteLpToLabel(Math.round(absolute_lp)),
@@ -400,8 +410,8 @@ export class LpTrendMiniComponent {
   tooltipFor(index: number): string {
     const point = this.plotted()[index];
     if (!point) return '';
-    const lp = Math.round(point.snapshot.absolute_lp);
-    return `${absoluteLpToLabel(lp)} ${lp % 100} LP, ${this.agoLabel(point.snapshot.timestamp)}`;
+    const lp = Math.round(point.snapshot.lp);
+    return `${absoluteLpToLabel(lp)} ${lp % 100} LP, ${this.agoLabel(point.snapshot.t)}`;
   }
 
   private agoLabel(timestamp: number): string {

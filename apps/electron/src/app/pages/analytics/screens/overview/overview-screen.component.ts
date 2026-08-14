@@ -58,8 +58,17 @@ export class OverviewScreenComponent {
    *
    * Null until there are two days to compare.
    */
+  /**
+   * Solo-queue days only. `rankSnapshots` carries every queue so one IPC call
+   * feeds both this chart and the rail's per-queue cards; plotting the mix
+   * would interleave two unrelated ladders into one line.
+   */
+  readonly soloRankSeries = computed(() =>
+    this.data.rankSnapshots().filter((s) => s.queue === 'RANKED_SOLO_5x5')
+  );
+
   readonly rankTrend = computed<{ net: number; since: string } | null>(() => {
-    const all = this.data.rankSnapshots();
+    const all = this.soloRankSeries();
 
     // Measure from the start of the *current* ladder. Spanning a split reset
     // would subtract last season's rank from this one and call the difference

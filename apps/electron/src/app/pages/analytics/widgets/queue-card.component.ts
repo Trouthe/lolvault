@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LpSnapshot } from '../../../../types/electron';
+import { RankSnapshot } from '../../../../types/electron';
 import { QueueCard } from '../models/analytics.types';
 import { RankStepperComponent } from './rank-stepper.component';
 import { LpTrendMiniComponent } from './lp-trend-mini.component';
@@ -214,7 +214,7 @@ import { IconComponent } from './icon.component';
 })
 export class QueueCardComponent {
   queue = input.required<QueueCard>();
-  snapshots = input<LpSnapshot[]>([]);
+  snapshots = input<RankSnapshot[]>([]);
 
   /** Two-way so the shell can expand the primary queue by default. */
   open = model<boolean>(false);
