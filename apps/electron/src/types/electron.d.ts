@@ -331,8 +331,16 @@ export interface RankSnapshot {
   losses: number | null;
   /** Games played this day; 0 when no win/loss baseline was available. */
   games: number;
-  /** Score delta versus the previous recorded day. */
+  /** Score delta versus the previous recorded day. 0 across a series break. */
   difference: number;
+  /**
+   * 1 when this row begins a new ladder — Riot's win/loss counters ran
+   * backwards, which only happens on a season or split reset. Never join a
+   * series across one: the previous row describes a different ladder.
+   */
+  series_start: number;
+  /** Riot's decay flag, or null when the source could not report it. */
+  inactive: number | null;
   observed_at: number;
 }
 

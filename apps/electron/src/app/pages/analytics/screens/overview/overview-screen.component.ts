@@ -59,7 +59,13 @@ export class OverviewScreenComponent {
    * Null until there are two days to compare.
    */
   readonly rankTrend = computed<{ net: number; since: string } | null>(() => {
-    const series = this.data.rankSnapshots();
+    const all = this.data.rankSnapshots();
+
+    // Measure from the start of the *current* ladder. Spanning a split reset
+    // would subtract last season's rank from this one and call the difference
+    // progress — the same mistake `difference` avoids per-row.
+    const lastReset = all.map((s) => s.series_start).lastIndexOf(1);
+    const series = lastReset > 0 ? all.slice(lastReset) : all;
     if (series.length < 2) return null;
 
     const first = series[0];

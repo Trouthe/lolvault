@@ -321,6 +321,29 @@ const MIGRATIONS = [
              ), score);
     `);
   },
+
+  // v6 → v7: mark series breaks and decay.
+  //
+  // `difference` assumed the previous row was comparable to this one. Across a
+  // season or split reset it is not: everyone drops, and the delta reads as an
+  // ~800 LP collapse that the player did not earn. A reset is detectable
+  // without guessing, because Riot restarts the win/loss counters — if
+  // wins+losses went *backwards*, the ladder reset underneath us. LP alone
+  // cannot tell a reset from a losing streak, so counter regression is the only
+  // honest signal, and `series_start` records where one was seen.
+  //
+  // `inactive` is Riot's decay flag. Diamond+ shed LP for not playing, and a
+  // decay drop drawn as a loss is a lie about what happened. It cannot be
+  // recovered later, so it is stored now even though nothing reads it yet.
+  (d) => {
+    const cols = d.pragma('table_info(rank_snapshots)').map((c) => c.name);
+    if (!cols.includes('series_start')) {
+      d.exec('ALTER TABLE rank_snapshots ADD COLUMN series_start INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!cols.includes('inactive')) {
+      d.exec('ALTER TABLE rank_snapshots ADD COLUMN inactive INTEGER');
+    }
+  },
 ];
 
 function runMigrations() {
@@ -413,6 +436,8 @@ function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
   const score = computeAbsoluteLp(tier, division, leaguePoints);
   const day = localDay(when);
 
+  const inactive = typeof entry.inactive === 'boolean' ? (entry.inactive ? 1 : 0) : null;
+
   const prev = getDb()
     .prepare(
       `SELECT score, wins, losses FROM rank_snapshots
@@ -421,21 +446,27 @@ function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
     )
     .get(accountId, queue, day);
 
-  const difference = prev ? score - prev.score : 0;
+  const haveCounts =
+    prev && wins != null && losses != null && prev.wins != null && prev.losses != null;
 
-  // Only claim a game count when both ends of the comparison actually have one.
-  // A negative delta means the season rolled over; report 0 rather than a lie.
-  const games =
-    prev && wins != null && losses != null && prev.wins != null && prev.losses != null
-      ? Math.max(0, wins + losses - (prev.wins + prev.losses))
-      : 0;
+  // Riot restarts the win/loss counters on a season or split reset, so counters
+  // running backwards is unambiguous evidence the ladder reset underneath us.
+  // An LP drop alone is not — that is just as likely to be a losing streak.
+  const seriesStart = haveCounts && wins + losses < prev.wins + prev.losses ? 1 : 0;
+
+  // Never measure across a reset: the previous row describes a different
+  // ladder, and subtracting it reports a collapse the player did not earn.
+  const difference = prev && !seriesStart ? score - prev.score : 0;
+
+  // Only claim a game count when both ends of the comparison have one.
+  const games = haveCounts && !seriesStart ? wins + losses - (prev.wins + prev.losses) : 0;
 
   getDb()
     .prepare(
       `INSERT INTO rank_snapshots
          (account_id, queue, day, tier, division, league_points, score,
-          wins, losses, games, difference, observed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          wins, losses, games, difference, series_start, inactive, observed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (account_id, queue, day) DO UPDATE SET
          tier          = excluded.tier,
          division      = excluded.division,
@@ -445,6 +476,8 @@ function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
          losses        = excluded.losses,
          games         = excluded.games,
          difference    = excluded.difference,
+         series_start  = excluded.series_start,
+         inactive      = excluded.inactive,
          observed_at   = excluded.observed_at`
     )
     .run(
@@ -459,10 +492,24 @@ function recordRankSnapshot(accountId, queue, entry, when = Date.now()) {
       losses,
       games,
       difference,
+      seriesStart,
+      inactive,
       when
     );
 
-  return { accountId, queue, day, tier, division, leaguePoints, score, games, difference };
+  return {
+    accountId,
+    queue,
+    day,
+    tier,
+    division,
+    leaguePoints,
+    score,
+    games,
+    difference,
+    seriesStart,
+    inactive,
+  };
 }
 
 /** Daily rank series for one account and queue, oldest first. */

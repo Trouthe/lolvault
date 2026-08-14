@@ -55,7 +55,18 @@ raw.close();
 
 // ── Migration ─────────────────────────────────────────────────────────────────
 const handle = db.initDatabase(dir);
-check('user_version advances to 6', handle.pragma('user_version', { simple: true }), 6);
+
+// Asserted against the schema rather than a literal version, so adding a
+// migration does not fail a test that has nothing to do with it.
+const schemaCols = handle.pragma('table_info(rank_snapshots)').map((c) => c.name);
+const requiredCols = [
+  'account_id', 'queue', 'day', 'tier', 'division', 'league_points', 'score',
+  'wins', 'losses', 'games', 'difference', 'series_start', 'inactive', 'observed_at',
+];
+check('every rank_snapshots column exists',
+  requiredCols.filter((c) => !schemaCols.includes(c)), []);
+check('migrations ran past the daily-series version',
+  handle.pragma('user_version', { simple: true }) >= 6, true);
 
 const series = db.getRankSnapshots('acc1');
 check('3 readings over 2 days collapse to 2 rows', series.length, 2);
@@ -99,22 +110,49 @@ check('missing LP writes nothing',
   db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5', { tier: 'EMERALD', rank: 'II' }), null);
 check('guarded calls leave the series alone', db.getRankSnapshots('acc1').length, 4);
 
-// A season reset lowers wins+losses; games must not go negative.
+// ── Season / split resets ─────────────────────────────────────────────────────
+// Counters running backwards is the only unambiguous reset signal: an LP drop
+// on its own is indistinguishable from a losing streak.
 db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5',
   { tier: 'SILVER', rank: 'I', leaguePoints: 0, wins: 1, losses: 0 }, at(2026, 8, 7, 11));
-check('a reset does not emit negative games', db.getRankSnapshots('acc1')[4].games, 0);
+const afterReset = db.getRankSnapshots('acc1')[4];
+check('a reset does not emit negative games', afterReset.games, 0);
+check('a reset is flagged as a series start', afterReset.series_start, 1);
+check('difference is not measured across a reset', afterReset.difference, 0);
+
+// The day after a reset is an ordinary day again, measured from the new floor.
+db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5',
+  { tier: 'SILVER', rank: 'I', leaguePoints: 40, wins: 4, losses: 1 }, at(2026, 8, 8, 11));
+const postReset = db.getRankSnapshots('acc1')[5];
+check('normal service resumes after a reset', postReset.series_start, 0);
+check('difference measured from the new floor', postReset.difference, 40);
+check('games measured from the new floor', postReset.games, 4 + 1 - (1 + 0));
+
+// ── Decay flag ────────────────────────────────────────────────────────────────
+db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5',
+  { tier: 'SILVER', rank: 'I', leaguePoints: 20, wins: 4, losses: 1, inactive: true },
+  at(2026, 8, 9, 11));
+check('decay flag persisted', db.getRankSnapshots('acc1')[6].inactive, 1);
+db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5',
+  { tier: 'SILVER', rank: 'I', leaguePoints: 25, wins: 5, losses: 1, inactive: false },
+  at(2026, 8, 10, 11));
+check('decay flag cleared when Riot clears it', db.getRankSnapshots('acc1')[7].inactive, 0);
+// The LCU does not report decay; unknown must stay unknown rather than false.
+db.recordRankSnapshot('acc1', 'RANKED_SOLO_5x5',
+  { tier: 'SILVER', rank: 'I', leaguePoints: 30 }, at(2026, 8, 11, 11));
+check('decay unknown stays null', db.getRankSnapshots('acc1')[8].inactive, null);
 
 // ── Queues are independent series ─────────────────────────────────────────────
 db.recordRankSnapshot('acc1', 'RANKED_FLEX_SR',
   { tier: 'GOLD', rank: 'I', leaguePoints: 30, wins: 10, losses: 5 }, at(2026, 8, 6, 11));
 check('flex is its own series', db.getRankSnapshots('acc1', 'RANKED_FLEX_SR').length, 1);
-check('solo is unaffected by a flex write', db.getRankSnapshots('acc1').length, 5);
+check('solo is unaffected by a flex write', db.getRankSnapshots('acc1').length, 9);
 check('queues are discoverable', db.getRankSnapshotQueues('acc1'),
   ['RANKED_FLEX_SR', 'RANKED_SOLO_5x5']);
 
 // ── Migrations are idempotent ─────────────────────────────────────────────────
 db.initDatabase(dir);
-check('re-initialising leaves the series intact', db.getRankSnapshots('acc1').length, 5);
+check('re-initialising leaves the series intact', db.getRankSnapshots('acc1').length, 9);
 
 // ── Teardown ──────────────────────────────────────────────────────────────────
 console.log(`\n${failures === 0 ? 'ALL PASS' : `${failures} FAILURE(S)`}`);

@@ -123,19 +123,43 @@ export class LpClimbChartComponent {
       : 'Rank is recorded while LoL Vault is open. Riot publishes no rank history, so this can only show days recorded from here on.'
   );
 
-  readonly series = computed(() => [
-    {
-      name: 'Rank',
-      data: this.snapshots().map((s) => ({ x: dayToLocalTime(s.day), y: s.score })),
-    },
-  ]);
+  /**
+   * Points to plot, alongside the row each one came from.
+   *
+   * The two are built together and stay index-aligned because the break points
+   * below have no row: ApexCharts reports a hovered point by index, so a
+   * separate lookup into `snapshots()` would silently point at the wrong day
+   * for every point after the first reset.
+   */
+  private readonly plotted = computed(() => {
+    const points: { x: number; y: number | null }[] = [];
+    const rows: (RankSnapshot | null)[] = [];
+
+    for (const s of this.snapshots()) {
+      const x = dayToLocalTime(s.day);
+      // A null y breaks an ApexCharts line. Without the break, a split reset
+      // draws a sheer ~800 LP cliff joining two unrelated ladders — visually
+      // the worst moment of the player's year, and something that never
+      // happened. Placed a millisecond before the row so ordering holds.
+      if (s.series_start && points.length > 0) {
+        points.push({ x: x - 1, y: null });
+        rows.push(null);
+      }
+      points.push({ x, y: s.score });
+      rows.push(s);
+    }
+
+    return { points, rows };
+  });
+
+  readonly series = computed(() => [{ name: 'Rank', data: this.plotted().points }]);
 
   readonly options = computed(() => {
     // Depend on the theme revision so colours refresh when the theme changes.
     this.chartTheme.revision();
     const base = this.chartTheme.baseOptions(this.height());
     const palette = this.chartTheme.palette();
-    const snaps = this.snapshots();
+    const { points, rows } = this.plotted();
 
     return {
       ...base,
@@ -155,7 +179,7 @@ export class LpClimbChartComponent {
       // Mark real samples while the series is short, so a sparse history reads
       // as "four readings" rather than as a continuous recording. Past ~60
       // points the dots stop being informative and start being noise.
-      markers: { size: snaps.length <= 60 ? 3 : 0, hover: { size: 5 } },
+      markers: { size: points.length <= 60 ? 3 : 0, hover: { size: 5 } },
       dataLabels: { enabled: false },
       xaxis: {
         type: 'datetime' as const,
@@ -177,7 +201,8 @@ export class LpClimbChartComponent {
         // reading — without them a flat day is indistinguishable from an
         // unplayed one.
         custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
-          const snap = snaps[dataPointIndex];
+          // Break points have no row and nothing to say about them.
+          const snap = rows[dataPointIndex];
           if (!snap) return '';
 
           const time = dayToLocalTime(snap.day);
@@ -191,14 +216,26 @@ export class LpClimbChartComponent {
           const trend = snap.difference > 0 ? 'up' : snap.difference < 0 ? 'down' : 'flat';
           const games = snap.games === 1 ? '1 game' : `${snap.games} games`;
 
+          // A reset row's delta describes a different ladder, and a decayed
+          // drop was not a loss. Both say so rather than showing a number that
+          // invites the wrong reading.
+          const note = snap.series_start
+            ? '<div class="lp-tip-note">New split — LP reset</div>'
+            : snap.inactive
+              ? '<div class="lp-tip-note">Inactive — LP may be decaying</div>'
+              : '';
+
+          const showDelta = !snap.series_start && (snap.games > 0 || snap.difference !== 0);
+
           return `
             <div class="lp-tip">
               <div class="lp-tip-rank">${absoluteLpToLabel(snap.score)}</div>
               ${
-                snap.games > 0 || snap.difference !== 0
+                showDelta
                   ? `<div class="lp-tip-delta ${trend}">${sign}${snap.difference} LP · ${games}</div>`
                   : ''
               }
+              ${note}
               <div class="lp-tip-when">${daysAgoLabel(time)}</div>
               <div class="lp-tip-date">${dateStr}</div>
             </div>`;
