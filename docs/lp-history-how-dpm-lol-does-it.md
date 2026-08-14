@@ -596,12 +596,12 @@ Set `ETag` and let the browser 304. That is the entire fast path.
 | # | Trap | Handling |
 |---|---|---|
 | 1 | **Dev keys expire every 24h** and sustain 1/60th of production throughput (0.83 vs 50 req/s). | Nothing beyond Tier 0/1 is possible without applying for production. Start that application now. |
-| 2 | **Split/season resets** drop everyone's LP hard. A naive `difference` shows a −800 LP "loss". | Store a `split_id`; never compute a delta across a boundary. dpm.lol's series starting 2026-02-15 is most likely exactly this. |
-| 3 | **Decay.** Diamond+ lose LP for inactivity. `inactive: true` ships in the ladder entry. | Persist the flag; render decay differently from a loss, or the graph lies. |
+| 2 | ✅ **Split/season resets** drop everyone's LP hard. A naive `difference` shows a −800 LP "loss". | **Done** (`7726218`). No `split_id` needed: Riot restarts the win/loss counters, so counters running *backwards* is unambiguous evidence of a reset, where an LP drop alone is not. Stored as `series_start`; deltas never cross it and the chart cuts the line there. |
+| 3 | ✅ **Decay.** Diamond+ lose LP for inactivity. `inactive: true` ships in the ladder entry. | **Done** (`7726218`). Persisted as `inactive`, null from sources that cannot report it (the LCU cannot) — unknown and false are different things. Tooltip names decay instead of showing a delta. |
 | 4 | **Apex tiers have no divisions.** Master/GM/Challenger all report `rank: "I"` with unbounded LP. | Your existing [`lp-climb-chart.component.ts:29`](apps/electron/src/app/pages/analytics/widgets/lp-climb-chart.component.ts#L29) already special-cases this — keep that behaviour server-side too. |
 | 5 | **Unranked / placements** return an empty array, not an error. | Write no row. Do not coerce to 0 — a zero point drags the whole Y-axis to Iron. |
 | 6 | **Players move between pages mid-sweep.** I measured a 5-entry overlap between consecutive pages of the same division. | Upsert by `(puuid, queue, day)` and it's self-healing: a duplicate is a no-op, a missed player is picked up tomorrow. |
-| 7 | **Flat gaps.** Inactive days have no row. | Carry the last value forward when charting (dpm.lol does — see the 7-week flat stretch in §1.5). Do not interpolate diagonally; that draws a climb that never happened. |
+| 7 | ⚠️ **Flat gaps.** Inactive days have no row. | Carry the last value forward when charting (dpm.lol does — see the 7-week flat stretch in §1.5). Do not interpolate diagonally; that draws a climb that never happened. **Written here, then shipped wrong anyway** (`4bba7cb`) and only caught by looking at the rendered chart: a straight line ran two months between June and August readings. Fixed with a stepped curve in `d4f34fb`. Neither the build nor the unit tests could have caught it. |
 | 8 | **Riot ToS.** Crawling the full ladder is legitimate and standard, but you must respect rate limits, disclose data usage, and never store PII beyond what the API returns. | Have a privacy policy before applying for the production key — it's part of the review. |
 | 9 | **`match-v5` cannot attribute LP to a match.** | Attribute by timestamp bracketing between adjacent snapshots. It's an approximation and should be labelled as one — exactly as your `lp-trend-mini` comment already does. |
 | 10 | **Your committed API key.** | See §5. Fix before anything else ships. |
@@ -622,8 +622,17 @@ Set `ETag` and let the browser 304. That is the entire fast path.
 | ✅ | `rank-recorder.js` — one pass 15s after launch, then every 6 hours, via the Riot API so it works with the client closed | `5c2a2d1` |
 | ✅ | Zero-net-LP days no longer discarded by the acc-card dedupe rule | `5417b5b` |
 | ✅ | `LpClimbChartComponent` mounted on the overview, retargeted to the daily series | `4bba7cb` |
+| ✅ | Chart no longer interpolates across unrecorded gaps; header note no longer reads a two-month gain as "over 4 days" | `d4f34fb` |
+| ✅ | Season/split resets (`series_start`) and decay (`inactive`) — gotchas #2 and #3 | `7726218` |
+| ✅ | Rail sparkline and queue cards moved onto the daily series, so flex gets a trend | `a68fba5` |
 
-Covered by `npm run test:db --workspace=apps/electron` — 39 assertions across the migration and the recorder's degradation paths.
+Covered by `npm run test:db --workspace=apps/electron` — 50 assertions across the migration, reset/decay handling, and the recorder's degradation paths.
+
+### Verified against the real app, not just the suite
+
+The migration ran on the live 39 MB dev database: **15/15 rows score-consistent, 15/15 difference-consistent, zero duplicate days, zero lost days**. The recorder logs `startup pass: 7 row(s) across 9 account(s)`, and rows written after the change carry win/loss counts where backfilled ones do not — the difference is visible proof it reached Riot.
+
+Two bugs got through the build, the typechecker and 39 passing assertions, and were caught only by launching the app and **looking at the chart** (gotcha #7, and a header that described a two-month climb as four days' work). Both are the kind that render perfectly and say something false. Worth remembering the next time a change here looks green.
 
 **The recorder is live from this point on.** Everything above changes what gets written down going forward; none of it can recover the past, and nothing ever will.
 
