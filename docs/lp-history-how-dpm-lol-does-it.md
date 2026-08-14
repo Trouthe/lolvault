@@ -625,6 +625,9 @@ Set `ETag` and let the browser 304. That is the entire fast path.
 | ✅ | Chart no longer interpolates across unrecorded gaps; header note no longer reads a two-month gain as "over 4 days" | `d4f34fb` |
 | ✅ | Season/split resets (`series_start`) and decay (`inactive`) — gotchas #2 and #3 | `7726218` |
 | ✅ | Rail sparkline and queue cards moved onto the daily series, so flex gets a trend | `a68fba5` |
+| ✅ | Peak badge and dashboard trend moved across; `rank-scale.ts` extracted so the dashboard does not import a charting library | `90a8e4c` |
+
+`lp_snapshots` now has no readers but is still written, deliberately: the daily table keeps only each day's final reading, and per-match LP attribution (gotcha #9) needs readings either side of a match. It is the raw log; `rank_snapshots` is the queryable series.
 
 Covered by `npm run test:db --workspace=apps/electron` — 50 assertions across the migration, reset/decay handling, and the recorder's degradation paths.
 
@@ -641,6 +644,16 @@ Two bugs got through the build, the typechecker and 39 passing assertions, and w
 1. **Apply for a production key.** Long lead time and it gates everything below, so start it first even though it finishes last. Needs a public-facing product and a privacy policy.
 2. **Tier 1 — server-side per-account recorder.** Lifts the heartbeat off the desktop app so history accrues with LoL Vault closed and syncs to web. §6.2 sketches this on Firebase scheduled functions; **the plan is now Railway**, which changes the host but not the design — same one-request-per-account-per-pass, same daily upsert keyed on `(puuid, queue, day)`.
 3. **Tier 2 — ladder crawler.** Only once arbitrary-player history is actually wanted, and only with a production key and Postgres behind it.
+
+#### Decision: the desktop heartbeat stays when Tier 1 lands
+
+Run both recorders, rather than retiring `rank-recorder.js` once the server one exists.
+
+The duplication is real but nearly free: both write the same `(account, queue, day)` key and the row upserts, so the second writer of any day is a no-op that costs one Riot request. Against a production key's 50 req/s that is not a number worth optimising.
+
+What it buys is a second independent path to a stream that **cannot be reconstructed if it is ever missed** — no Riot endpoint serves LP history, which is the entire premise of this document. A server-only design goes blind whenever the backend is down, the deploy is mid-rollout, the key is rotated, or the user is signed out; the desktop recorder covers all four, and it is the only one that works at all before a user has an account on the backend.
+
+Redundancy on an unrecoverable data stream is the cheap side of the trade. Revisit only if request volume ever becomes the constraint, which at one request per account per six hours it will not.
 
 ### Deliberately skipped
 
