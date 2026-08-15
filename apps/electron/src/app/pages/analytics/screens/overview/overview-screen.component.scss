@@ -211,19 +211,6 @@
   opacity: 1;
 }
 
-// Net LP inline in the heatmap's note, where the rest of the line stays muted.
-.note-lp {
-  font-weight: 700;
-
-  &.up {
-    color: #2f9e6f;
-  }
-
-  &.down {
-    color: var(--danger);
-  }
-}
-
 // ── KDA ──────────────────────────────────────────────────────────────────────
 
 // The headline number sits beside its breakdown rather than above it, so the
@@ -346,6 +333,89 @@
 }
 
 .match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// ── Day grouping ─────────────────────────────────────────────────────────────
+//
+// The header is the only thing separating one day from the next, so it carries
+// the separation itself — no divider rules, which read as clutter at this
+// density.
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+  flex-wrap: wrap;
+}
+
+.day-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-text);
+  letter-spacing: 0.01em;
+}
+
+.day-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+
+// Pills rather than plain text: at a glance the eye should find the day's
+// record without reading it.
+.day-stats > span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--muted);
+  color: var(--secondary-text);
+  white-space: nowrap;
+}
+
+.day-score.good {
+  color: #2f9e6f;
+}
+
+.day-score.poor {
+  color: var(--danger);
+}
+
+.day-lp.up {
+  color: #2f9e6f;
+}
+
+.day-lp.down {
+  color: var(--danger);
+}
+
+.day-wins {
+  color: #4b8cf7;
+}
+
+.day-losses {
+  color: var(--danger);
+}
+
+.day-remakes {
+  opacity: 0.8;
+}
+
+.day-games {
   display: flex;
   flex-direction: column;
   gap: 6px;

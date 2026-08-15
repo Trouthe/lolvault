@@ -149,18 +149,17 @@ export interface RecentGame {
  * Two sources feed this, and they know different things.
  *
  * **Cached games** know the result of each game, so they give wins and losses —
- * but only for games actually pulled from Riot, which is a fraction of a year
- * until the year sweep has run.
+ * but only for games actually pulled from Riot, and pulling a year of them costs
+ * one request each.
  *
- * **The daily rank series** (`rank_snapshots`, written by the recorder and by
- * every ladder sweep) knows how many ranked games were played and how much LP
- * moved, because both fall out of Riot's `wins`/`losses` counters and LP. It
- * knows nothing about individual results. Critically it covers days we hold no
- * games for at all, so it fills in a grid that would otherwise be blank.
+ * **The daily rank series** (`rank_snapshots`) knows only *how many* ranked
+ * games were played, because that falls out of Riot's `wins`/`losses` counters
+ * for free — one request covers a day no matter how much was played. It cannot
+ * know individual results, but it covers days we hold no games for at all.
  *
- * Where they overlap, cached games win: a real 3W-1L beats "4 games, +12 LP".
- * Where only the rank series has anything, the day is marked `estimated` and
- * coloured by LP movement instead of by record.
+ * Where they overlap, cached games win: a real 3W-1L beats "4 games". Where only
+ * the rank series has anything, the day is marked `estimated` — drawn as played,
+ * with no record claimed for it.
  */
 export interface ActivityDay {
   date: Date;
@@ -171,19 +170,36 @@ export interface ActivityDay {
   /** Before the first day we have any data for — rendered as "no data". */
   untracked: boolean;
   /**
-   * LP gained or lost this day, from the recorded rank series. Null when no
-   * rank reading brackets the day — which is not the same as zero.
-   */
-  lpChange: number | null;
-  /** Rank at the end of this day, when a reading was recorded. */
-  rank: { tier: string; division: string; leaguePoints: number } | null;
-  /**
    * True when `games` came from the rank series rather than from cached games,
    * so the cell has a count but no win/loss split.
    */
   estimated: boolean;
-  /** Riot's decay flag on this day's reading — an LP drop that was not a loss. */
-  inactive: boolean;
+}
+
+/**
+ * One calendar day of match history, with the day's own summary.
+ *
+ * A flat list of cards makes every game look equally far from every other, so a
+ * three-game evening and a three-week gap read the same. Grouping restores the
+ * shape of a session, and the header is where the day's figures belong — a
+ * per-day record and LP swing that no individual card can show.
+ */
+export interface MatchDayGroup<T> {
+  /** Local 'YYYY-MM-DD', and the group's stable track key. */
+  key: string;
+  date: Date;
+  games: T[];
+  wins: number;
+  losses: number;
+  /** Games that ended in a remake, counted separately from the record. */
+  remakes: number;
+  /** Mean 0-100 performance rating across the day, or null if unrateable. */
+  avgScore: number | null;
+  /**
+   * Ranked LP gained or lost on this day, from the recorded rank series.
+   * Null when no reading brackets the day — which is not the same as zero.
+   */
+  lpChange: number | null;
 }
 
 /** A ranked queue entry rendered as a collapsible card in the rail. */

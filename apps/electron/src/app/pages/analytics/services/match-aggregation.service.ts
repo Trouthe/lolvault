@@ -442,10 +442,14 @@ export class MatchAggregationService {
     startDate: Date;
     totalGames: number;
     totalWins: number;
-    /** Net LP across every day of the year that has a reading. */
-    totalLp: number;
-    /** True when any day carries LP, so the UI can offer an LP legend. */
-    hasLp: boolean;
+    /**
+     * Games whose result we actually know — the cached ones.
+     *
+     * Never divide `totalWins` by `totalGames`: the latter includes days known
+     * only from the rank series, which contribute a count but no wins. Doing so
+     * reports a win rate that falls as the grid gets *more* complete.
+     */
+    ratedGames: number;
     /** Busiest day in the year, used to scale the colour ramp. */
     busiestDay: number;
   } {
@@ -513,8 +517,7 @@ export class MatchAggregationService {
     let lastMonth = -1;
     let totalGames = 0;
     let totalWins = 0;
-    let totalLp = 0;
-    let hasLp = false;
+    let ratedGames = 0;
     let busiestDay = 0;
     let col = 0;
 
@@ -543,17 +546,9 @@ export class MatchAggregationService {
         const estimated = cachedGames === 0 && recordedGames > 0;
         const games = cachedGames || recordedGames;
 
-        // A series break is a reset, not a climb: its `difference` is already
-        // zeroed at write time, and its LP is not comparable to the day before.
-        const lpChange =
-          reading && !reading.series_start ? reading.difference : reading ? 0 : null;
-
         totalGames += games;
         totalWins += wins;
-        if (lpChange !== null) {
-          totalLp += lpChange;
-          hasLp = true;
-        }
+        ratedGames += cachedGames;
         if (games > busiestDay) busiestDay = games;
 
         week.push({
@@ -563,16 +558,7 @@ export class MatchAggregationService {
           games,
           future: date > today,
           untracked: outsideYear || date < earliest,
-          lpChange,
-          rank: reading
-            ? {
-                tier: reading.tier,
-                division: reading.division,
-                leaguePoints: reading.league_points,
-              }
-            : null,
           estimated,
-          inactive: reading?.inactive === 1,
         });
       }
 
@@ -592,7 +578,15 @@ export class MatchAggregationService {
       col++;
     }
 
-    return { weeks, monthLabels, startDate: earliest, totalGames, totalWins, totalLp, hasLp, busiestDay };
+    return {
+      weeks,
+      monthLabels,
+      startDate: earliest,
+      totalGames,
+      totalWins,
+      ratedGames,
+      busiestDay,
+    };
   }
 
   /** Longest current streak of the same result, from the newest match backwards. */

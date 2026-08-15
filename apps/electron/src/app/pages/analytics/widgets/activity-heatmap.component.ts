@@ -64,17 +64,16 @@ import { ActivityDay } from '../models/analytics.types';
             <span class="detail-date">{{ day.date | date: 'EEE d MMM y' }}</span>
             @if (day.untracked || day.future) {
               <span class="detail-muted">No Data</span>
-            } @else if (day.games === 0 && day.lpChange === null) {
+            } @else if (day.games === 0) {
               <span class="detail-muted">No games</span>
             } @else {
-              @if (day.games) {
-                <span class="detail-games">
-                  {{ day.games }} {{ day.games === 1 ? 'game' : 'games' }}
-                </span>
-              }
-              <!-- Only cached games carry a result, so a day known only from the
-                   rank series shows its LP and says nothing it cannot know. -->
-              @if (!day.estimated && day.games) {
+              <span class="detail-games">
+                {{ day.games }} {{ day.games === 1 ? 'game' : 'games' }}
+              </span>
+              <!-- Only cached games carry a result. A day known only from the
+                   rank series has a count and nothing else, so it says nothing
+                   it cannot know rather than showing a 0W-0L record. -->
+              @if (!day.estimated) {
                 <span class="detail-wl">
                   <b class="w">{{ day.wins }}W</b> <b class="l">{{ day.losses }}L</b>
                 </span>
@@ -86,26 +85,9 @@ import { ActivityDay } from '../models/analytics.types';
                   {{ (day.wins / day.games) * 100 | number: '1.0-0' }}%
                 </span>
               }
-              @if (day.lpChange !== null) {
-                <span
-                  class="detail-lp"
-                  [class.up]="day.lpChange > 0"
-                  [class.down]="day.lpChange < 0"
-                >
-                  {{ day.lpChange > 0 ? '+' : '' }}{{ day.lpChange }} LP
-                </span>
-              }
-              @if (day.rank; as rank) {
-                <span class="detail-rank">{{ rankLabel(rank) }}</span>
-              }
-              @if (day.inactive) {
-                <span class="detail-muted" title="Riot flagged this account as decaying">
-                  decay
-                </span>
-              }
             }
           } @else {
-            <span class="detail-hint">Hover a day for games, record and LP</span>
+            <span class="detail-hint">Hover a day for games played and record</span>
           }
         </div>
 
@@ -278,24 +260,6 @@ import { ActivityDay } from '../models/analytics.types';
         color: var(--danger);
       }
 
-      .detail-lp {
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        color: var(--secondary-text);
-      }
-
-      .detail-lp.up {
-        color: #2f9e6f;
-      }
-
-      .detail-lp.down {
-        color: var(--danger);
-      }
-
-      .detail-rank {
-        color: var(--secondary-text);
-        opacity: 0.85;
-      }
 
       .detail-muted,
       .detail-hint {
@@ -354,12 +318,9 @@ export class ActivityHeatmapComponent {
     const volume = Math.min(1, day.games / Math.max(1, this.busiestDay()));
     const alpha = 0.32 + volume * 0.68;
 
-    // Days with cached games are coloured by their record. Days known only from
-    // the rank series have no record, so LP movement stands in for one — it is
-    // the same question ("did the day go well") answered from the other source.
-    const balance = day.estimated
-      ? Math.sign(day.lpChange ?? 0) * Math.min(1, Math.abs(day.lpChange ?? 0) / 60)
-      : (day.wins - day.losses) / day.games;
+    // A day we only know the game count for gets the neutral slate below: it was
+    // played, and nothing here knows how it went.
+    const balance = day.estimated ? 0 : (day.wins - day.losses) / day.games;
 
     // An even day is neither red nor green — it gets a neutral slate so a 3-3
     // session does not have to pick a side.
@@ -371,15 +332,6 @@ export class ActivityHeatmapComponent {
       : `rgba(214, 69, 93, ${alpha * strength})`;
   }
 
-  /** "Emerald II 39 LP", or just the tier for apex ranks, which have no division. */
-  rankLabel(rank: { tier: string; division: string; leaguePoints: number }): string {
-    const tier = rank.tier.charAt(0) + rank.tier.slice(1).toLowerCase();
-    const apex = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rank.tier.toUpperCase());
-    return apex
-      ? `${tier} ${rank.leaguePoints} LP`
-      : `${tier} ${rank.division} ${rank.leaguePoints} LP`;
-  }
-
   describe(day: ActivityDay): string {
     const date = day.date.toLocaleDateString(undefined, {
       weekday: 'short',
@@ -387,14 +339,8 @@ export class ActivityHeatmapComponent {
       month: 'short',
     });
     if (day.future || day.untracked) return `${date}: no data`;
-    if (day.games === 0 && day.lpChange === null) return `${date}: no games`;
-
-    const parts: string[] = [];
-    if (day.games) parts.push(`${day.games} games`);
-    if (!day.estimated && day.games) parts.push(`${day.wins}W ${day.losses}L`);
-    if (day.lpChange !== null) {
-      parts.push(`${day.lpChange > 0 ? '+' : ''}${day.lpChange} LP`);
-    }
-    return `${date}: ${parts.join(', ')}`;
+    if (day.games === 0) return `${date}: no games`;
+    if (day.estimated) return `${date}: ${day.games} games`;
+    return `${date}: ${day.games} games, ${day.wins}W ${day.losses}L`;
   }
 }

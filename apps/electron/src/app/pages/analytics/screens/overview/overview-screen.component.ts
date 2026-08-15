@@ -12,11 +12,24 @@ import { ActivityHeatmapComponent } from '../../widgets/activity-heatmap.compone
 import { MostPlayedChampionsComponent } from '../../widgets/most-played-champions.component';
 import { MasteryPodiumComponent } from '../../widgets/mastery-podium.component';
 import { HistoryDepthComponent } from '../../widgets/history-depth.component';
-import { LpClimbChartComponent } from '../../widgets/lp-climb-chart.component';
 import { MatchCardComponent } from '../../match/match-card.component';
 import { BackfillControlComponent } from '../../widgets/backfill-control.component';
 import { SegmentOption, SegmentedToggleComponent } from '../../widgets/segmented-toggle.component';
-import { queueName } from '../../models/analytics.types';
+import { MatchDayGroup, queueName } from '../../models/analytics.types';
+
+/**
+ * Local 'YYYY-MM-DD' for a date.
+ *
+ * Matches the key `rank_snapshots.day` is written with in the main process
+ * (`database.js` `localDay`), so a day's games and a day's LP reading line up
+ * without either side converting. Built by hand rather than via `toISOString`,
+ * which would silently shift a late-night session into the next day.
+ */
+function localDayKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 @Component({
   selector: 'app-overview-screen',
@@ -31,7 +44,6 @@ import { queueName } from '../../models/analytics.types';
     MostPlayedChampionsComponent,
     MasteryPodiumComponent,
     HistoryDepthComponent,
-    LpClimbChartComponent,
     MatchCardComponent,
     BackfillControlComponent,
     SegmentedToggleComponent,
@@ -48,47 +60,13 @@ export class OverviewScreenComponent {
   readonly expandedMatchId = signal<string | null>(null);
 
   /**
-   * Net LP across the recorded series, for the panel header.
-   *
-   * Labelled with the date the series *starts*, not with how many rows it has.
-   * "over 4 days" was read as "in the last four days" when it actually meant
-   * "across the four days we happened to record" — for an account first seen in
-   * June and next seen in August, that is a two-month gain described as four
-   * days of work. Naming the start date cannot be misread that way.
-   *
-   * Null until there are two days to compare.
-   */
-  /**
    * Solo-queue days only. `rankSnapshots` carries every queue so one IPC call
-   * feeds both this chart and the rail's per-queue cards; plotting the mix
-   * would interleave two unrelated ladders into one line.
+   * feeds the heatmap, the match-day headers and the rail's per-queue cards;
+   * every consumer narrows to the queue it means.
    */
   readonly soloRankSeries = computed(() =>
     this.data.rankSnapshots().filter((s) => s.queue === 'RANKED_SOLO_5x5')
   );
-
-  readonly rankTrend = computed<{ net: number; since: string } | null>(() => {
-    const all = this.soloRankSeries();
-
-    // Measure from the start of the *current* ladder. Spanning a split reset
-    // would subtract last season's rank from this one and call the difference
-    // progress — the same mistake `difference` avoids per-row.
-    const lastReset = all.map((s) => s.series_start).lastIndexOf(1);
-    const series = lastReset > 0 ? all.slice(lastReset) : all;
-    if (series.length < 2) return null;
-
-    const first = series[0];
-    const last = series[series.length - 1];
-    const [y, m, d] = first.day.split('-').map(Number);
-
-    return {
-      net: last.score - first.score,
-      since: new Date(y, m - 1, d).toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-      }),
-    };
-  });
 
   /** Selected queue id, or `all`. Everything on this screen respects it. */
   readonly queueFilter = signal<number | 'all'>('all');
@@ -132,6 +110,93 @@ export class OverviewScreenComponent {
 
   readonly visibleMatches = computed(() => this.matches().slice(0, this.matchLimit()));
   readonly hasMore = computed(() => this.matches().length > this.matchLimit());
+
+  /**
+   * Visible matches grouped into the days they were played on.
+   *
+   * The list is already sorted newest-first, so a single pass produces groups in
+   * the right order without a second sort. Day boundaries are local: a game at
+   * 01:00 belongs to the night it was played, which is the day the player would
+   * name, not the UTC one.
+   */
+  readonly matchDays = computed<MatchDayGroup<MatchCacheRow>[]>(() => {
+    // Solo-queue LP by day. Only ranked solo has a series, so a day of ARAM
+    // gets a header with no LP on it rather than a fabricated zero.
+    const lpByDay = new Map<string, number>();
+    for (const row of this.soloRankSeries()) {
+      // A series break is a reset, not a swing — its delta is already zeroed.
+      if (!row.series_start) lpByDay.set(row.day, row.difference);
+    }
+
+    const groups: MatchDayGroup<MatchCacheRow>[] = [];
+    let current: MatchDayGroup<MatchCacheRow> | null = null;
+    let scoreSum = 0;
+    let scoreCount = 0;
+
+    const closeGroup = () => {
+      if (!current) return;
+      current.avgScore = scoreCount ? scoreSum / scoreCount : null;
+      scoreSum = 0;
+      scoreCount = 0;
+    };
+
+    for (const match of this.visibleMatches()) {
+      const date = new Date(match.timestamp);
+      const key = localDayKey(date);
+
+      if (!current || current.key !== key) {
+        closeGroup();
+        const midnight = new Date(date);
+        midnight.setHours(0, 0, 0, 0);
+        current = {
+          key,
+          date: midnight,
+          games: [],
+          wins: 0,
+          losses: 0,
+          remakes: 0,
+          avgScore: null,
+          lpChange: lpByDay.get(key) ?? null,
+        };
+        groups.push(current);
+      }
+
+      current.games.push(match);
+      // Remakes are neither a win nor a loss. The threshold is the card's own
+      // (`match-card.component.ts` `remake`) rather than a second opinion — a
+      // header that counts a game the card below it labels "Remake" as a win is
+      // worse than either rule on its own.
+      if ((match.duration_seconds ?? 0) < 300) {
+        current.remakes++;
+      } else if (match.win === 1) current.wins++;
+      else if (match.win === 0) current.losses++;
+
+      const rated = this.rate(match);
+      if (rated) {
+        scoreSum += rated.score;
+        scoreCount++;
+      }
+    }
+
+    closeGroup();
+    return groups;
+  });
+
+  /** "Today", "Yesterday", or "06 Aug" — with the year once it stops being obvious. */
+  dayLabel(date: Date): string {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+
+    return date.toLocaleDateString(undefined, {
+      day: '2-digit',
+      month: 'short',
+      ...(date.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+    });
+  }
 
   readonly roleRows = computed(() => this.agg.rolePerformance(this.matches()));
 

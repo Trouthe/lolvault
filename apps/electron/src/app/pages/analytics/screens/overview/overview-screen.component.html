@@ -116,21 +116,6 @@
     </div>
   </div>
 
-  <!-- ── Rank progression (ranked solo/duo, one point per recorded day) ───── -->
-  @if (!data.external()) {
-    <article class="panel">
-      <header class="panel-head">
-        <h3>Rank Progression</h3>
-        @if (rankTrend(); as trend) {
-          <span class="panel-note" [class.up]="trend.net > 0" [class.down]="trend.net < 0">
-            {{ trend.net > 0 ? '+' : '' }}{{ trend.net }} LP since {{ trend.since }}
-          </span>
-        }
-      </header>
-      <app-lp-climb-chart [snapshots]="soloRankSeries()" [height]="230" />
-    </article>
-  }
-
   <!-- ── Activity heatmap (ranked solo/duo, full calendar year) ───────────── -->
   <article class="panel">
     <header class="panel-head">
@@ -153,20 +138,10 @@
       </h3>
       <span class="panel-note">
         {{ activity().totalGames }} ranked games in {{ selectedYear() }}
-        @if (activity().totalGames && activity().totalWins) {
-          · {{ (activity().totalWins / activity().totalGames) * 100 | number: '1.0-0' }}% WR
-        }
-        <!-- Net LP for the year, from the recorded series rather than the games:
-             it is the one figure here that survives a cache that only holds a
-             few weeks. -->
-        @if (activity().hasLp) {
-          <span
-            class="note-lp"
-            [class.up]="activity().totalLp > 0"
-            [class.down]="activity().totalLp < 0"
-          >
-            · {{ activity().totalLp > 0 ? '+' : '' }}{{ activity().totalLp }} LP
-          </span>
+        <!-- Win rate over the games whose result we hold, not over every game
+             the rank series counted — those have no record to average. -->
+        @if (activity().ratedGames) {
+          · {{ (activity().totalWins / activity().ratedGames) * 100 | number: '1.0-0' }}% WR
         }
       </span>
     </header>
@@ -216,13 +191,64 @@
         />
       }
     } @else {
+      <!-- Grouped by the day played, so a session reads as a session rather
+           than as N unrelated cards. The header carries what only the day
+           knows: its record, its average rating, and the LP it moved. -->
       <div class="match-list">
-        @for (match of visibleMatches(); track match.match_id) {
-          <app-match-card
-            [match]="match"
-            [expanded]="expandedMatchId() === match.match_id"
-            (toggled)="toggleMatch(match.match_id)"
-          />
+        @for (day of matchDays(); track day.key) {
+          <div class="day">
+            <header class="day-head">
+              <span class="day-date">{{ dayLabel(day.date) }}</span>
+
+              <div class="day-stats">
+                @if (day.avgScore !== null) {
+                  <span
+                    class="day-score"
+                    [class.good]="day.avgScore >= 60"
+                    [class.poor]="day.avgScore < 40"
+                    title="Average performance rating across this day"
+                  >
+                    Score {{ day.avgScore | number: '1.1-1' }}
+                  </span>
+                }
+
+                @if (day.lpChange !== null) {
+                  <span
+                    class="day-lp"
+                    [class.up]="day.lpChange > 0"
+                    [class.down]="day.lpChange < 0"
+                    title="Ranked solo/duo LP recorded for this day"
+                  >
+                    {{ day.lpChange > 0 ? '+' : '' }}{{ day.lpChange }} LP
+                  </span>
+                }
+
+                @if (day.wins) {
+                  <span class="day-wins">{{ day.wins }} {{ day.wins === 1 ? 'win' : 'wins' }}</span>
+                }
+                @if (day.losses) {
+                  <span class="day-losses">
+                    {{ day.losses }} {{ day.losses === 1 ? 'loss' : 'losses' }}
+                  </span>
+                }
+                @if (day.remakes) {
+                  <span class="day-remakes">
+                    {{ day.remakes }} {{ day.remakes === 1 ? 'remake' : 'remakes' }}
+                  </span>
+                }
+              </div>
+            </header>
+
+            <div class="day-games">
+              @for (match of day.games; track match.match_id) {
+                <app-match-card
+                  [match]="match"
+                  [expanded]="expandedMatchId() === match.match_id"
+                  (toggled)="toggleMatch(match.match_id)"
+                />
+              }
+            </div>
+          </div>
         }
       </div>
 
