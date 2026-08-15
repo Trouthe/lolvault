@@ -273,7 +273,20 @@ export class AnalyticsDataService {
             platform,
           });
           if (!this.isCurrent(token)) return;
-          if (summoner && 'puuid' in summoner) puuid = summoner.puuid;
+          if (summoner && 'puuid' in summoner) {
+            puuid = summoner.puuid;
+
+            // Persist it. An account without a PUUID is invisible to the rest
+            // of the app: `rank-recorder.js` skips it entirely, so it never
+            // accrues rank history, and the dashboard card renders no lane, no
+            // recent form and no mastery — all of which read `account.puuid`
+            // directly. Resolving it here and throwing it away meant an account
+            // could stay in that state indefinitely while looking fine on this
+            // screen, and cost a Riot request to re-resolve every visit.
+            void optionalIpc(() =>
+              window.electronAPI.setAccountPuuid({ vaultId, puuid: summoner.puuid })
+            );
+          }
         }
       }
       if (!puuid) {

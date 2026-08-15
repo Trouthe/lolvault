@@ -73,6 +73,15 @@ export interface ElectronAPI {
   openCleanRiotClient: (payload: OpenCleanRiotClientPayload) => Promise<LaunchResult>;
   loadAccounts: () => Promise<Account[]>;
   saveAccounts: (accounts: Account[]) => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Records a PUUID against an account that has none, without rewriting the
+   * rest of the file. Never overwrites a PUUID that is already set.
+   */
+  setAccountPuuid: (args: {
+    vaultId: string;
+    puuid: string;
+  }) => Promise<{ success: boolean; unchanged?: boolean; error?: string }>;
   loadBoards: () => Promise<Board[]>;
   saveBoards: (boards: Board[]) => Promise<{ success: boolean; error?: string }>;
   openFilePicker: (options?: {

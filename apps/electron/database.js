@@ -396,6 +396,36 @@ const MIGRATIONS = [
       );
     `);
   },
+
+  // v8 → v9: reconcile v8.
+  //
+  // An earlier v8 on this branch created a `ladder_positions` table for a
+  // feature that was replaced before it shipped. A database that ran *that* v8
+  // is already at user_version 8, so it will never run the current one and would
+  // be left without `player_ranks` — every rank lookup failing on a missing
+  // table. Migrations are append-only for exactly this reason: the fix is a new
+  // step that both paths converge on, not an edit to the old one.
+  (d) => {
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS player_ranks (
+        puuid         TEXT    NOT NULL,
+        platform      TEXT    NOT NULL,
+        queue         TEXT    NOT NULL,
+        tier          TEXT    NOT NULL,
+        division      TEXT    NOT NULL,
+        league_points INTEGER NOT NULL,
+        score         INTEGER NOT NULL,
+        wins          INTEGER,
+        losses        INTEGER,
+        inactive      INTEGER,
+        source        TEXT    NOT NULL,
+        observed_at   INTEGER NOT NULL,
+        PRIMARY KEY (puuid, platform, queue)
+      );
+
+      DROP TABLE IF EXISTS ladder_positions;
+    `);
+  },
 ];
 
 function runMigrations() {

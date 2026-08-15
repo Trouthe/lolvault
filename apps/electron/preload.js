@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openCleanRiotClient: (payload) => ipcRenderer.invoke('open-clean-riot-client', payload),
   loadAccounts: () => ipcRenderer.invoke('load-accounts'),
   saveAccounts: (accounts) => ipcRenderer.invoke('save-accounts', accounts),
+  setAccountPuuid: (args) => ipcRenderer.invoke('accounts:set-puuid', args),
   loadBoards: () => ipcRenderer.invoke('load-boards'),
   saveBoards: (boards) => ipcRenderer.invoke('save-boards', boards),
   openFilePicker: (options) => ipcRenderer.invoke('open-file-dialog', options),

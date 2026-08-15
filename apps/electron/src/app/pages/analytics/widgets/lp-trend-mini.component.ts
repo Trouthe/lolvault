@@ -292,16 +292,27 @@ export class LpTrendMiniComponent {
    * hide. It would now delete real information: a day that ended on the LP it
    * started on is a day that was *played* to a draw, not a repeated sample.
    *
-   * If the requested window holds fewer than two readings the whole history is
-   * used instead, and the header says so.
+   * The window is a preference, not a constraint. It is abandoned in two cases:
+   *
+   * 1. Fewer than two readings fall inside it — there is no line to draw.
+   * 2. Every reading inside it sits on the same LP, while the full history does
+   *    not. This is the common one and it used to render as a flat line reading
+   *    "Last 30d · 0 LP" for an account that had climbed a division and then
+   *    stopped playing for a fortnight. The window was telling the truth and
+   *    saying nothing; the series held a real climb just outside it. Widening
+   *    to all time shows the climb, and the header says which is being shown.
    */
   private readonly source = computed(() => {
     const all: Point[] = this.snapshots()
       .map((s) => ({ t: dayToLocalTime(s.day), lp: s.score }))
       .sort((a, b) => a.t - b.t);
 
+    const moved = (points: Point[]) => points.some((p) => p.lp !== points[0].lp);
+
     const windowed = all.filter((p) => p.t >= Date.now() - this.windowDays() * DAY_MS);
-    if (windowed.length >= 2) return { points: windowed, windowed: true };
+    if (windowed.length >= 2 && (moved(windowed) || !moved(all))) {
+      return { points: windowed, windowed: true };
+    }
 
     return { points: all, windowed: false };
   });

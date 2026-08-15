@@ -1454,6 +1454,47 @@ ipcMain.handle('save-accounts', async (event, accounts) => {
   }
 });
 
+/**
+ * Records a PUUID against an account that did not have one.
+ *
+ * Deliberately a targeted patch rather than a `save-accounts` round trip. That
+ * handler re-encrypts every credential it is handed, so writing the whole array
+ * back from a renderer that holds *decrypted* accounts would double-encrypt
+ * them. This touches one unencrypted field and leaves the rest of the file
+ * byte-identical.
+ *
+ * Worth having at all because an account without a PUUID is invisible to half
+ * the app: the rank recorder skips it outright, so no rank history is ever
+ * written, and the dashboard's stat strip renders nothing. The analytics page
+ * resolves the PUUID whenever it opens such an account — it just had nowhere to
+ * put it, so it re-resolved it (and spent the request again) on every visit.
+ */
+ipcMain.handle('accounts:set-puuid', async (_event, { vaultId, puuid }) => {
+  try {
+    if (!vaultId || !puuid) return { success: false, error: 'vaultId and puuid are required' };
+
+    const accountsPath = path.join(getDataPath(), 'accounts.json');
+    if (!fs.existsSync(accountsPath)) return { success: false, error: 'no accounts file' };
+
+    const accounts = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
+    if (!Array.isArray(accounts)) return { success: false, error: 'accounts file is not an array' };
+
+    const target = accounts.find((a) => (a.syncId || String(a.id)) === vaultId);
+    if (!target) return { success: false, error: 'account not found' };
+    // Never overwrite one that is already known — a mismatch here would attach
+    // one player's history to another account.
+    if (target.puuid) return { success: true, unchanged: true };
+
+    target.puuid = puuid;
+    fs.writeFileSync(accountsPath, JSON.stringify(accounts, null, 2), 'utf8');
+    console.log(`[accounts] recorded PUUID for ${target.name || vaultId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('accounts:set-puuid error:', error?.message);
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle loading boards
 ipcMain.handle('load-boards', async () => {
   try {
