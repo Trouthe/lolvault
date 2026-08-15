@@ -20,6 +20,7 @@ import { RiotApiService } from '../../../services/riot-api.service';
 import { PlayerNavService } from '../services/player-nav.service';
 import { GameDataService } from '../../../services/game-data.service';
 import { MatchTab, queueName } from '../models/analytics.types';
+import { absoluteLpToTier, absoluteLpToTierLabel } from '../../../models/rank-scale';
 import { roleIcon, roleLabel } from '../services/game-assets';
 import { SegmentOption, SegmentedToggleComponent } from '../widgets/segmented-toggle.component';
 import { IconComponent } from '../widgets/icon.component';
@@ -125,6 +126,53 @@ export class MatchCardComponent {
   });
 
   readonly queueName = computed(() => queueName(this.match().queue_id, this.match().queue_type));
+
+  /**
+   * Average rank of everyone in the lobby, from the local rank cache.
+   *
+   * Averaged on the absolute-LP scale, which is the entire reason that scale
+   * exists — you cannot take the mean of "Emerald II" and "Platinum I" without
+   * first collapsing tier, division and LP into one number.
+   *
+   * Null until at least half the lobby is known. A "lobby average" computed from
+   * two players is not an average of the lobby, and quietly presenting one would
+   * be worse than showing nothing: the number would look identical to a real
+   * one. `known` is exposed so the badge can say what it is based on.
+   */
+  readonly averageRank = computed<{ label: string; tier: string; known: number; total: number } | null>(
+    () => {
+      const participants = this.agg.participantsOf(this.match());
+      if (!participants.length) return null;
+
+      const ranks = this.data.playerRanks();
+      let sum = 0;
+      let known = 0;
+
+      for (const p of participants) {
+        const rank = p.puuid ? ranks[p.puuid] : undefined;
+        if (!rank) continue;
+        sum += rank.score;
+        known++;
+      }
+
+      if (known < Math.ceil(participants.length / 2)) return null;
+
+      const mean = sum / known;
+      return {
+        label: absoluteLpToTierLabel(mean),
+        tier: absoluteLpToTier(mean),
+        known,
+        total: participants.length,
+      };
+    }
+  );
+
+  /** Emblem for the averaged tier, matching the rail's naming. */
+  readonly averageRankEmblem = computed(() => {
+    const avg = this.averageRank();
+    if (!avg) return '';
+    return `assets/emblems/${avg.tier.charAt(0)}${avg.tier.slice(1).toLowerCase()}.png`;
+  });
 
   /** The account holder's own full participant record, stored on raw_json. */
   private readonly selfRaw = computed<SelfRaw>(() => (this.match().raw_json ?? {}) as SelfRaw);

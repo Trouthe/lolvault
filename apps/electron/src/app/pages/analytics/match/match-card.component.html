@@ -42,6 +42,25 @@
         </span>
         <span class="queue">{{ queueName() }}</span>
         <span class="ago">{{ timeAgo() }} · {{ duration() }}</span>
+
+        <!-- Average rank of the lobby. Read from the local rank cache, which a
+             ladder harvest fills 205 players at a time — looking these up one
+             by one would be nine Riot requests for this one line. Absent when
+             too little of the lobby is known to average honestly. -->
+        @if (averageRank(); as avg) {
+          <span
+            class="avg-rank"
+            [title]="'Average rank of ' + avg.known + ' of ' + avg.total + ' players'"
+          >
+            @if (averageRankEmblem()) {
+              <img class="avg-rank-emblem" [src]="averageRankEmblem()" [alt]="''" />
+            }
+            {{ avg.label }}
+            @if (avg.known < avg.total) {
+              <i class="avg-rank-partial">{{ avg.known }}/{{ avg.total }}</i>
+            }
+          </span>
+        }
       </div>
 
       <!-- Champion, spells, runes. The MVP/ACE crumb rides the top of this

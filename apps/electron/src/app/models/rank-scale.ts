@@ -48,6 +48,33 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
+/**
+ * Absolute LP back to a rank label without the LP part — "Emerald II".
+ *
+ * What an *averaged* rank should say. "Emerald II 43 LP" implies a precision an
+ * average of ten players does not have, and the 43 is meaningless: it is the
+ * mean of ten unrelated LP totals, not anybody's LP.
+ */
+export function absoluteLpToTierLabel(absolute: number): string {
+  for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
+    const tier = TIER_ORDER[i];
+    if (absolute >= tier.min) {
+      if (tier.name === 'MASTER') return 'Master+';
+      const within = absolute - tier.min;
+      return `${titleCase(tier.name)} ${DIVISIONS[Math.min(Math.floor(within / 100), 3)]}`;
+    }
+  }
+  return 'Unranked';
+}
+
+/** Tier name for an absolute-LP value, for resolving the emblem image. */
+export function absoluteLpToTier(absolute: number): string {
+  for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
+    if (absolute >= TIER_ORDER[i].min) return TIER_ORDER[i].name;
+  }
+  return 'IRON';
+}
+
 /** "Today", "Yesterday", or "N days ago". */
 export function daysAgoLabel(timestamp: number): string {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

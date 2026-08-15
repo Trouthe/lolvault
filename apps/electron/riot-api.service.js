@@ -988,73 +988,118 @@ async function backfillMatchData(
   return { processed, total, failed, cancelled: false };
 }
 
-// ── Ladder position ───────────────────────────────────────────────────────────
+// ── Ladder harvest and the rank cache ────────────────────────────────────────
+
+/** 404s are expected while paging a division: "no such page", not a failure. */
+async function ladderRequest(url) {
+  try {
+    return await riotFetch(url, undefined, { interactive: false });
+  } catch (err) {
+    const status = err?.status || Number(err?.message);
+    if (status === 404) return [];
+    throw err;
+  }
+}
 
 /**
- * Measures where an account sits on its region's ranked ladder and records it.
+ * Which divisions a harvest should cover for an account, and what it will cost.
  *
- * The counting lives in `ladder.js`; this is the part that needs Riot — it
- * resolves the account's current rank, hands the sweep a paced request function,
- * and persists both results it produces.
- *
- * Two rows come out of one sweep, which is the reason it is worth the requests:
- * the ladder position itself, and a `rank_snapshots` row built from the
- * account's own ladder entry. That entry carries `wins`, `losses` and
- * `inactive` — the same fields the rank recorder reads — so the daily series
- * gets a reading out of a sweep that was already paid for.
+ * Needs the account's own rank to centre on, which is one request — and one that
+ * is almost always already in the volatile cache from the profile load.
  */
-async function sweepLadderPosition(
-  accountId,
-  puuid,
-  platform,
-  { queue = 'RANKED_SOLO_5x5', onProgress = () => {}, shouldCancel = () => false, freshCensus = false } = {}
-) {
+async function planLadderHarvest(puuid, platform, { queue = 'RANKED_SOLO_5x5', spread = 1 } = {}) {
   const entries = await getRankedByPuuid(puuid, platform);
   if (!Array.isArray(entries)) {
     return { error: entries?.error || 'Could not read rank from Riot' };
   }
 
   const current = entries.find((e) => e.queueType === queue);
-  if (!current || !current.tier) {
-    return { error: 'unranked', queue };
-  }
+  if (!current?.tier) return { error: 'unranked', queue };
 
-  // 404s are expected while paging: they mean "no such page", not a failure.
-  const request = async (url) => {
-    try {
-      return await riotFetch(url, undefined, { interactive: false });
-    } catch (err) {
-      const status = err?.status || Number(err?.message);
-      if (status === 404) return [];
-      throw err;
-    }
+  const buckets = ladder.bucketsAround(current.tier, current.rank, spread);
+  return {
+    tier: current.tier,
+    division: current.rank,
+    buckets: buckets.map((b) => ({ tier: b.tier, division: b.division, apex: !!b.apex })),
+    ...ladder.estimateHarvest(platform, queue, buckets),
+    cache: db.getPlayerRankStats(platform, queue),
   };
-
-  const result = await ladder.sweepLadderPosition(
-    {
-      puuid,
-      tier: current.tier,
-      division: current.rank,
-      leaguePoints: current.leaguePoints,
-    },
-    { platform, queue, request, onProgress, shouldCancel, freshCensus }
-  );
-
-  if (result.cancelled) return { cancelled: true, requests: result.requests };
-
-  db.recordLadderPosition(accountId, queue, result);
-
-  // The sweep saw the account's own ladder entry, which carries win/loss counts
-  // the by-puuid response also has — but written here it lands on the same day
-  // key, so the daily series gains a reading for free.
-  db.recordRankSnapshot(accountId, queue, result.entry ?? current);
-
-  return result;
 }
 
-/** Pre-flight cost of a sweep, so the UI can quote a wait before starting one. */
-function estimateLadderSweep(platform, queue, tier, division) {
-  return ladder.estimateSweep(platform, queue, tier, division);
+/**
+ * Harvests the divisions around an account's rank into the local rank cache.
+ *
+ * This is the request-saving trade in one function: minutes of paging now, in
+ * exchange for every match card afterwards costing nothing to show ranks on.
+ * Entries land in `player_ranks` 205 at a time, and the account's own entry —
+ * which is somewhere in the pages we just read — also updates the daily rank
+ * series, so the heatmap gains a day without a request of its own.
+ */
+async function harvestLadder(
+  accountId,
+  puuid,
+  platform,
+  { queue = 'RANKED_SOLO_5x5', spread = 1, onProgress = () => {}, shouldCancel = () => false } = {}
+) {
+  const plan = await planLadderHarvest(puuid, platform, { queue, spread });
+  if (plan.error) return plan;
+
+  const buckets = ladder.bucketsAround(plan.tier, plan.division, spread);
+
+  /** The account's own entry, if the harvest happens to page over it. */
+  let ownEntry = null;
+
+  const result = await ladder.harvestLadder({
+    platform,
+    queue,
+    buckets,
+    request: ladderRequest,
+    onProgress,
+    shouldCancel,
+    onEntries: (entries) => {
+      db.savePlayerRanks(entries, platform, queue, 'ladder');
+      const mine = entries.find((e) => e.puuid === puuid);
+      if (mine) ownEntry = mine;
+    },
+  });
+
+  // Free reading: the entry was already in a page we paid for.
+  if (ownEntry && accountId) db.recordRankSnapshot(accountId, queue, ownEntry);
+
+  return { ...result, cache: db.getPlayerRankStats(platform, queue) };
+}
+
+/**
+ * Ranks for a set of players, from the cache, optionally filling misses.
+ *
+ * `fill` is the escape hatch for players a harvest did not cover — a smurf two
+ * tiers below, an opponent from before the last harvest. Each costs one request,
+ * so it is bounded and off by default: a match card asks for what is cached and
+ * shows the rest as unknown rather than quietly spending nine requests.
+ */
+async function resolvePlayerRanks(
+  puuids,
+  platform,
+  { queue = 'RANKED_SOLO_5x5', fill = 0 } = {}
+) {
+  const unique = [...new Set((puuids || []).filter(Boolean))];
+  const cached = db.getPlayerRanks(unique, platform, queue);
+
+  if (fill > 0) {
+    const missing = unique.filter((p) => !cached[p]).slice(0, fill);
+    for (const missed of missing) {
+      const entries = await getRankedByPuuid(missed, platform);
+      if (!Array.isArray(entries)) continue;
+      const entry = entries.find((e) => e.queueType === queue);
+      // Unranked players are a real answer, not a miss — but there is nothing
+      // to cache for them, so they simply stay absent.
+      if (!entry?.tier) continue;
+      db.savePlayerRanks([{ ...entry, puuid: missed }], platform, queue, 'lookup');
+      cached[missed] = db.getPlayerRanks([missed], platform, queue)[missed];
+    }
+  }
+
+  return { ranks: cached, requested: unique.length, known: Object.keys(cached).length };
 }
 
 // ── API key validation ────────────────────────────────────────────────────────
@@ -1119,8 +1164,9 @@ module.exports = {
   getMatchTimeline,
   getMatchDetailCached,
   backfillMatchData,
-  sweepLadderPosition,
-  estimateLadderSweep,
+  planLadderHarvest,
+  harvestLadder,
+  resolvePlayerRanks,
   validateApiKey,
   getDDragonVersion,
   invalidatePlayerCache,

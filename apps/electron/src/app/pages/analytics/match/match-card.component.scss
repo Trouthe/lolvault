@@ -280,6 +280,32 @@
   text-overflow: ellipsis;
 }
 
+// Average lobby rank. Sits with the other meta on the left, deliberately quiet:
+// it is context for the game, not a stat the player earned.
+.avg-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--secondary-text);
+  white-space: nowrap;
+}
+
+.avg-rank-emblem {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+// Says the average is partial without making the number look broken.
+.avg-rank-partial {
+  font-style: normal;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
 // Champion column. Stretched so the MVP crumb can anchor to the card's top
 // edge, and `position: relative` so it does.
 .col-champ {

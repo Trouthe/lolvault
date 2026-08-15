@@ -345,24 +345,26 @@ const MIGRATIONS = [
     }
   },
 
-  // v7 → v8: ladder position.
+  // v7 → v8: the ladder cache.
   //
-  // `rank_snapshots` answers "what rank was I", which is not the same question
-  // as "where was I". Riot serves no ladder position at any endpoint — the only
-  // way to it is to count the players above you, which means measuring every
-  // tier/division on the region (see ladder.js).
+  // Showing the rank of the nine other players in a match is nine requests per
+  // card via `entries/by-puuid` — around eleven seconds of a development key's
+  // budget to fill in one row of match history, repeated for every row and
+  // repeated again tomorrow. A ladder page returns 205 players for one request,
+  // so the same information is thousands of times cheaper bought in bulk.
   //
-  // Two tables because the two halves have completely different lifetimes:
+  // Two tables, with deliberately different lifetimes:
   //
-  // `ladder_census` is about the *region*, not any account. A division's size
-  // moves over weeks, and re-measuring all 28 of them costs hundreds of requests
-  // against a ~0.83 req/s budget, so it is cached and shared by every account on
-  // that platform. It is a pure cache: deleting it costs time, never data.
+  // `ladder_census` is about the *region*, not any account: how many players and
+  // pages each division holds. Division sizes move over weeks, so it is cached
+  // and shared by every account on the platform. Its only job is to let a
+  // harvest quote an honest ETA before it starts. Pure cache — deleting it costs
+  // time, never data.
   //
-  // `ladder_positions` is about the account and is exactly as unrecoverable as
-  // `rank_snapshots` — nothing can tell you in December where you sat in August.
-  // Keyed by day for the same reason and with the same upsert semantics, so
-  // sweeping twice in one day refines the reading instead of duplicating it.
+  // `player_ranks` is the payoff: one row per player per queue, filled 205 at a
+  // time by a harvest and one at a time by a lookup when a player is missed.
+  // Also pure cache — every row is re-fetchable, which is why it carries no
+  // history and simply upserts.
   (d) => {
     d.exec(`
       CREATE TABLE IF NOT EXISTS ladder_census (
@@ -376,25 +378,22 @@ const MIGRATIONS = [
         PRIMARY KEY (platform, queue, tier, division)
       );
 
-      CREATE TABLE IF NOT EXISTS ladder_positions (
-        account_id      TEXT    NOT NULL,
-        queue           TEXT    NOT NULL,
-        day             TEXT    NOT NULL,   -- 'YYYY-MM-DD', local time
-        platform        TEXT    NOT NULL,
-        tier            TEXT    NOT NULL,
-        division        TEXT    NOT NULL,
-        league_points   INTEGER NOT NULL,
-        position        INTEGER NOT NULL,   -- 1-based, across the whole region
-        total           INTEGER NOT NULL,   -- ranked players in this queue/region
-        bucket_position INTEGER NOT NULL,   -- 1-based within the division
-        bucket_total    INTEGER NOT NULL,
-        percentile      REAL    NOT NULL,   -- top N% of the region
-        observed_at     INTEGER NOT NULL,
-        PRIMARY KEY (account_id, queue, day)
+      CREATE TABLE IF NOT EXISTS player_ranks (
+        puuid         TEXT    NOT NULL,
+        platform      TEXT    NOT NULL,
+        queue         TEXT    NOT NULL,
+        tier          TEXT    NOT NULL,
+        division      TEXT    NOT NULL,
+        league_points INTEGER NOT NULL,
+        score         INTEGER NOT NULL,   -- absolute LP, so ranks can be averaged
+        wins          INTEGER,
+        losses        INTEGER,
+        inactive      INTEGER,
+        -- 'ladder' came free with 204 others; 'lookup' cost a request of its own.
+        source        TEXT    NOT NULL,
+        observed_at   INTEGER NOT NULL,
+        PRIMARY KEY (puuid, platform, queue)
       );
-
-      CREATE INDEX IF NOT EXISTS idx_ladder_positions_series
-        ON ladder_positions (account_id, queue, day);
     `);
   },
 ];
@@ -648,74 +647,117 @@ function saveLadderCensus(platform, queue, tier, division, players, pages, when 
     .run(platform, queue, tier, division, players, pages, when);
 }
 
-// ── Ladder positions — one row per account per queue per day ──────────────────
+// ── Player ranks — the cache a harvest fills ──────────────────────────────────
 
 /**
- * Records where an account sat on the ladder, keyed by day so a second sweep
- * the same day refines the reading rather than duplicating it.
+ * Stores a batch of ladder entries as ranks.
  *
- * Same reasoning as `recordRankSnapshot`: no Riot endpoint can reconstruct this
- * later, so a row missed is a row lost permanently.
+ * One transaction for the whole batch, which is what makes a harvest viable at
+ * all: 205 rows per page and hundreds of pages is tens of thousands of writes,
+ * and better-sqlite3 outside a transaction fsyncs every one of them.
+ *
+ * @param {object[]} entries  league-v4 entries: `{ puuid, tier, rank, leaguePoints, wins, losses, inactive }`
+ * @param {string}   source   'ladder' (free, in bulk) or 'lookup' (one request)
+ * @returns {number} rows written
  */
-function recordLadderPosition(accountId, queue, result, when = Date.now()) {
-  if (!accountId || !queue || !result) return null;
+function savePlayerRanks(entries, platform, queue, source = 'ladder', when = Date.now()) {
+  if (!Array.isArray(entries) || entries.length === 0) return 0;
 
-  const day = localDay(when);
-  getDb()
-    .prepare(
-      `INSERT INTO ladder_positions
-         (account_id, queue, day, platform, tier, division, league_points,
-          position, total, bucket_position, bucket_total, percentile, observed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (account_id, queue, day) DO UPDATE SET
-         platform        = excluded.platform,
-         tier            = excluded.tier,
-         division        = excluded.division,
-         league_points   = excluded.league_points,
-         position        = excluded.position,
-         total           = excluded.total,
-         bucket_position = excluded.bucket_position,
-         bucket_total    = excluded.bucket_total,
-         percentile      = excluded.percentile,
-         observed_at     = excluded.observed_at`
-    )
-    .run(
-      accountId,
-      queue,
-      day,
-      result.platform,
-      result.tier,
-      result.division,
-      result.leaguePoints,
-      result.position,
-      result.total,
-      result.bucketPosition,
-      result.bucketTotal,
-      result.percentile,
-      when
-    );
+  const stmt = getDb().prepare(
+    `INSERT INTO player_ranks
+       (puuid, platform, queue, tier, division, league_points, score,
+        wins, losses, inactive, source, observed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (puuid, platform, queue) DO UPDATE SET
+       tier          = excluded.tier,
+       division      = excluded.division,
+       league_points = excluded.league_points,
+       score         = excluded.score,
+       wins          = excluded.wins,
+       losses        = excluded.losses,
+       inactive      = excluded.inactive,
+       source        = excluded.source,
+       observed_at   = excluded.observed_at`
+  );
 
-  return { accountId, queue, day, ...result };
+  const writeAll = getDb().transaction((rows) => {
+    let written = 0;
+    for (const entry of rows) {
+      const division = entry.division ?? entry.rank;
+      const leaguePoints = entry.leaguePoints ?? entry.lp;
+      // An entry without a puuid is unusable here — the cache is keyed by it.
+      if (!entry.puuid || !entry.tier || leaguePoints == null) continue;
+
+      stmt.run(
+        entry.puuid,
+        platform,
+        queue,
+        entry.tier,
+        division ?? 'I',
+        leaguePoints,
+        computeAbsoluteLp(entry.tier, division ?? 'I', leaguePoints),
+        Number.isFinite(entry.wins) ? entry.wins : null,
+        Number.isFinite(entry.losses) ? entry.losses : null,
+        typeof entry.inactive === 'boolean' ? (entry.inactive ? 1 : 0) : null,
+        source,
+        when
+      );
+      written++;
+    }
+    return written;
+  });
+
+  return writeAll(entries);
 }
 
-/** Ladder-position series for an account, oldest first. */
-function getLadderPositions(accountId, queue = null) {
+/**
+ * Cached ranks for a set of players.
+ *
+ * Returned as a map so callers can tell a miss from an unranked player: an
+ * absent key means "we have never seen them", which is answerable with a
+ * lookup, while a present row means we know.
+ */
+function getPlayerRanks(puuids, platform, queue) {
+  if (!Array.isArray(puuids) || puuids.length === 0) return {};
+
+  const out = {};
   const db = getDb();
-  return queue
-    ? db
-        .prepare(
-          `SELECT * FROM ladder_positions
-            WHERE account_id = ? AND queue = ?
-            ORDER BY day ASC`
-        )
-        .all(accountId, queue)
-    : db
-        .prepare(
-          `SELECT * FROM ladder_positions
-            WHERE account_id = ?
-            ORDER BY queue ASC, day ASC`
-        )
-        .all(accountId);
+
+  // SQLite caps variables per statement (999 by default), and a full lobby list
+  // for a page of match history runs well past that.
+  const CHUNK = 400;
+  for (let i = 0; i < puuids.length; i += CHUNK) {
+    const chunk = puuids.slice(i, i + CHUNK);
+    const rows = db
+      .prepare(
+        `SELECT * FROM player_ranks
+          WHERE platform = ? AND queue = ?
+            AND puuid IN (${chunk.map(() => '?').join(',')})`
+      )
+      .all(platform, queue, ...chunk);
+    for (const row of rows) out[row.puuid] = row;
+  }
+
+  return out;
+}
+
+/** How much of the cache is filled, for the harvest control's before/after. */
+function getPlayerRankStats(platform, queue) {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS players,
+              MAX(observed_at) AS newest,
+              SUM(CASE WHEN source = 'ladder' THEN 1 ELSE 0 END) AS from_ladder
+         FROM player_ranks
+        WHERE platform = ? AND queue = ?`
+    )
+    .get(platform, queue);
+
+  return {
+    players: row?.players ?? 0,
+    fromLadder: row?.from_ladder ?? 0,
+    newest: row?.newest ?? null,
+  };
 }
 
 // ── Match Cache ───────────────────────────────────────────────────────────────
@@ -1077,11 +1119,12 @@ module.exports = {
   recordRankSnapshot,
   getRankSnapshots,
   getRankSnapshotQueues,
-  // Ladder position
+  // Ladder cache
   getLadderCensus,
   saveLadderCensus,
-  recordLadderPosition,
-  getLadderPositions,
+  savePlayerRanks,
+  getPlayerRanks,
+  getPlayerRankStats,
   // Match cache
   saveMatchCache,
   getMatchCache,

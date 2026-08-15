@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatchCacheRow } from '../../../../../types/electron';
 import { AnalyticsDataService } from '../../services/analytics-data.service';
@@ -58,6 +65,24 @@ export class OverviewScreenComponent {
 
   readonly matchLimit = signal(10);
   readonly expandedMatchId = signal<string | null>(null);
+
+  constructor() {
+    // Ranks for everyone on screen, in one local read.
+    //
+    // Batched here rather than per card because it is a single query for the
+    // whole page instead of one per row, and because the cache is shared: two
+    // cards holding the same opponent resolve them once. It never spends a Riot
+    // request — misses stay unknown until a ladder harvest covers them.
+    effect(() => {
+      const puuids = new Set<string>();
+      for (const match of this.visibleMatches()) {
+        for (const p of this.agg.participantsOf(match)) {
+          if (p.puuid) puuids.add(p.puuid);
+        }
+      }
+      if (puuids.size) void this.data.loadPlayerRanks([...puuids]);
+    });
+  }
 
   /**
    * Solo-queue days only. `rankSnapshots` carries every queue so one IPC call

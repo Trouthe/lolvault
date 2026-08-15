@@ -273,34 +273,41 @@ export interface ElectronAPI {
   ) => void;
 
   /**
-   * Counts every ranked player on the region to place this account on the
-   * ladder. Minutes of requests — always user-triggered, always cancellable.
+   * Pages the divisions around this account's rank into the local rank cache,
+   * 205 players per request. Minutes of requests — user-triggered, cancellable —
+   * in exchange for match cards that cost nothing to show ranks on afterwards.
    */
-  riotSweepLadderPosition: (args: {
+  riotHarvestLadder: (args: {
     accountId: string;
     puuid: string;
     platform: string;
     queue?: string;
-    /** Re-measure every division instead of trusting the cached census. */
-    freshCensus?: boolean;
-  }) => Promise<LadderSweepResult | { cancelled: true; requests: number } | { error: string }>;
+    /** Divisions to reach either side of the account's own. Default 1. */
+    spread?: number;
+  }) => Promise<LadderHarvestResult | { error: string }>;
 
-  riotCancelLadderSweep: (args: { accountId: string }) => Promise<{ success: boolean }>;
+  riotCancelLadderHarvest: (args: { accountId: string }) => Promise<{ success: boolean }>;
 
-  /** Requests and wait a sweep would cost right now, given the cached census. */
-  riotEstimateLadderSweep: (args: {
+  /** Which divisions a harvest would cover and what it would cost right now. */
+  riotPlanLadderHarvest: (args: {
+    puuid: string;
     platform: string;
-    queue: string;
-    tier: string;
-    division: string;
-  }) => Promise<LadderSweepEstimate | { error: string }>;
+    queue?: string;
+    spread?: number;
+  }) => Promise<LadderHarvestPlan | { error: string }>;
 
-  riotGetLadderPositions: (args: {
-    accountId: string;
-    queue?: string | null;
-  }) => Promise<{ positions: LadderPosition[] }>;
+  /**
+   * Cached ranks for a set of players. `fill` allows at most that many
+   * single-player lookups for cache misses; omit it to spend no requests.
+   */
+  riotGetPlayerRanks: (args: {
+    puuids: string[];
+    platform: string;
+    queue?: string;
+    fill?: number;
+  }) => Promise<{ ranks: Record<string, PlayerRank>; requested: number; known: number }>;
 
-  onLadderSweepProgress: (callback: (data: LadderSweepProgress) => void) => void;
+  onLadderHarvestProgress: (callback: (data: LadderHarvestProgress) => void) => void;
 
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
@@ -384,76 +391,68 @@ export interface BackfillProgress {
 }
 
 /**
- * One day's ladder position for an account.
+ * One player's rank, from the local cache.
  *
- * Riot serves no such endpoint — every row here was counted by sweeping the
- * region's divisions (see apps/electron/ladder.js), and like `RankSnapshot` it
- * cannot be reconstructed after the fact.
+ * Filled 205 at a time by a ladder harvest, or one at a time by a lookup when a
+ * player was missed. Pure cache — every row is re-fetchable from Riot, which is
+ * why it keeps no history.
  */
-export interface LadderPosition {
-  account_id: string;
-  queue: string;
-  /** Local calendar day, 'YYYY-MM-DD'. */
-  day: string;
+export interface PlayerRank {
+  puuid: string;
   platform: string;
+  queue: string;
   tier: string;
   division: string;
   league_points: number;
-  /** 1-based place across every ranked player on the region. */
-  position: number;
-  /** Ranked players in this queue on this region, at sweep time. */
-  total: number;
-  /** 1-based place within the account's own tier/division. */
-  bucket_position: number;
-  bucket_total: number;
-  /** Top N% of the region. Lower is better. */
-  percentile: number;
+  /** Absolute LP across all tiers — the value to average a lobby on. */
+  score: number;
+  wins: number | null;
+  losses: number | null;
+  inactive: number | null;
+  /** 'ladder' came free with 204 others; 'lookup' cost a request of its own. */
+  source: 'ladder' | 'lookup';
   observed_at: number;
 }
 
-/** What a completed sweep returns, before it is written to a daily row. */
-export interface LadderSweepResult {
-  cancelled: false;
-  requests: number;
-  platform: string;
-  queue: string;
+/** How full the rank cache is, for the harvest control's before and after. */
+export interface PlayerRankCacheStats {
+  players: number;
+  fromLadder: number;
+  newest: number | null;
+}
+
+export interface LadderHarvestPlan {
   tier: string;
   division: string;
-  leaguePoints: number;
-  position: number;
-  total: number;
-  bucketPosition: number;
-  bucketTotal: number;
-  percentile: number;
-  /** Players on exactly this LP in this division; all share the same place. */
-  ties: number;
-  censusReused: number;
-}
-
-export interface LadderSweepEstimate {
+  buckets: { tier: string; division: string; apex: boolean }[];
   requests: number;
   etaSeconds: number;
-  /** Divisions whose size is already cached and need not be re-measured. */
-  censusCached: number;
-  censusTotal: number;
-  /** Pages in the account's own division — the unavoidable part of the cost. */
-  ownPages: number;
-  /** True when the whole census is cached, so the estimate is near-exact. */
+  divisions: number;
+  /** Divisions whose page count is already known, so their cost is exact. */
+  known: number;
   exact: boolean;
+  cache: PlayerRankCacheStats;
 }
 
-export interface LadderSweepProgress {
-  accountId: string;
-  /** `census` sizes every division; `scanning` reads the account's own. */
-  phase: 'census' | 'scanning';
+export interface LadderHarvestResult {
+  players: number;
+  pages: number;
   requests: number;
-  plannedRequests: number;
-  etaSeconds: number;
-  bucketsDone: number;
-  bucketsTotal: number;
+  cancelled: boolean;
+  cache: PlayerRankCacheStats;
+}
+
+export interface LadderHarvestProgress {
+  accountId: string;
+  /** `sizing` measures each division; `harvesting` reads them. */
+  phase: 'sizing' | 'harvesting';
+  requests: number;
   pagesDone: number;
   pagesTotal: number;
-  done: boolean;
+  playersCached: number;
+  etaSeconds: number;
+  /** The division currently being read, e.g. `EMERALD/II`. */
+  bucket: string;
 }
 
 export interface YearHistoryProgress extends BackfillProgress {

@@ -1,18 +1,16 @@
 'use strict';
 
 /**
- * Ladder sweep tests. Run via `npm run test:db --workspace=apps/electron`.
+ * Ladder harvest tests. Run via `npm run test:db --workspace=apps/electron`.
  *
- * This module produces a single number — "you are #4,321" — and a wrong one
- * looks exactly like a right one. Nothing in the app can catch that: the build
- * passes, the panel renders, and the figure is simply false. So the fake ladder
- * below is generated with a *known* population, which makes every assertion a
- * comparison against arithmetic done independently of the code under test.
+ * The harvest exists for exactly one reason — to spend fewer Riot requests than
+ * looking players up one at a time — so the request count is asserted as
+ * carefully as the data. A regression that returns every correct rank while
+ * quietly paging twice as much has broken the only thing this module is for,
+ * and nothing else in the app would notice.
  *
- * The requests are counted as well as the answers. The binary search exists
- * solely to keep the sweep affordable on a development key, and a regression
- * that quietly turns it into a linear scan would still return the right
- * position — just hours later.
+ * The fake ladder below has a known population, so every expectation is
+ * arithmetic done independently of the code under test.
  */
 
 const fs = require('fs');
@@ -50,23 +48,22 @@ function checkAtMost(label, actual, ceiling) {
 
 // ── A fake region ─────────────────────────────────────────────────────────────
 //
-// Deliberately uneven: every division a different size, several not a multiple
-// of the page size, and one empty. Uniform sizes would hide off-by-ones in the
-// last-page arithmetic, which is the only place this code can be wrong quietly.
+// Sizes are deliberately uneven: one division empty, one a single short page,
+// one an exact multiple of the page size, the rest neither. Uniform sizes would
+// hide off-by-ones in the last-page arithmetic, which is where this code can be
+// wrong without anything looking wrong.
 
 const PAGE = 205;
-
-/** players[`TIER/DIV`] = array of entries, highest LP first is NOT assumed. */
 const population = new Map();
 
-function seedBucket(tier, division, count, lpAt) {
+function seedBucket(tier, division, count) {
   const entries = [];
   for (let i = 0; i < count; i++) {
     entries.push({
       puuid: `p-${tier}-${division}-${i}`,
       tier,
       rank: division,
-      leaguePoints: lpAt(i),
+      leaguePoints: i % 100,
       wins: 40 + (i % 7),
       losses: 30 + (i % 5),
       inactive: false,
@@ -75,8 +72,6 @@ function seedBucket(tier, division, count, lpAt) {
   population.set(`${tier}/${division}`, entries);
 }
 
-// Sizes chosen so that: one bucket is empty, one is a single short page, one is
-// exactly a whole number of pages, and the rest are neither.
 const SIZES = {
   'IRON/IV': 0,
   'IRON/III': 7,
@@ -100,8 +95,6 @@ const SIZES = {
   'PLATINUM/I': 950,
   'EMERALD/IV': 820,
   'EMERALD/III': 700,
-  // The bucket under test. LP cycles 0..99 so the count above any given LP is
-  // computable by hand rather than by re-running the code being tested.
   'EMERALD/II': 617,
   'EMERALD/I': 500,
   'DIAMOND/IV': 300,
@@ -112,17 +105,11 @@ const SIZES = {
 
 for (const [key, count] of Object.entries(SIZES)) {
   const [tier, division] = key.split('/');
-  seedBucket(tier, division, count, (i) => i % 100);
+  seedBucket(tier, division, count);
 }
 
 const APEX = { MASTER: 60, GRANDMASTER: 25, CHALLENGER: 10 };
-for (const [tier, count] of Object.entries(APEX)) {
-  seedBucket(tier, 'I', count, (i) => 200 + i * 13);
-}
-
-const TOTAL_PLAYERS =
-  Object.values(SIZES).reduce((a, b) => a + b, 0) +
-  Object.values(APEX).reduce((a, b) => a + b, 0);
+for (const [tier, count] of Object.entries(APEX)) seedBucket(tier, 'I', count);
 
 // ── Fake Riot ─────────────────────────────────────────────────────────────────
 
@@ -140,7 +127,10 @@ async function request(url) {
   const apex = url.match(/league\/v4\/(\w+)\/by-queue\//);
   if (apex) {
     const tier = APEX_PATHS[apex[1]];
-    return { tier, entries: population.get(`${tier}/I`) ?? [] };
+    // Apex payloads carry the tier on the league, not on each entry — the
+    // harvest has to put it back, and that is worth testing.
+    const entries = (population.get(`${tier}/I`) ?? []).map(({ tier: _t, rank: _r, ...rest }) => rest);
+    return { tier, entries };
   }
 
   const m = url.match(/entries\/[^/]+\/([A-Z]+)\/([IV]+)\?page=(\d+)/);
@@ -152,130 +142,179 @@ async function request(url) {
   return all.slice(start, start + PAGE);
 }
 
-// ── The account under test ────────────────────────────────────────────────────
-//
-// Emerald II, 60 LP. Worked out by hand from the seed above:
-//   · EMERALD/II holds 617 players with LP = i % 100, i in 0..616.
-//   · LP values 0..16 appear 7 times (i, i+100, … i+600); 17..99 appear 6 times.
-//   · Players above 60 LP: values 61..99 → 17..99 band only → 39 values × 6 = 234.
-//   · The account itself is one of the 60-LP entries and is skipped, so 6 - 1 = 5
-//     others tie with it.
+const PLATFORM = 'test1';
+const QUEUE = 'RANKED_SOLO_5x5';
 
-const SELF = population.get('EMERALD/II').find((e) => e.leaguePoints === 60);
-
-const ABOVE_IN_BUCKET = 234;
-const TIERS_ABOVE =
-  SIZES['EMERALD/I'] +
-  SIZES['DIAMOND/IV'] +
-  SIZES['DIAMOND/III'] +
-  SIZES['DIAMOND/II'] +
-  SIZES['DIAMOND/I'] +
-  APEX.MASTER +
-  APEX.GRANDMASTER +
-  APEX.CHALLENGER;
+function harvest(buckets, extra = {}) {
+  const cached = [];
+  return ladder
+    .harvestLadder({
+      platform: PLATFORM,
+      queue: QUEUE,
+      buckets,
+      request,
+      onEntries: (entries) => {
+        cached.push(...entries);
+        db.savePlayerRanks(entries, PLATFORM, QUEUE, 'ladder');
+      },
+      ...extra,
+    })
+    .then((result) => ({ ...result, cached }));
+}
 
 async function main() {
-  // ── Cold sweep ─────────────────────────────────────────────────────────────
-  requestCount = 0;
-  const cold = await ladder.sweepLadderPosition(
-    { puuid: SELF.puuid, tier: 'EMERALD', division: 'II', leaguePoints: 60 },
-    { platform: 'test1', queue: 'RANKED_SOLO_5x5', request }
-  );
-
-  check('position counts every player above', cold.position, TIERS_ABOVE + ABOVE_IN_BUCKET + 1);
-  check('total is the whole region', cold.total, TOTAL_PLAYERS);
-  check('place within the division', cold.bucketPosition, ABOVE_IN_BUCKET + 1);
-  check('division size', cold.bucketTotal, SIZES['EMERALD/II']);
-  check('ties are reported, not hidden', cold.ties, 5);
-  check(
-    'percentile is position over total',
-    Math.round(cold.percentile * 1000) / 1000,
-    Math.round(((TIERS_ABOVE + ABOVE_IN_BUCKET + 1) / TOTAL_PLAYERS) * 100 * 1000) / 1000
-  );
-  check('the account finds its own entry', cold.entry?.puuid, SELF.puuid);
-  check('the entry carries win/loss counts', cold.entry?.wins, SELF.wins);
-
-  // 28 divisions binary-searched + 3 apex leagues + a full read of a 4-page
-  // division. A linear scan of the ladder would be ~130 requests here; the real
-  // ladder makes that difference three orders of magnitude wider.
-  checkAtMost('cold sweep stays cheap', requestCount, 260);
-
-  // ── Census reuse ───────────────────────────────────────────────────────────
+  // ── Which divisions get harvested ──────────────────────────────────────────
   //
-  // The point of caching the census: a second sweep should pay for the account's
-  // own division and essentially nothing else.
-  const ownPages = Math.ceil(SIZES['EMERALD/II'] / PAGE);
+  // The cost control: matchmaking stays near your rank, so the harvest does too.
+  check(
+    'spread 1 reaches one division either side',
+    ladder.bucketsAround('EMERALD', 'II', 1).map((b) => `${b.tier}/${b.division}`),
+    ['EMERALD/III', 'EMERALD/II', 'EMERALD/I']
+  );
+  check(
+    'spread 0 is the division alone',
+    ladder.bucketsAround('EMERALD', 'II', 0).map((b) => `${b.tier}/${b.division}`),
+    ['EMERALD/II']
+  );
+  check(
+    'the range crosses tier boundaries',
+    ladder.bucketsAround('EMERALD', 'I', 1).map((b) => `${b.tier}/${b.division}`),
+    ['EMERALD/II', 'EMERALD/I', 'DIAMOND/IV']
+  );
+  // Challenger is the last bucket, so reaching two beyond it must clamp rather
+  // than slice past the end of the ladder.
+  check(
+    'the top of the ladder does not run off the end',
+    ladder.bucketsAround('CHALLENGER', 'I', 2).map((b) => b.tier),
+    ['MASTER', 'GRANDMASTER', 'CHALLENGER']
+  );
+  check(
+    'nor does the bottom',
+    ladder.bucketsAround('IRON', 'IV', 2).map((b) => `${b.tier}/${b.division}`),
+    ['IRON/IV', 'IRON/III', 'IRON/II']
+  );
+  check('an unknown tier harvests nothing', ladder.bucketsAround('WOOD', 'V', 1), []);
+
+  // ── A cold harvest ─────────────────────────────────────────────────────────
+  const buckets = ladder.bucketsAround('EMERALD', 'II', 1);
+  const expectedPlayers = SIZES['EMERALD/III'] + SIZES['EMERALD/II'] + SIZES['EMERALD/I'];
+  const expectedPages =
+    Math.ceil(SIZES['EMERALD/III'] / PAGE) +
+    Math.ceil(SIZES['EMERALD/II'] / PAGE) +
+    Math.ceil(SIZES['EMERALD/I'] / PAGE);
+
   requestCount = 0;
-  const warm = await ladder.sweepLadderPosition(
-    { puuid: SELF.puuid, tier: 'EMERALD', division: 'II', leaguePoints: 60 },
-    { platform: 'test1', queue: 'RANKED_SOLO_5x5', request }
+  const cold = await harvest(buckets);
+
+  check('every player in range is cached', cold.players, expectedPlayers);
+  check('every page is read exactly once', cold.pages, expectedPages);
+  check('the harvest is not reported as cancelled', cold.cancelled, false);
+
+  // The whole point. Looking these players up one at a time is one request each;
+  // sizing the divisions adds a handful of probes on top of the pages.
+  checkAtMost('bulk is cheaper than per-player by two orders of magnitude', requestCount, 40);
+  check(
+    'a per-player lookup would have cost this instead',
+    expectedPlayers > requestCount * 100,
+    true
   );
 
-  check('a cached census gives the same answer', warm.position, cold.position);
-  check('census rows were reused', warm.censusReused > 0, true);
-  // Own division (4 pages, plus the binary search's bracketing probes) and the
-  // 3 apex leagues, which are one request each and never cached.
-  checkAtMost('warm sweep only re-reads what it must', requestCount, ownPages + 3 + 4);
+  // ── The cache is what the app reads ────────────────────────────────────────
+  const sample = population.get('EMERALD/II')[42];
+  const ranks = db.getPlayerRanks([sample.puuid, 'nobody'], PLATFORM, QUEUE);
 
-  // ── Estimate agrees with reality ───────────────────────────────────────────
-  const estimate = ladder.estimateSweep('test1', 'RANKED_SOLO_5x5', 'EMERALD', 'II');
-  check('estimate knows the census is cached', estimate.exact, true);
-  check('estimate knows the division length', estimate.ownPages, ownPages);
+  check('a harvested player is in the cache', ranks[sample.puuid]?.tier, 'EMERALD');
+  check('division survives the round trip', ranks[sample.puuid]?.division, 'II');
+  check('LP survives the round trip', ranks[sample.puuid]?.league_points, sample.leaguePoints);
+  check('win/loss counts come along for free', ranks[sample.puuid]?.wins, sample.wins);
+  check('the source is recorded', ranks[sample.puuid]?.source, 'ladder');
+  // A miss must be absent rather than a zero row — the difference between "we
+  // have not seen them" and "they are Iron IV 0 LP".
+  check('a player never seen is absent, not zeroed', ranks['nobody'], undefined);
+
+  // Absolute LP is what makes lobby averages possible at all.
+  check(
+    'absolute LP is on the same scale the app averages with',
+    ranks[sample.puuid]?.score,
+    db.computeAbsoluteLp('EMERALD', 'II', sample.leaguePoints)
+  );
+
+  const stats = db.getPlayerRankStats(PLATFORM, QUEUE);
+  check('cache stats count the harvest', stats.players, expectedPlayers);
+  check('and attribute it to the ladder', stats.fromLadder, expectedPlayers);
+
+  // ── A warm harvest ─────────────────────────────────────────────────────────
+  //
+  // The census remembers the page counts, so the sizing probes mostly vanish.
+  requestCount = 0;
+  const warm = await harvest(buckets);
+  check('a warm harvest reads the same players', warm.players, expectedPlayers);
+  checkAtMost('and spends fewer requests doing it', requestCount, expectedPages + 6);
+
+  const plan = ladder.estimateHarvest(PLATFORM, QUEUE, buckets);
+  check('the estimate knows every page count', plan.exact, true);
+  check('so it quotes the real page total', plan.requests, expectedPages);
 
   // ── Apex ───────────────────────────────────────────────────────────────────
   //
-  // Master/GM/Challenger have no divisions and come from their own endpoints;
-  // the position arithmetic has to keep working across that seam.
-  const gm = population.get('GRANDMASTER/I')[10];
-  const gmAbove = population
-    .get('GRANDMASTER/I')
-    .filter((e) => e.leaguePoints > gm.leaguePoints).length;
+  // Master and above come from their own endpoints, one request per league, and
+  // arrive without a tier on each entry.
+  requestCount = 0;
+  const apex = await harvest(ladder.bucketsAround('CHALLENGER', 'I', 1));
 
-  const apexResult = await ladder.sweepLadderPosition(
-    { puuid: gm.puuid, tier: 'GRANDMASTER', division: 'I', leaguePoints: gm.leaguePoints },
-    { platform: 'test1', queue: 'RANKED_SOLO_5x5', request }
-  );
+  check('the whole apex range is 2 requests', requestCount, 2);
+  check('and yields both leagues', apex.players, APEX.GRANDMASTER + APEX.CHALLENGER);
 
-  check('apex counts only Challenger above the tier', apexResult.position, APEX.CHALLENGER + gmAbove + 1);
-  check('apex division size is the league size', apexResult.bucketTotal, APEX.GRANDMASTER);
+  const challenger = population.get('CHALLENGER/I')[0];
+  const apexRank = db.getPlayerRanks([challenger.puuid], PLATFORM, QUEUE)[challenger.puuid];
+  check('apex entries get their tier put back', apexRank?.tier, 'CHALLENGER');
+
+  // ── An empty division ──────────────────────────────────────────────────────
+  requestCount = 0;
+  const empty = await harvest(ladder.bucketsAround('IRON', 'IV', 0));
+  check('an empty division yields nobody', empty.players, 0);
+  checkAtMost('and costs one request to find that out', requestCount, 1);
 
   // ── Cancellation ───────────────────────────────────────────────────────────
   //
-  // A sweep is minutes long, so cancelling has to actually stop it rather than
-  // run to completion and discard the result.
+  // A harvest runs for minutes, so cancelling has to stop it rather than run to
+  // completion and throw the result away.
   requestCount = 0;
-  const cancelled = await ladder.sweepLadderPosition(
-    { puuid: SELF.puuid, tier: 'EMERALD', division: 'II', leaguePoints: 60 },
-    {
-      platform: 'test1',
-      queue: 'RANKED_SOLO_5x5',
-      request,
-      shouldCancel: () => requestCount >= 3,
-    }
-  );
+  const cancelled = await harvest(ladder.bucketsAround('GOLD', 'II', 1), {
+    shouldCancel: () => requestCount >= 3,
+  });
   check('cancelling reports itself', cancelled.cancelled, true);
   checkAtMost('cancelling stops promptly', requestCount, 12);
 
-  // ── Persistence ────────────────────────────────────────────────────────────
-  db.recordLadderPosition('acct-1', 'RANKED_SOLO_5x5', cold);
-  db.recordLadderPosition('acct-1', 'RANKED_SOLO_5x5', { ...cold, position: cold.position - 10 });
+  // ── Lookups fill what a harvest missed ─────────────────────────────────────
+  db.savePlayerRanks(
+    [{ puuid: 'smurf-1', tier: 'SILVER', rank: 'I', leaguePoints: 12, wins: 3, losses: 1 }],
+    PLATFORM,
+    QUEUE,
+    'lookup'
+  );
+  const smurf = db.getPlayerRanks(['smurf-1'], PLATFORM, QUEUE)['smurf-1'];
+  check('a single lookup caches too', smurf?.tier, 'SILVER');
+  check('and is marked as having cost a request', smurf?.source, 'lookup');
 
-  const rows = db.getLadderPositions('acct-1', 'RANKED_SOLO_5x5');
-  check('two sweeps in a day stay one row', rows.length, 1);
-  check('the later sweep wins', rows[0].position, cold.position - 10);
-  check('percentile survives the round trip', Math.round(rows[0].percentile), Math.round(cold.percentile));
+  // ── Platforms and queues do not bleed into each other ──────────────────────
+  check(
+    'another platform sees nothing',
+    Object.keys(db.getPlayerRanks([sample.puuid], 'other1', QUEUE)).length,
+    0
+  );
+  check(
+    'another queue sees nothing',
+    Object.keys(db.getPlayerRanks([sample.puuid], PLATFORM, 'RANKED_FLEX_SR')).length,
+    0
+  );
 
-  // ── An unrecognised rank is refused, not guessed ───────────────────────────
-  let threw = null;
-  try {
-    await ladder.sweepLadderPosition(
-      { puuid: 'x', tier: 'WOOD', division: 'V', leaguePoints: 0 },
-      { platform: 'test1', queue: 'RANKED_SOLO_5x5', request }
-    );
-  } catch (err) {
-    threw = err.code;
-  }
-  check('an unknown tier throws rather than placing you somewhere', threw, 'BAD_RANK');
+  // ── A lobby-sized read ─────────────────────────────────────────────────────
+  //
+  // What the match card actually does: one query for ten players.
+  const lobby = population.get('EMERALD/II').slice(0, 10).map((e) => e.puuid);
+  const lobbyRanks = db.getPlayerRanks(lobby, PLATFORM, QUEUE);
+  check('a whole lobby resolves in one read', Object.keys(lobbyRanks).length, 10);
 
   if (failures > 0) {
     console.error(`\n${failures} assertion(s) failed.`);

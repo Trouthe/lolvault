@@ -100,11 +100,11 @@
         }
       </div>
 
-      <!-- Ladder position — counted, not fetched. Vault accounts only: the
-           sweep writes rows under a vault id, and someone else's profile has
-           nowhere to put them. -->
+      <!-- Rank cache — bulk ladder pages instead of per-player lookups. Vault
+           accounts only: the harvest centres on the account's own division, and
+           it also records a rank reading under a vault id. -->
       @if (!data.external()) {
-        <app-ladder-position />
+        <app-ladder-harvest />
       }
 
       <!-- Most played -->

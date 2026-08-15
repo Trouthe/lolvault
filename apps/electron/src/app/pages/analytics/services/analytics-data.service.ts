@@ -3,11 +3,11 @@ import { Account } from '../../../models/interfaces/Account';
 import {
   BackfillProgress,
   CompactTimeline,
-  LadderPosition,
-  LadderSweepEstimate,
-  LadderSweepProgress,
+  LadderHarvestPlan,
+  LadderHarvestProgress,
   MatchCacheRow,
   MatchDetail,
+  PlayerRank,
   RankSnapshot,
   YearHistoryProgress,
 } from '../../../../types/electron';
@@ -124,17 +124,20 @@ export class AnalyticsDataService {
   readonly yearHistoryRunning = signal(false);
 
   /**
-   * Ladder position over time — one row per day a sweep was run.
+   * Ranks of every player seen in the loaded match history, from the local
+   * cache — keyed by puuid.
    *
-   * Sparse by design, unlike `rankSnapshots`. A sweep counts every ranked player
-   * on the region and costs minutes on a development key, so it only ever
-   * happens when the user asks for it. The rail shows the newest row and says
-   * how old it is rather than pretending it is live.
+   * The point of this signal is that filling it is nearly free. A ladder harvest
+   * caches 205 players per request, so the ranks of the nine other people in a
+   * match are almost always already here; without one, showing them would cost
+   * nine requests per card. Misses stay absent rather than being looked up
+   * behind the user's back.
    */
-  readonly ladderPositions = signal<LadderPosition[]>([]);
-  readonly ladderSweep = signal<LadderSweepProgress | null>(null);
-  readonly ladderSweepRunning = signal(false);
-  readonly ladderSweepError = signal<string | null>(null);
+  readonly playerRanks = signal<Record<string, PlayerRank>>({});
+
+  readonly ladderHarvest = signal<LadderHarvestProgress | null>(null);
+  readonly ladderHarvestRunning = signal(false);
+  readonly ladderHarvestError = signal<string | null>(null);
 
   /** In-memory caches so re-opening a match card is instant. */
   private timelineCache = new Map<string, CompactTimeline>();
@@ -286,12 +289,6 @@ export class AnalyticsDataService {
       if (!this.isCurrent(token)) return;
       this.rankSnapshots.set(rankResult?.snapshots ?? []);
 
-      const ladderResult = await optionalIpc(() =>
-        window.electronAPI.riotGetLadderPositions({ accountId: vaultId })
-      );
-      if (!this.isCurrent(token)) return;
-      this.ladderPositions.set(ladderResult?.positions ?? []);
-
       await this.loadRiotData(token, vaultId, puuid, platform, 30);
     } catch (err: unknown) {
       if (this.isCurrent(token)) this.fail(err);
@@ -313,7 +310,6 @@ export class AnalyticsDataService {
     const token = this.beginLoad();
     this.external.set(true);
     this.rankSnapshots.set([]);
-    this.ladderPositions.set([]);
 
     try {
       if (!puuid) {
@@ -611,20 +607,23 @@ export class AnalyticsDataService {
   }
 
   /**
-   * Cost of a ladder sweep right now, so the button can quote a wait before the
-   * user commits to one. Null when the running main process is too old to know
-   * about ladder sweeps at all.
+   * Which divisions a harvest would cover and what it would cost, so the button
+   * can quote a wait before the user commits. Null when the running main process
+   * predates ladder harvesting.
    */
-  async ladderSweepEstimate(queue = 'RANKED_SOLO_5x5'): Promise<LadderSweepEstimate | null> {
-    const entry = this.ranked().find((e) => e.queueType === queue);
-    if (!entry?.tier) return null;
+  async ladderHarvestPlan(
+    queue = 'RANKED_SOLO_5x5',
+    spread = 1
+  ): Promise<LadderHarvestPlan | null> {
+    const puuid = this.puuid();
+    if (!puuid) return null;
 
     const result = await optionalIpc(() =>
-      window.electronAPI.riotEstimateLadderSweep({
+      window.electronAPI.riotPlanLadderHarvest({
+        puuid,
         platform: this.platform(),
         queue,
-        tier: entry.tier,
-        division: entry.rank,
+        spread,
       })
     );
     if (!result || 'error' in result) return null;
@@ -632,78 +631,98 @@ export class AnalyticsDataService {
   }
 
   /**
-   * Counts the region's ranked ladder to place this account on it.
+   * Loads cached ranks for every player in the currently visible matches.
    *
-   * Deliberately never automatic. Every other Riot call in this service is
-   * either one request or bounded by how many games you played; this one is
-   * bounded by how many people are on the ladder, which on a development key is
-   * minutes of budget for a single number. It runs when asked, reports progress,
-   * and stops when cancelled.
+   * Costs nothing: it reads the local cache and never falls back to per-player
+   * lookups. Players the cache has never seen simply stay absent, and the UI
+   * says "unknown" rather than spending nine requests to avoid saying it.
    */
-  async sweepLadderPosition(queue = 'RANKED_SOLO_5x5', freshCensus = false): Promise<void> {
+  async loadPlayerRanks(puuids: string[], queue = 'RANKED_SOLO_5x5'): Promise<void> {
+    if (!puuids.length) return;
+
+    const result = await optionalIpc(() =>
+      window.electronAPI.riotGetPlayerRanks({
+        puuids,
+        platform: this.platform(),
+        queue,
+      })
+    );
+    if (!result?.ranks) return;
+
+    // Merged, not replaced: scrolling further down the match list should add to
+    // what is known rather than discard the ranks already on screen.
+    this.playerRanks.update((current) => ({ ...current, ...result.ranks }));
+  }
+
+  /**
+   * Pages the divisions around this account's rank into the local rank cache.
+   *
+   * The one call in this service whose cost is bounded by the size of the ladder
+   * rather than by the user's own history, so it is never automatic. What it
+   * buys is that every match card afterwards shows ranks for free — the same
+   * information that costs nine requests per card to fetch player by player.
+   */
+  async harvestLadder(queue = 'RANKED_SOLO_5x5', spread = 1): Promise<void> {
     const puuid = this.puuid();
     const accountId = this.cacheKey;
-    // External profiles are excluded: their rows would be filed under a puuid
-    // key that no rail ever reads, for a sweep the user cannot see the result of.
-    if (!puuid || !accountId || this.external() || this.ladderSweepRunning()) return;
+    if (!puuid || !accountId || this.ladderHarvestRunning()) return;
 
     this.streamingKey = accountId;
-    this.ladderSweepError.set(null);
+    this.ladderHarvestError.set(null);
 
     if (!this.ladderListenerBound) {
       void optionalIpc(async () => {
-        window.electronAPI.onLadderSweepProgress((progress) => {
-          if (progress.accountId === this.streamingKey) this.ladderSweep.set(progress);
+        window.electronAPI.onLadderHarvestProgress((progress) => {
+          if (progress.accountId === this.streamingKey) this.ladderHarvest.set(progress);
         });
       });
       this.ladderListenerBound = true;
     }
 
-    this.ladderSweepRunning.set(true);
+    this.ladderHarvestRunning.set(true);
     try {
       const result = await optionalIpc(() =>
-        window.electronAPI.riotSweepLadderPosition({
+        window.electronAPI.riotHarvestLadder({
           accountId,
           puuid,
           platform: this.platform(),
           queue,
-          freshCensus,
+          spread,
         })
       );
 
       if (result === null) {
-        this.ladderSweepError.set(
-          'Ladder position needs a newer app version than the one currently running. Restart LoL Vault and try again.'
+        this.ladderHarvestError.set(
+          'Harvesting the ladder needs a newer app version than the one currently running. Restart LoL Vault and try again.'
         );
         return;
       }
       if ('error' in result) {
-        this.ladderSweepError.set(
+        this.ladderHarvestError.set(
           result.error === 'unranked'
-            ? 'This queue has no rank yet, so there is no ladder to place you on.'
+            ? 'This queue has no rank yet, so there is no division to harvest around.'
             : result.error
         );
         return;
       }
-      if ('cancelled' in result && result.cancelled) return;
 
-      // The sweep wrote both a position row and a rank-snapshot row, so re-read
-      // each rather than reconstructing them here.
-      const [positions, snapshots] = await Promise.all([
-        optionalIpc(() => window.electronAPI.riotGetLadderPositions({ accountId })),
-        optionalIpc(() => window.electronAPI.getRankSnapshots(accountId)),
-      ]);
-      if (positions?.positions) this.ladderPositions.set(positions.positions);
+      // The harvest also wrote a rank-snapshot row if it paged over this
+      // account's own entry, so re-read the series rather than guessing.
+      const snapshots = await optionalIpc(() =>
+        window.electronAPI.getRankSnapshots(accountId)
+      );
       if (snapshots?.snapshots) this.rankSnapshots.set(snapshots.snapshots);
     } finally {
-      this.ladderSweepRunning.set(false);
-      this.ladderSweep.set(null);
+      this.ladderHarvestRunning.set(false);
+      this.ladderHarvest.set(null);
     }
   }
 
-  async cancelLadderSweep(): Promise<void> {
+  async cancelLadderHarvest(): Promise<void> {
     if (!this.cacheKey) return;
-    await optionalIpc(() => window.electronAPI.riotCancelLadderSweep({ accountId: this.cacheKey }));
+    await optionalIpc(() =>
+      window.electronAPI.riotCancelLadderHarvest({ accountId: this.cacheKey })
+    );
   }
 
   async cancelYearHistory(): Promise<void> {
@@ -727,9 +746,11 @@ export class AnalyticsDataService {
     this.streamingKey = '';
     this.external.set(false);
     this.yearHistory.set(null);
-    this.ladderSweep.set(null);
-    this.ladderSweepError.set(null);
-    this.ladderPositions.set([]);
+    this.ladderHarvest.set(null);
+    this.ladderHarvestError.set(null);
+    // The rank cache itself is on disk and shared across accounts; only this
+    // profile's view of it is cleared.
+    this.playerRanks.set({});
     this.timelineCache.clear();
     this.detailCache.clear();
     this.matches.set([]);

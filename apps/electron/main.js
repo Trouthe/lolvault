@@ -1802,54 +1802,55 @@ ipcMain.handle('riot:get-backfill-status', (_event, { accountId }) => {
   }
 });
 
-// ── Ladder position ──────────────────────────────────────────────────────────
+// ── Ladder harvest and the rank cache ────────────────────────────────────────
 //
-// A sweep counts every ranked player on the region and runs for minutes on a
-// development key, so it follows the same shape as the year backfill: explicit
-// start, pushed progress, and a cancel flag the loop checks between pages.
+// A harvest pages whole divisions and runs for minutes on a development key, so
+// it follows the same shape as the year backfill: explicit start, pushed
+// progress, and a cancel flag the loop checks between pages. Reading ranks back
+// out is a local query and needs none of that.
 
 const ladderCancelled = new Set();
 
-ipcMain.handle('riot:cancel-ladder-sweep', (_event, { accountId }) => {
+ipcMain.handle('riot:cancel-ladder-harvest', (_event, { accountId }) => {
   ladderCancelled.add(accountId);
   return { success: true };
 });
 
-ipcMain.handle('riot:estimate-ladder-sweep', (_event, { platform, queue, tier, division }) => {
+ipcMain.handle('riot:plan-ladder-harvest', async (_event, { puuid, platform, queue, spread }) => {
   try {
-    return riotApi.estimateLadderSweep(platform, queue, tier, division);
+    return await riotApi.planLadderHarvest(puuid, platform, { queue, spread });
   } catch (err) {
-    console.error('riot:estimate-ladder-sweep error:', err?.message);
+    console.error('riot:plan-ladder-harvest error:', err?.message);
     return { error: err?.message || 'unknown' };
   }
 });
 
-ipcMain.handle('riot:get-ladder-positions', (_event, { accountId, queue }) => {
+ipcMain.handle('riot:get-player-ranks', async (_event, { puuids, platform, queue, fill }) => {
   try {
-    return { positions: db.getLadderPositions(accountId, queue ?? null) };
+    return await riotApi.resolvePlayerRanks(puuids, platform, { queue, fill });
   } catch (err) {
-    console.error('riot:get-ladder-positions error:', err?.message);
-    return { positions: [] };
+    console.error('riot:get-player-ranks error:', err?.message);
+    return { ranks: {}, requested: 0, known: 0 };
   }
 });
 
 ipcMain.handle(
-  'riot:sweep-ladder-position',
-  async (event, { accountId, puuid, platform, queue, freshCensus }) => {
+  'riot:harvest-ladder',
+  async (event, { accountId, puuid, platform, queue, spread }) => {
     ladderCancelled.delete(accountId);
     try {
-      return await riotApi.sweepLadderPosition(accountId, puuid, platform, {
+      return await riotApi.harvestLadder(accountId, puuid, platform, {
         queue: queue || 'RANKED_SOLO_5x5',
-        freshCensus: !!freshCensus,
+        spread: spread ?? 1,
         shouldCancel: () => ladderCancelled.has(accountId),
         onProgress: (progress) => {
           if (!event.sender.isDestroyed()) {
-            event.sender.send('riot:ladder-sweep-progress', { accountId, ...progress });
+            event.sender.send('riot:ladder-harvest-progress', { accountId, ...progress });
           }
         },
       });
     } catch (err) {
-      console.error('riot:sweep-ladder-position error:', err?.message);
+      console.error('riot:harvest-ladder error:', err?.message);
       return { error: err?.message || 'unknown' };
     } finally {
       ladderCancelled.delete(accountId);
