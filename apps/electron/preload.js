@@ -73,6 +73,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Rows arrive in batches during the sweep so the page can fill in live.
   onYearHistoryRows: (cb) => ipcRenderer.on('riot:year-history-rows', (_e, data) => cb(data)),
 
+  // Riot API — ladder position
+  riotSweepLadderPosition: (args) => ipcRenderer.invoke('riot:sweep-ladder-position', args),
+  riotCancelLadderSweep: (args) => ipcRenderer.invoke('riot:cancel-ladder-sweep', args),
+  riotEstimateLadderSweep: (args) => ipcRenderer.invoke('riot:estimate-ladder-sweep', args),
+  riotGetLadderPositions: (args) => ipcRenderer.invoke('riot:get-ladder-positions', args),
+  onLadderSweepProgress: (cb) =>
+    ipcRenderer.on('riot:ladder-sweep-progress', (_e, data) => cb(data)),
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => ipcRenderer.invoke('lcu:get-state'),
 

@@ -153,8 +153,20 @@
       </h3>
       <span class="panel-note">
         {{ activity().totalGames }} ranked games in {{ selectedYear() }}
-        @if (activity().totalGames) {
+        @if (activity().totalGames && activity().totalWins) {
           · {{ (activity().totalWins / activity().totalGames) * 100 | number: '1.0-0' }}% WR
+        }
+        <!-- Net LP for the year, from the recorded series rather than the games:
+             it is the one figure here that survives a cache that only holds a
+             few weeks. -->
+        @if (activity().hasLp) {
+          <span
+            class="note-lp"
+            [class.up]="activity().totalLp > 0"
+            [class.down]="activity().totalLp < 0"
+          >
+            · {{ activity().totalLp > 0 ? '+' : '' }}{{ activity().totalLp }} LP
+          </span>
         }
       </span>
     </header>

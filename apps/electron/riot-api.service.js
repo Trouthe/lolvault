@@ -11,6 +11,7 @@
 const { LolApi, RiotApi } = require('twisted');
 const db = require('./database');
 const limiter = require('./rate-limiter');
+const ladder = require('./ladder');
 const {
   compactTimeline,
   computeDiffsAtMinute,
@@ -987,6 +988,75 @@ async function backfillMatchData(
   return { processed, total, failed, cancelled: false };
 }
 
+// ── Ladder position ───────────────────────────────────────────────────────────
+
+/**
+ * Measures where an account sits on its region's ranked ladder and records it.
+ *
+ * The counting lives in `ladder.js`; this is the part that needs Riot — it
+ * resolves the account's current rank, hands the sweep a paced request function,
+ * and persists both results it produces.
+ *
+ * Two rows come out of one sweep, which is the reason it is worth the requests:
+ * the ladder position itself, and a `rank_snapshots` row built from the
+ * account's own ladder entry. That entry carries `wins`, `losses` and
+ * `inactive` — the same fields the rank recorder reads — so the daily series
+ * gets a reading out of a sweep that was already paid for.
+ */
+async function sweepLadderPosition(
+  accountId,
+  puuid,
+  platform,
+  { queue = 'RANKED_SOLO_5x5', onProgress = () => {}, shouldCancel = () => false, freshCensus = false } = {}
+) {
+  const entries = await getRankedByPuuid(puuid, platform);
+  if (!Array.isArray(entries)) {
+    return { error: entries?.error || 'Could not read rank from Riot' };
+  }
+
+  const current = entries.find((e) => e.queueType === queue);
+  if (!current || !current.tier) {
+    return { error: 'unranked', queue };
+  }
+
+  // 404s are expected while paging: they mean "no such page", not a failure.
+  const request = async (url) => {
+    try {
+      return await riotFetch(url, undefined, { interactive: false });
+    } catch (err) {
+      const status = err?.status || Number(err?.message);
+      if (status === 404) return [];
+      throw err;
+    }
+  };
+
+  const result = await ladder.sweepLadderPosition(
+    {
+      puuid,
+      tier: current.tier,
+      division: current.rank,
+      leaguePoints: current.leaguePoints,
+    },
+    { platform, queue, request, onProgress, shouldCancel, freshCensus }
+  );
+
+  if (result.cancelled) return { cancelled: true, requests: result.requests };
+
+  db.recordLadderPosition(accountId, queue, result);
+
+  // The sweep saw the account's own ladder entry, which carries win/loss counts
+  // the by-puuid response also has — but written here it lands on the same day
+  // key, so the daily series gains a reading for free.
+  db.recordRankSnapshot(accountId, queue, result.entry ?? current);
+
+  return result;
+}
+
+/** Pre-flight cost of a sweep, so the UI can quote a wait before starting one. */
+function estimateLadderSweep(platform, queue, tier, division) {
+  return ladder.estimateSweep(platform, queue, tier, division);
+}
+
 // ── API key validation ────────────────────────────────────────────────────────
 
 /**
@@ -1049,6 +1119,8 @@ module.exports = {
   getMatchTimeline,
   getMatchDetailCached,
   backfillMatchData,
+  sweepLadderPosition,
+  estimateLadderSweep,
   validateApiKey,
   getDDragonVersion,
   invalidatePlayerCache,

@@ -100,6 +100,13 @@
         }
       </div>
 
+      <!-- Ladder position — counted, not fetched. Vault accounts only: the
+           sweep writes rows under a vault id, and someone else's profile has
+           nowhere to put them. -->
+      @if (!data.external()) {
+        <app-ladder-position />
+      }
+
       <!-- Most played -->
       <section class="rail-panel">
         <header class="rail-panel-head">

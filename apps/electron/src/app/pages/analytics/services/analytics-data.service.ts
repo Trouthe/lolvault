@@ -3,6 +3,9 @@ import { Account } from '../../../models/interfaces/Account';
 import {
   BackfillProgress,
   CompactTimeline,
+  LadderPosition,
+  LadderSweepEstimate,
+  LadderSweepProgress,
   MatchCacheRow,
   MatchDetail,
   RankSnapshot,
@@ -120,12 +123,26 @@ export class AnalyticsDataService {
   readonly yearHistory = signal<YearHistoryProgress | null>(null);
   readonly yearHistoryRunning = signal(false);
 
+  /**
+   * Ladder position over time — one row per day a sweep was run.
+   *
+   * Sparse by design, unlike `rankSnapshots`. A sweep counts every ranked player
+   * on the region and costs minutes on a development key, so it only ever
+   * happens when the user asks for it. The rail shows the newest row and says
+   * how old it is rather than pretending it is live.
+   */
+  readonly ladderPositions = signal<LadderPosition[]>([]);
+  readonly ladderSweep = signal<LadderSweepProgress | null>(null);
+  readonly ladderSweepRunning = signal(false);
+  readonly ladderSweepError = signal<string | null>(null);
+
   /** In-memory caches so re-opening a match card is instant. */
   private timelineCache = new Map<string, CompactTimeline>();
   private detailCache = new Map<string, MatchDetail>();
 
   private backfillListenerBound = false;
   private yearHistoryListenerBound = false;
+  private ladderListenerBound = false;
 
   /**
    * Cache key the streaming year-history listener is currently filtering on.
@@ -269,6 +286,12 @@ export class AnalyticsDataService {
       if (!this.isCurrent(token)) return;
       this.rankSnapshots.set(rankResult?.snapshots ?? []);
 
+      const ladderResult = await optionalIpc(() =>
+        window.electronAPI.riotGetLadderPositions({ accountId: vaultId })
+      );
+      if (!this.isCurrent(token)) return;
+      this.ladderPositions.set(ladderResult?.positions ?? []);
+
       await this.loadRiotData(token, vaultId, puuid, platform, 30);
     } catch (err: unknown) {
       if (this.isCurrent(token)) this.fail(err);
@@ -290,6 +313,7 @@ export class AnalyticsDataService {
     const token = this.beginLoad();
     this.external.set(true);
     this.rankSnapshots.set([]);
+    this.ladderPositions.set([]);
 
     try {
       if (!puuid) {
@@ -586,6 +610,102 @@ export class AnalyticsDataService {
     }
   }
 
+  /**
+   * Cost of a ladder sweep right now, so the button can quote a wait before the
+   * user commits to one. Null when the running main process is too old to know
+   * about ladder sweeps at all.
+   */
+  async ladderSweepEstimate(queue = 'RANKED_SOLO_5x5'): Promise<LadderSweepEstimate | null> {
+    const entry = this.ranked().find((e) => e.queueType === queue);
+    if (!entry?.tier) return null;
+
+    const result = await optionalIpc(() =>
+      window.electronAPI.riotEstimateLadderSweep({
+        platform: this.platform(),
+        queue,
+        tier: entry.tier,
+        division: entry.rank,
+      })
+    );
+    if (!result || 'error' in result) return null;
+    return result;
+  }
+
+  /**
+   * Counts the region's ranked ladder to place this account on it.
+   *
+   * Deliberately never automatic. Every other Riot call in this service is
+   * either one request or bounded by how many games you played; this one is
+   * bounded by how many people are on the ladder, which on a development key is
+   * minutes of budget for a single number. It runs when asked, reports progress,
+   * and stops when cancelled.
+   */
+  async sweepLadderPosition(queue = 'RANKED_SOLO_5x5', freshCensus = false): Promise<void> {
+    const puuid = this.puuid();
+    const accountId = this.cacheKey;
+    // External profiles are excluded: their rows would be filed under a puuid
+    // key that no rail ever reads, for a sweep the user cannot see the result of.
+    if (!puuid || !accountId || this.external() || this.ladderSweepRunning()) return;
+
+    this.streamingKey = accountId;
+    this.ladderSweepError.set(null);
+
+    if (!this.ladderListenerBound) {
+      void optionalIpc(async () => {
+        window.electronAPI.onLadderSweepProgress((progress) => {
+          if (progress.accountId === this.streamingKey) this.ladderSweep.set(progress);
+        });
+      });
+      this.ladderListenerBound = true;
+    }
+
+    this.ladderSweepRunning.set(true);
+    try {
+      const result = await optionalIpc(() =>
+        window.electronAPI.riotSweepLadderPosition({
+          accountId,
+          puuid,
+          platform: this.platform(),
+          queue,
+          freshCensus,
+        })
+      );
+
+      if (result === null) {
+        this.ladderSweepError.set(
+          'Ladder position needs a newer app version than the one currently running. Restart LoL Vault and try again.'
+        );
+        return;
+      }
+      if ('error' in result) {
+        this.ladderSweepError.set(
+          result.error === 'unranked'
+            ? 'This queue has no rank yet, so there is no ladder to place you on.'
+            : result.error
+        );
+        return;
+      }
+      if ('cancelled' in result && result.cancelled) return;
+
+      // The sweep wrote both a position row and a rank-snapshot row, so re-read
+      // each rather than reconstructing them here.
+      const [positions, snapshots] = await Promise.all([
+        optionalIpc(() => window.electronAPI.riotGetLadderPositions({ accountId })),
+        optionalIpc(() => window.electronAPI.getRankSnapshots(accountId)),
+      ]);
+      if (positions?.positions) this.ladderPositions.set(positions.positions);
+      if (snapshots?.snapshots) this.rankSnapshots.set(snapshots.snapshots);
+    } finally {
+      this.ladderSweepRunning.set(false);
+      this.ladderSweep.set(null);
+    }
+  }
+
+  async cancelLadderSweep(): Promise<void> {
+    if (!this.cacheKey) return;
+    await optionalIpc(() => window.electronAPI.riotCancelLadderSweep({ accountId: this.cacheKey }));
+  }
+
   async cancelYearHistory(): Promise<void> {
     if (!this.cacheKey) return;
     await optionalIpc(() =>
@@ -607,6 +727,9 @@ export class AnalyticsDataService {
     this.streamingKey = '';
     this.external.set(false);
     this.yearHistory.set(null);
+    this.ladderSweep.set(null);
+    this.ladderSweepError.set(null);
+    this.ladderPositions.set([]);
     this.timelineCache.clear();
     this.detailCache.clear();
     this.matches.set([]);

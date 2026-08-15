@@ -211,6 +211,19 @@
   opacity: 1;
 }
 
+// Net LP inline in the heatmap's note, where the rest of the line stays muted.
+.note-lp {
+  font-weight: 700;
+
+  &.up {
+    color: #2f9e6f;
+  }
+
+  &.down {
+    color: var(--danger);
+  }
+}
+
 // ── KDA ──────────────────────────────────────────────────────────────────────
 
 // The headline number sits beside its breakdown rather than above it, so the

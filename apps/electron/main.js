@@ -1802,6 +1802,61 @@ ipcMain.handle('riot:get-backfill-status', (_event, { accountId }) => {
   }
 });
 
+// ── Ladder position ──────────────────────────────────────────────────────────
+//
+// A sweep counts every ranked player on the region and runs for minutes on a
+// development key, so it follows the same shape as the year backfill: explicit
+// start, pushed progress, and a cancel flag the loop checks between pages.
+
+const ladderCancelled = new Set();
+
+ipcMain.handle('riot:cancel-ladder-sweep', (_event, { accountId }) => {
+  ladderCancelled.add(accountId);
+  return { success: true };
+});
+
+ipcMain.handle('riot:estimate-ladder-sweep', (_event, { platform, queue, tier, division }) => {
+  try {
+    return riotApi.estimateLadderSweep(platform, queue, tier, division);
+  } catch (err) {
+    console.error('riot:estimate-ladder-sweep error:', err?.message);
+    return { error: err?.message || 'unknown' };
+  }
+});
+
+ipcMain.handle('riot:get-ladder-positions', (_event, { accountId, queue }) => {
+  try {
+    return { positions: db.getLadderPositions(accountId, queue ?? null) };
+  } catch (err) {
+    console.error('riot:get-ladder-positions error:', err?.message);
+    return { positions: [] };
+  }
+});
+
+ipcMain.handle(
+  'riot:sweep-ladder-position',
+  async (event, { accountId, puuid, platform, queue, freshCensus }) => {
+    ladderCancelled.delete(accountId);
+    try {
+      return await riotApi.sweepLadderPosition(accountId, puuid, platform, {
+        queue: queue || 'RANKED_SOLO_5x5',
+        freshCensus: !!freshCensus,
+        shouldCancel: () => ladderCancelled.has(accountId),
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('riot:ladder-sweep-progress', { accountId, ...progress });
+          }
+        },
+      });
+    } catch (err) {
+      console.error('riot:sweep-ladder-position error:', err?.message);
+      return { error: err?.message || 'unknown' };
+    } finally {
+      ladderCancelled.delete(accountId);
+    }
+  }
+);
+
 // ── Persistent game settings ─────────────────────────────────────────────────
 //
 // League rewrites its Config files whenever the client signs a different

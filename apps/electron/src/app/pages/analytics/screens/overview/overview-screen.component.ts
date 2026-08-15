@@ -178,15 +178,25 @@ export class OverviewScreenComponent {
   );
 
   // Years come from the unfiltered pool: switching to ARAM should not make a
-  // year vanish from the picker just because it holds no ARAM games.
-  readonly activityYears = computed(() => this.agg.activityYears(this.data.matches()));
+  // year vanish from the picker just because it holds no ARAM games. The rank
+  // series counts too, so a year the recorder covered is offered even when no
+  // game from it has been pulled yet.
+  readonly activityYears = computed(() =>
+    this.agg.activityYears(this.data.matches(), this.soloRankSeries())
+  );
 
   readonly selectedYear = computed(
     () => this.activityYear() ?? this.activityYears()[0] ?? new Date().getFullYear()
   );
 
+  /**
+   * The grid reads both sources: cached ranked games for the record, and the
+   * daily rank series for LP and for days no game was ever cached. The series
+   * is solo-queue only, matching the games the grid counts — every ladder
+   * sweep and every recorder pass adds to it.
+   */
   readonly activity = computed(() =>
-    this.agg.activityGrid(this.rankedMatches(), this.selectedYear())
+    this.agg.activityGrid(this.rankedMatches(), this.selectedYear(), this.soloRankSeries())
   );
 
   /**

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { MatchCacheRow } from '../../../../types/electron';
+import { MatchCacheRow, RankSnapshot } from '../../../../types/electron';
 import {
   ActivityDay,
   ChampionStatRow,
@@ -403,10 +403,16 @@ export class MatchAggregationService {
     };
   }
 
-  /** Calendar years that have any cached game, newest first. */
-  activityYears(matches: MatchCacheRow[]): number[] {
+  /** Calendar years with any cached game or recorded rank reading, newest first. */
+  activityYears(matches: MatchCacheRow[], rankSeries: RankSnapshot[] = []): number[] {
     const years = new Set<number>();
     for (const m of matches) if (m.timestamp > 0) years.add(new Date(m.timestamp).getFullYear());
+    // A year the recorder covered but the match cache does not still has a grid
+    // worth showing — LP moved, even if no game from it was ever pulled.
+    for (const row of rankSeries) {
+      const year = Number(row.day.slice(0, 4));
+      if (year) years.add(year);
+    }
     // The current year is always offered, even before its first game.
     years.add(new Date().getFullYear());
     return [...years].sort((a, b) => b - a);
@@ -415,21 +421,31 @@ export class MatchAggregationService {
   /**
    * Day-by-day activity heatmap for one calendar year.
    *
-   * Built purely from cached games: a day's colour is its win/loss balance, and
-   * its intensity is how much was played. The grid always spans Jan-Dec so the
-   * strip keeps its shape as the year fills in. Three states are distinguished:
-   * days before we hold any data, days in the future, and days that simply had
-   * no games.
+   * Two sources, merged per day (see `ActivityDay` for which knows what):
+   * cached games give the win/loss record, and the recorded rank series gives
+   * LP movement plus a games count for days no game was ever cached. A day the
+   * rank series knows about is a real day played — Riot's own `wins + losses`
+   * counters moved — so it is drawn rather than left blank, just without a
+   * record it cannot know.
+   *
+   * The grid always spans Jan-Dec so the strip keeps its shape as the year fills
+   * in. Three states are distinguished: days before we hold any data, days in
+   * the future, and days that genuinely had no games.
    */
   activityGrid(
     matches: MatchCacheRow[],
-    year: number = new Date().getFullYear()
+    year: number = new Date().getFullYear(),
+    rankSeries: RankSnapshot[] = []
   ): {
     weeks: ActivityDay[][];
     monthLabels: { index: number; label: string }[];
     startDate: Date;
     totalGames: number;
     totalWins: number;
+    /** Net LP across every day of the year that has a reading. */
+    totalLp: number;
+    /** True when any day carries LP, so the UI can offer an LP legend. */
+    hasLp: boolean;
     /** Busiest day in the year, used to scale the colour ramp. */
     busiestDay: number;
   } {
@@ -453,11 +469,32 @@ export class MatchAggregationService {
       perDay.set(key, entry);
     }
 
+    // The rank series is keyed by local 'YYYY-MM-DD' strings; re-key it the same
+    // way the match map is so a day is looked up once, by one kind of key.
+    const rankByDay = new Map<string, RankSnapshot>();
+    for (const row of rankSeries) {
+      const [y, m, d] = row.day.split('-').map(Number);
+      if (!y || !m || !d) continue;
+      rankByDay.set(dayKey(new Date(y, m - 1, d)), row);
+    }
+
     const today = startOfDay(Date.now());
     // With nothing cached, every past day is genuinely "no data" rather than
     // "played nothing" — and the grid still renders, so the control that fills
     // it in is reachable instead of being hidden behind an empty state.
-    const earliest = stamps.length ? startOfDay(Math.min(...stamps)) : today;
+    //
+    // The rank series counts towards this too: a recorded day is a tracked day
+    // even when no game from it was ever pulled, which is exactly the case on a
+    // fresh install where the recorder has been running longer than the cache.
+    const rankStamps = rankSeries
+      .map((row) => {
+        const [y, m, d] = row.day.split('-').map(Number);
+        return y && m && d ? new Date(y, m - 1, d).getTime() : 0;
+      })
+      .filter((t) => t > 0);
+
+    const allStamps = [...stamps, ...rankStamps];
+    const earliest = allStamps.length ? startOfDay(Math.min(...allStamps)) : today;
 
     // Grid columns are calendar weeks starting Monday.
     const mondayOf = (d: Date) => {
@@ -476,6 +513,8 @@ export class MatchAggregationService {
     let lastMonth = -1;
     let totalGames = 0;
     let totalWins = 0;
+    let totalLp = 0;
+    let hasLp = false;
     let busiestDay = 0;
     let col = 0;
 
@@ -486,16 +525,35 @@ export class MatchAggregationService {
         const date = new Date(cursor);
         date.setDate(cursor.getDate() + row);
 
-        const entry = perDay.get(dayKey(date));
+        const key = dayKey(date);
+        const entry = perDay.get(key);
         // Days from the neighbouring year that fall in an edge week are shown
         // as padding rather than being counted.
         const outsideYear = date.getFullYear() !== year;
+        const reading = outsideYear ? undefined : rankByDay.get(key);
+
         const wins = outsideYear ? 0 : (entry?.wins ?? 0);
         const losses = outsideYear ? 0 : (entry?.losses ?? 0);
-        const games = wins + losses;
+        const cachedGames = wins + losses;
+
+        // A day with cached games is described by them. A day with none but a
+        // rank reading that moved Riot's counters was still played, so its game
+        // count comes from there — flagged, because there is no record to show.
+        const recordedGames = reading?.games ?? 0;
+        const estimated = cachedGames === 0 && recordedGames > 0;
+        const games = cachedGames || recordedGames;
+
+        // A series break is a reset, not a climb: its `difference` is already
+        // zeroed at write time, and its LP is not comparable to the day before.
+        const lpChange =
+          reading && !reading.series_start ? reading.difference : reading ? 0 : null;
 
         totalGames += games;
         totalWins += wins;
+        if (lpChange !== null) {
+          totalLp += lpChange;
+          hasLp = true;
+        }
         if (games > busiestDay) busiestDay = games;
 
         week.push({
@@ -505,6 +563,16 @@ export class MatchAggregationService {
           games,
           future: date > today,
           untracked: outsideYear || date < earliest,
+          lpChange,
+          rank: reading
+            ? {
+                tier: reading.tier,
+                division: reading.division,
+                leaguePoints: reading.league_points,
+              }
+            : null,
+          estimated,
+          inactive: reading?.inactive === 1,
         });
       }
 
@@ -524,7 +592,7 @@ export class MatchAggregationService {
       col++;
     }
 
-    return { weeks, monthLabels, startDate: earliest, totalGames, totalWins, busiestDay };
+    return { weeks, monthLabels, startDate: earliest, totalGames, totalWins, totalLp, hasLp, busiestDay };
   }
 
   /** Longest current streak of the same result, from the newest match backwards. */

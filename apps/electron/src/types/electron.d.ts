@@ -272,6 +272,36 @@ export interface ElectronAPI {
     callback: (data: { accountId: string; year: number; rows: MatchCacheRow[] }) => void
   ) => void;
 
+  /**
+   * Counts every ranked player on the region to place this account on the
+   * ladder. Minutes of requests — always user-triggered, always cancellable.
+   */
+  riotSweepLadderPosition: (args: {
+    accountId: string;
+    puuid: string;
+    platform: string;
+    queue?: string;
+    /** Re-measure every division instead of trusting the cached census. */
+    freshCensus?: boolean;
+  }) => Promise<LadderSweepResult | { cancelled: true; requests: number } | { error: string }>;
+
+  riotCancelLadderSweep: (args: { accountId: string }) => Promise<{ success: boolean }>;
+
+  /** Requests and wait a sweep would cost right now, given the cached census. */
+  riotEstimateLadderSweep: (args: {
+    platform: string;
+    queue: string;
+    tier: string;
+    division: string;
+  }) => Promise<LadderSweepEstimate | { error: string }>;
+
+  riotGetLadderPositions: (args: {
+    accountId: string;
+    queue?: string | null;
+  }) => Promise<{ positions: LadderPosition[] }>;
+
+  onLadderSweepProgress: (callback: (data: LadderSweepProgress) => void) => void;
+
   // LCU Monitor — pull current state (handles race condition on startup)
   getLcuState: () => Promise<{
     activeVaultId: string | null;
@@ -350,6 +380,79 @@ export interface BackfillProgress {
   total: number;
   failed: number;
   etaSeconds: number;
+  done: boolean;
+}
+
+/**
+ * One day's ladder position for an account.
+ *
+ * Riot serves no such endpoint — every row here was counted by sweeping the
+ * region's divisions (see apps/electron/ladder.js), and like `RankSnapshot` it
+ * cannot be reconstructed after the fact.
+ */
+export interface LadderPosition {
+  account_id: string;
+  queue: string;
+  /** Local calendar day, 'YYYY-MM-DD'. */
+  day: string;
+  platform: string;
+  tier: string;
+  division: string;
+  league_points: number;
+  /** 1-based place across every ranked player on the region. */
+  position: number;
+  /** Ranked players in this queue on this region, at sweep time. */
+  total: number;
+  /** 1-based place within the account's own tier/division. */
+  bucket_position: number;
+  bucket_total: number;
+  /** Top N% of the region. Lower is better. */
+  percentile: number;
+  observed_at: number;
+}
+
+/** What a completed sweep returns, before it is written to a daily row. */
+export interface LadderSweepResult {
+  cancelled: false;
+  requests: number;
+  platform: string;
+  queue: string;
+  tier: string;
+  division: string;
+  leaguePoints: number;
+  position: number;
+  total: number;
+  bucketPosition: number;
+  bucketTotal: number;
+  percentile: number;
+  /** Players on exactly this LP in this division; all share the same place. */
+  ties: number;
+  censusReused: number;
+}
+
+export interface LadderSweepEstimate {
+  requests: number;
+  etaSeconds: number;
+  /** Divisions whose size is already cached and need not be re-measured. */
+  censusCached: number;
+  censusTotal: number;
+  /** Pages in the account's own division — the unavoidable part of the cost. */
+  ownPages: number;
+  /** True when the whole census is cached, so the estimate is near-exact. */
+  exact: boolean;
+}
+
+export interface LadderSweepProgress {
+  accountId: string;
+  /** `census` sizes every division; `scanning` reads the account's own. */
+  phase: 'census' | 'scanning';
+  requests: number;
+  plannedRequests: number;
+  etaSeconds: number;
+  bucketsDone: number;
+  bucketsTotal: number;
+  pagesDone: number;
+  pagesTotal: number;
   done: boolean;
 }
 

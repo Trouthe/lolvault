@@ -17,7 +17,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 const electron = require('electron');
 
-const TESTS = ['database.test.js', 'rank-recorder.test.js'];
+const TESTS = ['database.test.js', 'rank-recorder.test.js', 'ladder.test.js'];
 
 let failed = 0;
 

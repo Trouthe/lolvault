@@ -26,6 +26,7 @@ import { OverviewSkeletonComponent } from './widgets/overview-skeleton.component
 import { absoluteLpToLabel, dayToLocalTime } from '../../models/rank-scale';
 import { SegmentOption, SegmentedToggleComponent } from './widgets/segmented-toggle.component';
 import { QueueCardComponent } from './widgets/queue-card.component';
+import { LadderPositionComponent } from './widgets/ladder-position.component';
 import { MostPlayedChampionsComponent } from './widgets/most-played-champions.component';
 import { PlayedWithPanelComponent } from './widgets/played-with-panel.component';
 import { OverviewScreenComponent } from './screens/overview/overview-screen.component';
@@ -43,6 +44,7 @@ import { InsightsScreenComponent } from './screens/insights/insights-screen.comp
     OverviewSkeletonComponent,
     SegmentedToggleComponent,
     QueueCardComponent,
+    LadderPositionComponent,
     MostPlayedChampionsComponent,
     PlayedWithPanelComponent,
     OverviewScreenComponent,

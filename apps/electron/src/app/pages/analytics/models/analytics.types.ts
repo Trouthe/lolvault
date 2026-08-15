@@ -146,9 +146,21 @@ export interface RecentGame {
 /**
  * One cell of the activity heatmap.
  *
- * Games played and won, nothing else. LP used to drive the colour, which meant
- * the grid only said anything on days a ranked snapshot happened to bracket the
- * session — and said nothing at all for a player we have never tracked.
+ * Two sources feed this, and they know different things.
+ *
+ * **Cached games** know the result of each game, so they give wins and losses —
+ * but only for games actually pulled from Riot, which is a fraction of a year
+ * until the year sweep has run.
+ *
+ * **The daily rank series** (`rank_snapshots`, written by the recorder and by
+ * every ladder sweep) knows how many ranked games were played and how much LP
+ * moved, because both fall out of Riot's `wins`/`losses` counters and LP. It
+ * knows nothing about individual results. Critically it covers days we hold no
+ * games for at all, so it fills in a grid that would otherwise be blank.
+ *
+ * Where they overlap, cached games win: a real 3W-1L beats "4 games, +12 LP".
+ * Where only the rank series has anything, the day is marked `estimated` and
+ * coloured by LP movement instead of by record.
  */
 export interface ActivityDay {
   date: Date;
@@ -158,6 +170,20 @@ export interface ActivityDay {
   future: boolean;
   /** Before the first day we have any data for — rendered as "no data". */
   untracked: boolean;
+  /**
+   * LP gained or lost this day, from the recorded rank series. Null when no
+   * rank reading brackets the day — which is not the same as zero.
+   */
+  lpChange: number | null;
+  /** Rank at the end of this day, when a reading was recorded. */
+  rank: { tier: string; division: string; leaguePoints: number } | null;
+  /**
+   * True when `games` came from the rank series rather than from cached games,
+   * so the cell has a count but no win/loss split.
+   */
+  estimated: boolean;
+  /** Riot's decay flag on this day's reading — an LP drop that was not a loss. */
+  inactive: boolean;
 }
 
 /** A ranked queue entry rendered as a collapsible card in the rail. */

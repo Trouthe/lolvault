@@ -344,6 +344,59 @@ const MIGRATIONS = [
       d.exec('ALTER TABLE rank_snapshots ADD COLUMN inactive INTEGER');
     }
   },
+
+  // v7 → v8: ladder position.
+  //
+  // `rank_snapshots` answers "what rank was I", which is not the same question
+  // as "where was I". Riot serves no ladder position at any endpoint — the only
+  // way to it is to count the players above you, which means measuring every
+  // tier/division on the region (see ladder.js).
+  //
+  // Two tables because the two halves have completely different lifetimes:
+  //
+  // `ladder_census` is about the *region*, not any account. A division's size
+  // moves over weeks, and re-measuring all 28 of them costs hundreds of requests
+  // against a ~0.83 req/s budget, so it is cached and shared by every account on
+  // that platform. It is a pure cache: deleting it costs time, never data.
+  //
+  // `ladder_positions` is about the account and is exactly as unrecoverable as
+  // `rank_snapshots` — nothing can tell you in December where you sat in August.
+  // Keyed by day for the same reason and with the same upsert semantics, so
+  // sweeping twice in one day refines the reading instead of duplicating it.
+  (d) => {
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS ladder_census (
+        platform    TEXT    NOT NULL,
+        queue       TEXT    NOT NULL,
+        tier        TEXT    NOT NULL,
+        division    TEXT    NOT NULL,
+        players     INTEGER NOT NULL,
+        pages       INTEGER NOT NULL,   -- seeds the next sweep's binary search
+        observed_at INTEGER NOT NULL,
+        PRIMARY KEY (platform, queue, tier, division)
+      );
+
+      CREATE TABLE IF NOT EXISTS ladder_positions (
+        account_id      TEXT    NOT NULL,
+        queue           TEXT    NOT NULL,
+        day             TEXT    NOT NULL,   -- 'YYYY-MM-DD', local time
+        platform        TEXT    NOT NULL,
+        tier            TEXT    NOT NULL,
+        division        TEXT    NOT NULL,
+        league_points   INTEGER NOT NULL,
+        position        INTEGER NOT NULL,   -- 1-based, across the whole region
+        total           INTEGER NOT NULL,   -- ranked players in this queue/region
+        bucket_position INTEGER NOT NULL,   -- 1-based within the division
+        bucket_total    INTEGER NOT NULL,
+        percentile      REAL    NOT NULL,   -- top N% of the region
+        observed_at     INTEGER NOT NULL,
+        PRIMARY KEY (account_id, queue, day)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ladder_positions_series
+        ON ladder_positions (account_id, queue, day);
+    `);
+  },
 ];
 
 function runMigrations() {
@@ -554,6 +607,115 @@ function getRankSnapshotQueues(accountId) {
     .prepare('SELECT DISTINCT queue FROM rank_snapshots WHERE account_id = ? ORDER BY queue')
     .all(accountId)
     .map((r) => r.queue);
+}
+
+// ── Ladder census — how big each tier/division is on a region ─────────────────
+//
+// A cache, and only a cache. Every row here can be re-measured from Riot; what
+// it buys is the several hundred requests that measuring costs. Shared across
+// accounts on the same platform, because a division's size has nothing to do
+// with who is asking.
+
+/**
+ * Census rows for a platform/queue, optionally only those measured recently.
+ *
+ * @param {number} [maxAgeMs] Rows older than this are omitted. Pass `Infinity`
+ *                            for every row regardless of age — the sweep does,
+ *                            because a stale page count is still a good seed for
+ *                            the binary search even when it is too old to trust
+ *                            as an answer.
+ */
+function getLadderCensus(platform, queue, maxAgeMs = Infinity) {
+  const rows = getDb()
+    .prepare('SELECT * FROM ladder_census WHERE platform = ? AND queue = ?')
+    .all(platform, queue);
+
+  if (!Number.isFinite(maxAgeMs)) return rows;
+  const cutoff = Date.now() - maxAgeMs;
+  return rows.filter((row) => row.observed_at >= cutoff);
+}
+
+function saveLadderCensus(platform, queue, tier, division, players, pages, when = Date.now()) {
+  getDb()
+    .prepare(
+      `INSERT INTO ladder_census (platform, queue, tier, division, players, pages, observed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (platform, queue, tier, division) DO UPDATE SET
+         players     = excluded.players,
+         pages       = excluded.pages,
+         observed_at = excluded.observed_at`
+    )
+    .run(platform, queue, tier, division, players, pages, when);
+}
+
+// ── Ladder positions — one row per account per queue per day ──────────────────
+
+/**
+ * Records where an account sat on the ladder, keyed by day so a second sweep
+ * the same day refines the reading rather than duplicating it.
+ *
+ * Same reasoning as `recordRankSnapshot`: no Riot endpoint can reconstruct this
+ * later, so a row missed is a row lost permanently.
+ */
+function recordLadderPosition(accountId, queue, result, when = Date.now()) {
+  if (!accountId || !queue || !result) return null;
+
+  const day = localDay(when);
+  getDb()
+    .prepare(
+      `INSERT INTO ladder_positions
+         (account_id, queue, day, platform, tier, division, league_points,
+          position, total, bucket_position, bucket_total, percentile, observed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (account_id, queue, day) DO UPDATE SET
+         platform        = excluded.platform,
+         tier            = excluded.tier,
+         division        = excluded.division,
+         league_points   = excluded.league_points,
+         position        = excluded.position,
+         total           = excluded.total,
+         bucket_position = excluded.bucket_position,
+         bucket_total    = excluded.bucket_total,
+         percentile      = excluded.percentile,
+         observed_at     = excluded.observed_at`
+    )
+    .run(
+      accountId,
+      queue,
+      day,
+      result.platform,
+      result.tier,
+      result.division,
+      result.leaguePoints,
+      result.position,
+      result.total,
+      result.bucketPosition,
+      result.bucketTotal,
+      result.percentile,
+      when
+    );
+
+  return { accountId, queue, day, ...result };
+}
+
+/** Ladder-position series for an account, oldest first. */
+function getLadderPositions(accountId, queue = null) {
+  const db = getDb();
+  return queue
+    ? db
+        .prepare(
+          `SELECT * FROM ladder_positions
+            WHERE account_id = ? AND queue = ?
+            ORDER BY day ASC`
+        )
+        .all(accountId, queue)
+    : db
+        .prepare(
+          `SELECT * FROM ladder_positions
+            WHERE account_id = ?
+            ORDER BY queue ASC, day ASC`
+        )
+        .all(accountId);
 }
 
 // ── Match Cache ───────────────────────────────────────────────────────────────
@@ -915,6 +1077,11 @@ module.exports = {
   recordRankSnapshot,
   getRankSnapshots,
   getRankSnapshotQueues,
+  // Ladder position
+  getLadderCensus,
+  saveLadderCensus,
+  recordLadderPosition,
+  getLadderPositions,
   // Match cache
   saveMatchCache,
   getMatchCache,
